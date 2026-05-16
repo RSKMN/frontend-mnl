@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import { isAuthenticated, removeToken } from "@/services";
-import { ThemeToggle } from "@/components/shared";
+import { ThemeToggle, PharmaAssistantWidget } from "@/components/shared";
 import logo from "../../../logo.png";
 
 type IconName =
@@ -239,9 +239,16 @@ function ResearchContextBar() {
   );
 }
 
-function isRouteActive(pathname: string, href: string) {
-  const [baseHref] = href.split("?");
-  return pathname === baseHref || pathname.startsWith(`${baseHref}/`);
+function isRouteActive(pathname: string, href: string, currentSearch: string = "") {
+  const [baseHref, search] = href.split("?");
+  
+  // If there's a search string in the target href, it must match the current search exactly for a specific section
+  if (search) {
+    return pathname === baseHref && currentSearch.includes(search);
+  }
+  
+  // Standard base route matching
+  return pathname === baseHref || (baseHref !== "/" && pathname.startsWith(`${baseHref}/`));
 }
 
 function getPageContext(pathname: string) {
@@ -256,8 +263,15 @@ export default function DashboardLayout({
   const router = useRouter();
   const [canAccess, setCanAccess] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentSearch = searchParams.toString();
   const pageContext = useMemo(() => getPageContext(pathname), [pathname]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const showContextBar = useMemo(() => {
     const contextRoutes = [
@@ -284,12 +298,7 @@ export default function DashboardLayout({
     setCanAccess(true);
   }, [router]);
 
-  const handleLogout = () => {
-    removeToken();
-    router.replace("/");
-  };
-
-  if (!canAccess) {
+  if (!canAccess || !mounted) {
     return <div className="min-h-screen" style={{ background: "var(--bg)" }} />;
   }
 
@@ -350,7 +359,7 @@ export default function DashboardLayout({
 
                   <div className="space-y-1">
                     {group.items.map((item) => {
-                      const isActive = isRouteActive(pathname, item.matchHref ?? item.href);
+                      const isActive = isRouteActive(pathname, item.matchHref ?? item.href, currentSearch);
 
                       return (
                         <Link
@@ -545,6 +554,7 @@ export default function DashboardLayout({
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6 lg:px-10">
           {children}
         </main>
+        <PharmaAssistantWidget />
       </div>
     </div>
   );

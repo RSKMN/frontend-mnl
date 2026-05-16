@@ -1,22 +1,59 @@
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { EmptyState } from "@/components/shared";
+import ComputeDashboard from "@/components/compute/ComputeDashboard";
+import StorageDashboard from "@/components/storage/StorageDashboard";
+import ApiDashboard from "@/components/api/ApiDashboard";
+import IntegrationsDashboard from "@/components/integrations/IntegrationsDashboard";
+import TeamDashboard from "@/components/team/TeamDashboard";
+import BillingDashboard from "@/components/billing/BillingDashboard";
+import AuditDashboard from "@/components/audit/AuditDashboard";
+import GeneralSettings from "@/components/settings/GeneralSettings";
+
+function SettingsContent() {
+  const searchParams = useSearchParams();
+  const section = searchParams.get("section");
+
+  if (section === "compute") {
+    return <ComputeDashboard />;
+  }
+
+  if (section === "storage") {
+    return <StorageDashboard />;
+  }
+
+  if (section === "api") {
+    return <ApiDashboard />;
+  }
+
+  if (section === "integrations") {
+    return <IntegrationsDashboard />;
+  }
+
+  if (section === "team") {
+    return <TeamDashboard />;
+  }
+
+  if (section === "billing") {
+    return <BillingDashboard />;
+  }
+
+  if (section === "audit") {
+    return <AuditDashboard />;
+  }
+
+  return <GeneralSettings />;
+}
+
 
 export default function SettingsPage() {
   return (
-    <div className="page-shell">
-      <header className="page-header">
-        <p className="page-kicker" style={{ color: "var(--accent)" }}>Settings</p>
-        <h1 className="page-title" style={{ color: "var(--text)" }}>Workspace Settings</h1>
-        <p className="page-subtitle" style={{ color: "var(--muted-text)" }}>
-          Configure your research workspace defaults and environment preferences.
-        </p>
-      </header>
-
-      <EmptyState
-        title="No settings configured yet"
-        description="Start from Workspace and Dashboard, then return here to tune your defaults."
-        ctaLabel="Go to Workspace"
-        ctaHref="/workspace"
-      />
-    </div>
+    <Suspense fallback={<div className="page-shell">Loading settings...</div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }
+
+

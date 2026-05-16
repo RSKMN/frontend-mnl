@@ -1,427 +1,328 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React from "react";
+import PageHeader from "@/components/ui/PageHeader";
+import MetricCard from "@/components/ui/MetricCard";
+import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import StatusBadge, { StatusType } from "@/components/ui/StatusBadge";
 
-type Model = {
-  id: string;
-  name: string;
-  target: string;
-  architecture: string;
-  accuracy: string;
-  dataset: string;
-  size: string;
-  lastUpdated: string;
-  latency: string;
-  type: "Activity" | "ADMET" | "Embedding";
-  tags: string[];
-};
+const SUMMARY_METRICS = [
+  { label: "Active Models", value: "14", icon: "🧠" },
+  { label: "Production Models", value: "7", status: "completed" as StatusType },
+  { label: "Validation Warnings", value: "2", status: "warning" as StatusType },
+  { label: "Inference Requests", value: "1.2M", helperText: "Last 24h", trend: { value: 12, isUp: true } },
+  { label: "Average Latency", value: "86", unit: "ms", trend: { value: 4, isUp: false } },
+  { label: "Dataset Coverage", value: "84%", trend: { value: 2, isUp: true } },
+];
 
-const MODELS: Model[] = [
+const MODELS = [
   {
     id: "m1",
-    name: "EGFR Baseline Activity",
-    target: "EGFR (Epidermal Growth Factor Receptor)",
-    architecture: "Graph Convolutional Network (GCN)",
-    accuracy: "92.4%",
-    dataset: "ChEMBL v33 + Internal Screening",
-    size: "124 MB",
-    lastUpdated: "2024-05-10",
-    latency: "45ms",
-    type: "Activity",
-    tags: ["Oncology", "Kinase"]
+    name: "TargetRank-GNN",
+    type: "Target prioritization",
+    version: "v4.2.1",
+    status: "active" as StatusType,
+    dataset: "BindingDB + ChEMBL",
+    metric: "0.94 (ROC-AUC)",
+    latency: "124ms",
+    lastRun: "2h ago",
+    endpoint: "rt-gnn-04",
+    description: "Deep learning on PPI networks for prioritizing novel oncology targets.",
   },
   {
     id: "m2",
-    name: "PARP1 Activity Predictor",
-    target: "PARP1 (Poly [ADP-ribose] polymerase 1)",
-    architecture: "Message Passing Neural Network (MPNN)",
-    accuracy: "89.7%",
-    dataset: "BindingDB + PubChem",
-    size: "156 MB",
-    lastUpdated: "2024-04-22",
-    latency: "52ms",
-    type: "Activity",
-    tags: ["DNA Repair", "Synthetic Lethality"]
+    name: "MolGen-Diffusion",
+    type: "Molecule generation",
+    version: "v1.8.0",
+    status: "running" as StatusType,
+    dataset: "ZINC20 + PubChem",
+    metric: "0.88 (QED-Enrich)",
+    latency: "840ms",
+    lastRun: "Active",
+    endpoint: "mg-diff-18",
+    description: "Conditional diffusion model for de-novo lead generation with specific ADMET constraints.",
   },
   {
     id: "m3",
-    name: "PIK3CA Mutant Specific",
-    target: "PIK3CA (PI3K Alpha)",
-    architecture: "Transformer-based Molecular Encoder",
-    accuracy: "94.1%",
-    dataset: "ZINC20 + Custom Mutagenesis Data",
-    size: "210 MB",
-    lastUpdated: "2024-05-01",
-    latency: "68ms",
-    type: "Activity",
-    tags: ["Oncology", "Mutation-Specific"]
+    name: "ADMET-ToxNet",
+    type: "ADMET prediction",
+    version: "v3.1.2",
+    status: "completed" as StatusType,
+    dataset: "Internal + Tox21",
+    metric: "0.86 (Avg RMSE)",
+    latency: "45ms",
+    lastRun: "15m ago",
+    endpoint: "adm-tox-31",
+    description: "Multi-task neural network for identifying toxicity liabilities and metabolic stability.",
   },
   {
     id: "m4",
-    name: "ADMET Multi-task Classifier",
-    target: "Absorption, Distribution, Metabolism, Excretion, Toxicity",
-    architecture: "Multi-task Deep Neural Network",
-    accuracy: "87.5% (Avg)",
-    dataset: "FDA Approved Drugs + Tox21",
-    size: "89 MB",
-    lastUpdated: "2024-03-15",
-    latency: "30ms",
-    type: "ADMET",
-    tags: ["Safety", "Pharmacokinetics"]
+    name: "GNINA-CNN-Rescorer",
+    type: "Pose scoring",
+    version: "v2.0.4",
+    status: "active" as StatusType,
+    dataset: "PDBbind v2020",
+    metric: "0.92 (Pose-Acc)",
+    latency: "210ms",
+    lastRun: "1h ago",
+    endpoint: "gnina-cnn-20",
+    description: "Convolutional neural network for rescoring docking poses and binding affinity prediction.",
   },
   {
     id: "m5",
-    name: "MolEmbed-v2",
-    target: "General Molecular Representation",
-    architecture: "Self-Supervised BERT-style Transformer",
-    accuracy: "N/A (Embedding)",
-    dataset: "100M+ SMILES from PubChem",
-    size: "1.2 GB",
-    lastUpdated: "2024-01-20",
+    name: "QuantumRank-QML",
+    type: "Quantum reranking",
+    version: "v0.9.5",
+    status: "active" as StatusType,
+    dataset: "QM9 + Internal DFT",
+    metric: "0.98 (Conf-Corr)",
+    latency: "1.2s",
+    lastRun: "3h ago",
+    endpoint: "qr-qml-09",
+    description: "Quantum machine learning model for high-fidelity electronic property reranking.",
+  },
+  {
+    id: "m6",
+    name: "ChemSpace-Embedder",
+    type: "Molecular embeddings",
+    version: "v2.2.0",
+    status: "completed" as StatusType,
+    dataset: "PubChem 110M",
+    metric: "0.91 (NSS)",
     latency: "12ms",
-    type: "Embedding",
-    tags: ["Foundation Model", "Representation"]
-  }
+    lastRun: "Synced",
+    endpoint: "cs-emb-22",
+    description: "Foundation transformer model for mapping chemical space into 1024-d latent vectors.",
+  },
+  {
+    id: "m7",
+    name: "PharmaLLM-RAG",
+    type: "Literature assistant",
+    version: "v1.4-Bio",
+    status: "active" as StatusType,
+    dataset: "PubMed + Internal",
+    metric: "0.89 (Fact-Score)",
+    latency: "450ms",
+    lastRun: "6h ago",
+    endpoint: "llm-rag-14",
+    description: "Retrieval-augmented LLM for synthesizing scientific literature and project evidence.",
+  },
+];
+
+const DATASETS = [
+  { name: "ChEMBL", records: "3.4M", type: "Bioactivity" },
+  { name: "BindingDB", records: "2.1M", type: "Protein-Ligand" },
+  { name: "PubChem", records: "110M", type: "Chemical Space" },
+  { name: "PDBbind", records: "25k", type: "Structural" },
+  { name: "Internal Assay Data", records: "450k", type: "Proprietary" },
+  { name: "ADMET Benchmark", records: "120k", type: "Validation" },
+  { name: "Literature Corpus", records: "18M", type: "NLP/Evidence" },
+];
+
+const RECENT_RUNS = [
+  { name: "EGFR Target Ranking", model: "TargetRank-GNN", status: "completed" as StatusType, time: "2h ago" },
+  { name: "MolGen Generation Batch", model: "MolGen-Diffusion", status: "running" as StatusType, time: "Active" },
+  { name: "ADMET Global Screening", model: "ADMET-ToxNet", status: "completed" as StatusType, time: "15m ago" },
+  { name: "EGFR Quantum Reranking", model: "QuantumRank-QML", status: "completed" as StatusType, time: "3h ago" },
+  { name: "Pharma LLM Summary", model: "PharmaLLM-RAG", status: "completed" as StatusType, time: "6h ago" },
 ];
 
 export default function ModelsPage() {
-  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
-  const [smiles, setSmiles] = useState("");
-  const [isInferenceLoading, setIsInferenceLoading] = useState(false);
-  const [predictionResult, setPredictionResult] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"registry" | "playground" | "artifacts">("registry");
-
-  const runInference = () => {
-    if (!selectedModel || !smiles) return;
-    
-    setIsInferenceLoading(true);
-    setPredictionResult(null);
-    
-    // Fake async inference
-    setTimeout(() => {
-      setIsInferenceLoading(false);
-      setPredictionResult({
-        activity: (Math.random() * 10).toFixed(2) + " pIC50",
-        toxicity: Math.random() > 0.8 ? "High" : Math.random() > 0.4 ? "Moderate" : "Low",
-        confidence: (0.85 + Math.random() * 0.14).toFixed(3),
-        qed: (0.3 + Math.random() * 0.6).toFixed(2),
-        saScore: (2 + Math.random() * 4).toFixed(2),
-      });
-    }, 1500);
-  };
-
   return (
-    <div className="page-shell">
-      <header className="page-header">
-        <div className="page-kicker">Core Infrastructure</div>
-        <h1 className="page-title">Model Registry & Intelligence</h1>
-        <p className="page-subtitle">
-          Manage, evaluate, and deploy specialized deep learning models for molecular property prediction and lead optimization.
-        </p>
-      </header>
+    <div className="flex flex-col gap-8 pb-12">
+      <PageHeader 
+        title="Model Registry" 
+        breadcrumb="AI / Model registry"
+        description="Unified management of specialized AI/ML models powering molecular intelligence and lead optimization pipelines."
+      />
 
-      <div className="flex gap-4 border-b pb-px" style={{ borderColor: "var(--border)" }}>
-        {(["registry", "playground", "artifacts"] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-4 text-sm font-medium transition-all duration-200 border-b-2 capitalize ${
-              activeTab === tab 
-                ? "border-cyan-500 text-cyan-500" 
-                : "border-transparent text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            {tab}
-          </button>
+      {/* Summary Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {SUMMARY_METRICS.map((metric, i) => (
+          <MetricCard key={i} {...metric} />
         ))}
       </div>
 
-      {activeTab === "registry" && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-          {MODELS.map((model) => (
-            <div key={model.id} className="ui-card-surface p-6 flex flex-col gap-4 group">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mb-2 ${
-                    model.type === "Activity" ? "bg-indigo-500/10 text-indigo-500" :
-                    model.type === "ADMET" ? "bg-emerald-500/10 text-emerald-500" :
-                    "bg-amber-500/10 text-amber-500"
-                  }`}>
-                    {model.type}
-                  </span>
-                  <h3 className="text-xl font-bold">{model.name}</h3>
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] text-slate-500 uppercase font-bold">Accuracy</div>
-                  <div className="text-lg font-mono text-cyan-500 font-bold">{model.accuracy}</div>
-                </div>
-              </div>
-
-              <div className="space-y-3 py-2 border-y border-white/5">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Target</span>
-                  <span className="text-slate-300 font-medium">{model.target}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Architecture</span>
-                  <span className="font-mono text-xs text-slate-400">{model.architecture}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Latency</span>
-                  <span className="text-slate-400">{model.latency}</span>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-1.5 mt-auto">
-                {model.tags.map(tag => (
-                  <span key={tag} className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] text-slate-400 border border-slate-700">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              <div className="pt-4 flex gap-2 mt-2">
-                <button 
-                  onClick={() => {
-                    setSelectedModel(model);
-                    setActiveTab("playground");
-                  }}
-                  className="flex-1 ui-btn-surface py-2 text-xs font-bold uppercase tracking-wider hover:text-cyan-400 transition-colors"
-                >
-                  Test Model
-                </button>
-                <button className="px-3 ui-btn-surface py-2 text-slate-400 hover:text-white">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {activeTab === "playground" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start aurora-bg p-8 rounded-3xl overflow-hidden">
-          <div className="absolute inset-0 bg-grid-noise pointer-events-none opacity-20" />
-          <div className="lg:col-span-2 space-y-6 relative z-10">
-            <div className="ui-card-surface p-8 backdrop-blur-2xl">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                <span className="p-2 rounded-lg bg-cyan-500/10 text-cyan-500">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.628.285a2 2 0 01-1.968 0l-.628-.285a6 6 0 00-3.86-.517l-2.387.477a2 2 0 00-1.022.547l1.166 6.837a2 2 0 001.946 1.668h9.916a2 2 0 001.946-1.668l1.166-6.837z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </span>
-                Inference Playground
-              </h2>
-              
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Target Model</label>
-                  <select 
-                    value={selectedModel?.id || ""} 
-                    onChange={(e) => setSelectedModel(MODELS.find(m => m.id === e.target.value) || null)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-slate-200 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
-                  >
-                    <option value="" disabled>Select a model to run inference</option>
-                    {MODELS.filter(m => m.type !== "Embedding").map(m => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">SMILES Input</label>
-                  <div className="relative">
-                    <textarea 
-                      value={smiles}
-                      onChange={(e) => setSmiles(e.target.value)}
-                      placeholder="Enter SMILES string (e.g. CC1=C(C=C(C=C1)NC2=NC=CC(=N2)C3=CN=CC=C3)NC4=CC=C(C=C4)CN5CCN(CC5)C)"
-                      className="w-full h-32 bg-slate-900 border border-slate-800 rounded-xl p-4 font-mono text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all"
-                    />
-                    <div className="absolute bottom-3 right-3 flex gap-2">
-                      <button 
-                        onClick={() => setSmiles("CC1=C(C=C(C=C1)NC2=NC=CC(=N2)C3=CN=CC=C3)NC4=CC=C(C=C4)CN5CCN(CC5)C")}
-                        className="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-400 hover:text-white border border-slate-700 transition-colors"
-                      >
-                        Load Imatinib
-                      </button>
-                      <button 
-                        onClick={() => setSmiles("CC(C)C1=C(C(=C(N1C2=CC=C(C=C2)F)C3=CC=C(C=C3)F)C(=O)NC4=CC=CC=C4)C[C@@H](C[C@@H](CC(=O)O)O)O")}
-                        className="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-400 hover:text-white border border-slate-700 transition-colors"
-                      >
-                        Load Atorvastatin
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={runInference}
-                  disabled={isInferenceLoading || !selectedModel || !smiles}
-                  className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-all ${
-                    isInferenceLoading || !selectedModel || !smiles
-                      ? "bg-slate-800 text-slate-600 cursor-not-allowed"
-                      : "btn-primary-glow"
-                  }`}
-                >
-                  {isInferenceLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Running Quantum Simulation...
-                    </span>
-                  ) : "Run Prediction Engine"}
-                </button>
-              </div>
-            </div>
-
-            {predictionResult && (
-              <div className="ui-card-surface p-8 ui-fade-in border-cyan-500/20 bg-gradient-to-br from-slate-900 to-indigo-900/20">
-                <h3 className="text-xl font-bold mb-6 text-cyan-400 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Prediction Results
-                </h3>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="space-y-1">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Predicted Activity</div>
-                    <div className="text-2xl font-bold text-white">{predictionResult.activity}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Toxicity Risk</div>
-                    <div className={`text-2xl font-bold ${
-                      predictionResult.toxicity === "High" ? "text-red-400" : 
-                      predictionResult.toxicity === "Moderate" ? "text-amber-400" : "text-emerald-400"
-                    }`}>
-                      {predictionResult.toxicity}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Confidence Score</div>
-                    <div className="text-2xl font-bold text-cyan-400">{predictionResult.confidence}</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Drug-likeness (QED)</div>
-                    <div className="text-2xl font-bold text-white">{predictionResult.qed}</div>
-                  </div>
-                </div>
-
-                <div className="mt-8 p-4 rounded-lg bg-white/5 border border-white/10">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold text-slate-400 uppercase">Attention Map Visualization</span>
-                    <span className="text-[10px] text-cyan-500 px-2 py-0.5 rounded bg-cyan-500/10">Ready</span>
-                  </div>
-                  <div className="h-32 w-full flex items-end gap-1 px-2">
-                    {Array.from({ length: 40 }).map((_, i) => (
-                      <div 
-                        key={i} 
-                        className="flex-1 bg-cyan-500/40 rounded-t hover:bg-cyan-400 transition-all cursor-help"
-                        style={{ height: `${20 + Math.random() * 80}%` }}
-                        title={`Atom ${i+1} contribution: ${(Math.random() * 0.4).toFixed(3)}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-6 relative z-10">
-            <div className="ui-card-surface p-6">
-              <h3 className="text-lg font-bold mb-4">Model Specs</h3>
-              {selectedModel ? (
-                <div className="space-y-4">
-                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Architecture</div>
-                    <div className="text-sm text-slate-200">{selectedModel.architecture}</div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Training Set</div>
-                    <div className="text-sm text-slate-200">{selectedModel.dataset}</div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Inference Latency</div>
-                    <div className="text-sm text-slate-200">{selectedModel.latency}</div>
-                  </div>
-                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800">
-                    <div className="text-[10px] text-slate-500 uppercase font-bold">Checkpoint Size</div>
-                    <div className="text-sm text-slate-200">{selectedModel.size}</div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12 text-slate-500 italic text-sm">
-                  Select a model to view technical specifications.
-                </div>
-              )}
-            </div>
-
-            <div className="ui-card-surface p-6 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 border-cyan-500/20">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-cyan-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Experiment Link
-              </h3>
-              <p className="text-sm text-slate-400 mb-4">
-                This model was trained as part of <strong>Project Oncology Phase II</strong> (Exp ID: OX-992).
-              </p>
-              <button className="w-full py-2 text-xs font-bold uppercase border border-cyan-500/30 text-cyan-400 rounded-lg hover:bg-cyan-500/10 transition-colors">
-                View Experiment Details
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === "artifacts" && (
-        <div className="space-y-6">
-          <div className="ui-card-surface overflow-hidden">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-900/50 border-b border-slate-800">
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Artifact Name</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Version</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Size</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Last Sync</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {MODELS.map((model) => (
-                  <tr key={model.id} className="hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded bg-slate-800">
-                          <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                          </svg>
-                        </div>
-                        <span className="font-medium text-slate-200">{model.name} Weights</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-mono text-xs text-slate-400">v2.4.1-prod</td>
-                    <td className="px-6 py-4">
-                      <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[10px] font-bold uppercase">PyTorch</span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-400">{model.size}</td>
-                    <td className="px-6 py-4 text-sm text-slate-400">{model.lastUpdated}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="text-cyan-500 hover:text-cyan-400 text-xs font-bold uppercase tracking-wider">Download</button>
-                    </td>
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-8">
+        <div className="flex flex-col gap-8">
+          {/* Registry Table */}
+          <Card 
+            header={<h3 className="text-xs font-black uppercase tracking-[0.2em] text-text/80">Scientific Model Registry</h3>}
+            contentClassName="p-0"
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-border/40 bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60">
+                    <th className="px-6 py-4">Model Name</th>
+                    <th className="px-6 py-4">Type</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Validation</th>
+                    <th className="px-6 py-4">Latency</th>
+                    <th className="px-6 py-4 text-right">Endpoint</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {MODELS.map((model) => (
+                    <tr key={model.id} className="group hover:bg-muted-bg/20 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-text/80 group-hover:text-accent transition-colors">{model.name}</span>
+                          <span className="text-[9px] font-medium text-muted-text/40">{model.version}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-[10px] font-bold text-muted-text/70 uppercase tracking-wider">{model.type}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={model.status} size="sm" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-mono font-bold text-accent">{model.metric}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-[11px] font-medium text-muted-text">{model.latency}</span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <code className="text-[10px] bg-muted-bg/50 px-2 py-1 rounded border border-border/20 text-muted-text">{model.endpoint}</code>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Model Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {MODELS.map((model) => (
+              <Card 
+                key={model.id}
+                className="group border-accent/10"
+                header={
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-black text-text group-hover:text-accent transition-colors">{model.name}</h4>
+                    <StatusBadge status={model.status} size="sm" />
+                  </div>
+                }
+              >
+                <div className="space-y-4">
+                  <p className="text-xs text-muted-text/80 leading-relaxed">{model.description}</p>
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="flex flex-col">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Primary Use</span>
+                      <span className="text-[11px] font-bold text-text/70">{model.type}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Dataset Source</span>
+                      <span className="text-[11px] font-bold text-text/70 truncate">{model.dataset}</span>
+                    </div>
+                  </div>
+                  <div className="h-px bg-border/20" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-accent">{model.metric}</span>
+                      <span className="text-[10px] font-medium text-muted-text/40">| {model.version}</span>
+                    </div>
+                    <button className="text-[10px] font-black uppercase tracking-widest text-muted-text hover:text-accent transition-colors">Technical Docs</button>
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
         </div>
-      )}
+
+        {/* Side Panels */}
+        <div className="flex flex-col gap-6">
+          {/* Validation Metrics Panel */}
+          <Card header={<h3 className="text-xs font-black uppercase tracking-widest">Global Validation</h3>}>
+            <div className="space-y-4">
+              {[
+                { label: "Avg ROC-AUC", value: "0.912" },
+                { label: "Avg RMSE", value: "0.145" },
+                { label: "Enrichment Factor", value: "14.2x" },
+                { label: "Pose Accuracy", value: "88%" },
+                { label: "Calibration Score", value: "0.94" },
+                { label: "AD Domain Coverage", value: "84%" },
+              ].map((m, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-text/70">{m.label}</span>
+                  <span className="text-xs font-mono font-bold text-text">{m.value}</span>
+                </div>
+              ))}
+              <div className="pt-2">
+                <div className="h-1.5 w-full bg-muted-bg/30 rounded-full overflow-hidden">
+                  <div className="h-full bg-accent" style={{ width: '84%' }} />
+                </div>
+                <p className="text-[10px] text-muted-text/40 mt-2 text-right uppercase font-black">AD-Domain Coverage</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Dataset Coverage Panel */}
+          <Card header={<h3 className="text-xs font-black uppercase tracking-widest text-text/80">Dataset Coverage</h3>}>
+            <div className="space-y-3">
+              {DATASETS.map((ds, i) => (
+                <div key={i} className="flex items-center justify-between group">
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-text/80 group-hover:text-accent transition-colors">{ds.name}</span>
+                    <span className="text-[9px] text-muted-text/40 uppercase font-bold">{ds.type}</span>
+                  </div>
+                  <span className="text-[11px] font-mono font-bold text-muted-text">{ds.records}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Inference Status */}
+          <Card header={<h3 className="text-xs font-black uppercase tracking-widest">Inference Status</h3>}>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded bg-muted-bg/20 border border-border/40">
+                  <p className="text-[9px] font-black uppercase text-muted-text/40 mb-1">Active Endpoints</p>
+                  <p className="text-lg font-black text-text">24</p>
+                </div>
+                <div className="p-3 rounded bg-muted-bg/20 border border-border/40">
+                  <p className="text-[9px] font-black uppercase text-muted-text/40 mb-1">Queued Jobs</p>
+                  <p className="text-lg font-black text-text">142</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-text/70">Failed Jobs (24h)</span>
+                  <span className="text-error font-bold">3</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-text/70">Avg Latency</span>
+                  <span className="text-accent font-bold">86ms</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-text/70">Throughput</span>
+                  <span className="text-text font-bold">450 req/s</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Recent Model Runs */}
+          <Card header={<h3 className="text-xs font-black uppercase tracking-widest">Recent Model Runs</h3>}>
+            <div className="space-y-4">
+              {RECENT_RUNS.map((run, i) => (
+                <div key={i} className="flex items-center justify-between group cursor-pointer">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-text/80 truncate group-hover:text-accent transition-colors">{run.name}</span>
+                    <span className="text-[10px] text-muted-text/40 truncate">{run.model}</span>
+                  </div>
+                  <div className="flex flex-col items-end shrink-0">
+                    <StatusBadge status={run.status} size="sm" />
+                    <span className="text-[9px] text-muted-text/30 uppercase font-black mt-1">{run.time}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
