@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   getDataset,
   getDatasets,
@@ -9,12 +10,20 @@ import {
 } from "@/services/api";
 import { useUiStore } from "@/store";
 import type { RecentRun } from "@/types/api";
-import DatasetSelector from "@/components/dashboard/DatasetSelector";
-import SummaryCards from "@/components/dashboard/SummaryCards";
-import ActivityPanel from "@/components/dashboard/ActivityPanel";
-import ChartsSection from "@/components/dashboard/Charts";
-import DatasetInsightsPanel from "@/components/dashboard/DatasetInsightsPanel";
-import RankingsTable from "@/components/dashboard/RankingsTable";
+import {
+  MetricCard,
+  StatusBadge,
+  PipelineStepper,
+  ResearchProjectCard,
+  CandidateCard,
+  ExperimentTable,
+  ReportCard,
+  PageHeader,
+  ActionButton,
+  ActionButtonGroup,
+  SectionHeader,
+} from "@/components/ui";
+import { AssistantWidget, ChartsSection } from "@/components/dashboard";
 import { DashboardPageSkeleton } from "@/components/shared/skeletons";
 import { ApiErrorState } from "@/components/shared/states";
 import { toFriendlyErrorMessage } from "@/services/api";
@@ -36,7 +45,6 @@ export default function DashboardPage() {
   const [recentRunsLoading, setRecentRunsLoading] = useState(true);
   const [recentRunsError, setRecentRunsError] = useState<string | null>(null);
 
-  const activeDatasetLabel = selectedDataset ?? datasetNames[0] ?? "All Datasets";
   const hasApiError = Boolean(error || experimentsError || recentRunsError);
   const dashboardError = error || experimentsError || recentRunsError;
 
@@ -55,10 +63,7 @@ export default function DashboardPage() {
 
     getDatasets()
       .then(async (data) => {
-        if (!active) {
-          return;
-        }
-
+        if (!active) return;
         setDatasetNames(data.datasets);
         setTotalDatasets(data.count);
 
@@ -66,32 +71,23 @@ export default function DashboardPage() {
           selectedDataset && data.datasets.includes(selectedDataset)
             ? selectedDataset
             : data.datasets[0] ?? null;
+        
         if (resolvedDataset && resolvedDataset !== selectedDataset) {
           setSelectedDataset(resolvedDataset);
         }
 
-        if (!resolvedDataset) {
-          setTotalMolecules(null);
-          return;
-        }
-
-        const datasetDetails = await getDataset(resolvedDataset);
-        if (active) {
-          setTotalMolecules(datasetDetails.count);
+        if (resolvedDataset) {
+          const datasetDetails = await getDataset(resolvedDataset);
+          if (active) setTotalMolecules(datasetDetails.count);
         }
       })
       .catch((err) => {
         if (active) {
-          setDatasetNames([]);
-          setTotalDatasets(0);
-          setTotalMolecules(null);
           setError(toFriendlyErrorMessage(err, "Dataset data is temporarily unavailable."));
         }
       })
       .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       });
 
     getExperimentSummary()
@@ -103,8 +99,7 @@ export default function DashboardPage() {
       })
       .catch((err) => {
         if (active) {
-          setExperimentCount(null);
-          setExperimentsError(toFriendlyErrorMessage(err, "Experiment metrics are not available right now."));
+          setExperimentsError(toFriendlyErrorMessage(err, "Experiment metrics are not available."));
           setExperimentsLoading(false);
         }
       });
@@ -118,7 +113,6 @@ export default function DashboardPage() {
       })
       .catch((err) => {
         if (active) {
-          setRecentRuns([]);
           setRecentRunsError(toFriendlyErrorMessage(err, "Recent activity could not be loaded."));
           setRecentRunsLoading(false);
         }
@@ -129,143 +123,195 @@ export default function DashboardPage() {
     };
   }, [selectedDataset, reloadTick, setSelectedDataset]);
 
-  return (
-    <div className="page-shell ui-fade-in">
-      <div className="ui-state-transition flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="page-title" style={{ color: "var(--text)" }}>
-            Dashboard
-          </h1>
-          <p className="page-subtitle mt-2" style={{ color: "var(--muted-text)" }}>
-            Dataset statistics and molecular properties
-          </p>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <span className="hidden text-[11px] font-semibold uppercase tracking-[0.14em] sm:inline-block" style={{ color: "var(--muted-text)" }}>
-            Active Dataset:
-          </span>
-          <DatasetSelector />
-        </div>
-      </div>
+  if (loading) return <DashboardPageSkeleton />;
 
-      {loading ? <DashboardPageSkeleton /> : null}
-
-      {hasApiError && !loading && (
+  if (hasApiError && !loading) {
+    return (
+      <div className="page-shell">
         <ApiErrorState
           error={dashboardError}
           onRetry={handleRetry}
-          title="Dashboard is partially unavailable"
-          fallbackMessage="Some dashboard sections are temporarily unavailable."
+          title="Dashboard System Offline"
+          fallbackMessage="The research intelligence systems are currently undergoing maintenance."
         />
-      )}
+      </div>
+    );
+  }
 
-      {!loading && (
-        <div className="space-y-8 fade-in-soft ui-state-transition">
-          <DatasetInsightsPanel
-            totalDatasets={totalDatasets}
-            activeDataset={activeDatasetLabel}
-            totalMolecules={totalMolecules}
-          />
+  return (
+    <div className="page-shell ui-fade-in flex flex-col gap-8 pb-10">
+      {/* 1. PAGE HEADER */}
+      <PageHeader 
+        title="EGFR NSCLC Discovery Program"
+        breadcrumb="Oncology Research Workspace / Docking & Quantum Reranking"
+        description="High-throughput screening and quantum-mechanical rescoring of covalent inhibitors targeting EGFR T790M/L858R mutants in non-small cell lung cancer."
+        actions={
+          <ActionButtonGroup>
+            <ActionButton label="New Project" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>} />
+            <ActionButton label="Upload Dataset" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>} />
+            <ActionButton label="Run Pipeline" variant="primary" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
+          </ActionButtonGroup>
+        }
+      />
 
-          <section className="space-y-5">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--muted-text)" }}>
-                Metrics
-              </p>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight" style={{ color: "var(--text)" }}>
-                Overview
-              </h2>
-              <p className="mt-1 text-sm leading-6" style={{ color: "var(--muted-text)" }}>
-                Core metrics for the currently selected dataset.
-              </p>
-            </div>
-            <SummaryCards
-              totalMolecules={totalMolecules}
-              totalDatasets={totalDatasets}
-              experimentCount={experimentCount}
-              experimentsLoading={experimentsLoading}
-              experimentsError={experimentsError}
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2 space-y-8">
+          {/* 2. ACTIVE RESEARCH PROGRAMS */}
+          <section className="space-y-4">
+            <SectionHeader 
+              title="Active Research Programs" 
+              action={<Link href="/research-projects" className="text-[10px] font-bold text-accent uppercase tracking-widest hover:underline">View All Programs</Link>}
             />
-          </section>
-
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <section className="space-y-5">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--muted-text)" }}>
-                  Visualization
-                </p>
-                <h2 className="mt-1 text-lg font-semibold tracking-tight" style={{ color: "var(--text)" }}>
-                  Charts
-                </h2>
-                <p className="mt-1 text-sm leading-6" style={{ color: "var(--muted-text)" }}>
-                  Distribution views for key molecular properties.
-                </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <ResearchProjectCard 
+                id="egfr-nsclc"
+                name="EGFR NSCLC Discovery"
+                disease="Lung Cancer"
+                target="EGFR (L858R)"
+                stage="Lead Optimization"
+                status="running"
+                candidates={{ generated: 1240, filtered: 450 }}
+                lastRun="2 mins ago"
+                owner="Dr. Sarah Chen"
+                tags={["Oncology", "Active"]}
+                progress={68}
+              />
+              <ResearchProjectCard 
+                id="parp1-oncology"
+                name="PARP1 Oncology Program"
+                disease="Breast/Ovarian"
+                target="PARP1"
+                stage="Fragment Screening"
+                status="completed"
+                candidates={{ generated: 450, filtered: 120 }}
+                lastRun="4 hours ago"
+                owner="David Kim"
+                tags={["Oncology", "Completed"]}
+                progress={100}
+              />
+              <ResearchProjectCard 
+                id="pik3ca-screening"
+                name="PIK3CA Molecular Screening"
+                disease="Solid Tumors"
+                target="PIK3CA"
+                stage="Target Validation"
+                status="pending"
+                candidates={{ generated: 8900, filtered: 1240 }}
+                lastRun="1 day ago"
+                owner="Dr. Elena Rossi"
+                tags={["Oncology", "Pending"]}
+                progress={12}
+              />
+              <div className="ui-card-surface flex flex-col items-center justify-center gap-2 border-dashed border-border/60 bg-transparent p-5 text-muted-text/40 hover:border-accent/40 hover:text-accent transition-all cursor-pointer">
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span className="text-[10px] font-black uppercase tracking-widest">Create New Program</span>
               </div>
-
-              <ChartsSection />
-            </section>
-
-            <ActivityPanel
-              recentRuns={recentRuns}
-              loading={recentRunsLoading}
-              error={recentRunsError}
-            />
-          </div>
-
-          <section className="space-y-6">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--muted-text)" }}>
-                Pipeline Results
-              </p>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight" style={{ color: "var(--text)" }}>
-                Lead Optimization Rankings
-              </h2>
             </div>
-            <RankingsTable />
           </section>
 
-          <section className="space-y-6">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: "var(--muted-text)" }}>
-                Workflow
-              </p>
-              <h2 className="mt-1 text-lg font-semibold tracking-tight" style={{ color: "var(--text)" }}>
-                Research Pipeline Timeline
-              </h2>
-            </div>
-            <div className="ui-card-surface p-10 flex items-center justify-between overflow-x-auto gap-8">
-              {[
-                { label: "Target Prep", status: "completed" },
-                { label: "Ligand Screening", status: "completed" },
-                { label: "Docking Prep", status: "active" },
-                { label: "MD Simulation", status: "pending" },
-                { label: "QM Reranking", status: "pending" },
-                { label: "Validation", status: "pending" },
-              ].map((step, i, arr) => (
-                <div key={i} className="flex items-center gap-8 min-w-fit">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className={`h-12 w-12 rounded-full border-2 flex items-center justify-center text-xs font-black transition-all duration-500 shadow-lg ${
-                      step.status === 'completed' ? 'border-success bg-success/10 text-success' : 
-                      step.status === 'active' ? 'border-primary bg-primary animate-pulse text-white ring-4 ring-primary/20 shadow-primary/40' : 
-                      'border-border/40 bg-surface-subtle/30 text-text-secondary/40'
-                    }`}>
-                      {step.status === 'completed' ? '✓' : i + 1}
-                    </div>
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${
-                      step.status === 'active' ? 'text-primary' : 'text-text-secondary/60'
-                    }`}>{step.label}</span>
-                  </div>
-                  {i < arr.length - 1 && (
-                    <div className={`h-0.5 w-16 md:w-24 rounded-full ${
-                      step.status === 'completed' ? 'bg-success/40' : 'bg-border/20'
-                    }`} />
-                  )}
-                </div>
-              ))}
+          {/* 3. PIPELINE STATUS */}
+          <section className="space-y-4">
+            <PipelineStepper 
+              steps={[
+                { label: "Input Data", status: "completed", description: "SMILES/SDF Ingest" },
+                { label: "Target Ranking", status: "completed", description: "Bio-activity score" },
+                { label: "Molecule Generation", status: "completed", description: "Transformer-based" },
+                { label: "ADMET Filtering", status: "completed", description: "SwissADME engine" },
+                { label: "Docking", status: "completed", description: "AutoDock Vina" },
+                { label: "GNINA Rescoring", status: "running", description: "CNN-based scoring" },
+                { label: "Quantum Reranking", status: "queued", description: "DFT-level refinement" },
+                { label: "Report Generation", status: "queued", description: "Validation dossier" },
+              ]}
+            />
+          </section>
+
+          {/* 5. CANDIDATE SNAPSHOT */}
+          <section className="space-y-4">
+            <SectionHeader 
+              title="Top Lead Candidates"
+              description="Highest confidence molecular leads prioritized by quantum reranking scores."
+              action={<button className="text-[10px] font-bold text-accent uppercase tracking-widest hover:underline">Full Analytics</button>}
+            />
+            <div className="grid gap-4 md:grid-cols-2">
+              <CandidateCard id="QU-7721-X" target="EGFR (L858R)" dockingScore={-11.4} admetRisk="Low" quantumRank={1} noveltyScore={0.88} />
+              <CandidateCard id="QU-7745-B" target="EGFR (L858R)" dockingScore={-10.9} admetRisk="Low" quantumRank={2} noveltyScore={0.72} />
             </div>
           </section>
         </div>
-      )}
+
+        <div className="space-y-8">
+          {/* 4. COMPUTE OVERVIEW */}
+          <section className="space-y-4">
+            <SectionHeader title="Compute Overview" />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              <MetricCard 
+                label="GPU Utilization"
+                value="94"
+                unit="%"
+                trend={{ value: 12, isUp: true }}
+                helperText="8x NVIDIA H100 Active"
+                icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 5h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2z" /></svg>}
+              />
+              <MetricCard 
+                label="GNINA Queue"
+                value="1,420"
+                unit="mol"
+                helperText="Estimated time: 42m"
+                icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+              />
+              <MetricCard 
+                label="Quantum Jobs"
+                value="12"
+                unit="active"
+                trend={{ value: 5, isUp: false }}
+                helperText="Rigetti Aspen-M-3"
+                icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707" /></svg>}
+              />
+            </div>
+          </section>
+
+          {/* 8. PHARMA LLM ASSISTANT WIDGET */}
+          <AssistantWidget />
+
+          {/* 7. RECENT REPORTS */}
+          <section className="space-y-4">
+            <SectionHeader 
+              title="Recent Reports" 
+              action={<button className="text-[10px] font-bold text-accent uppercase tracking-widest hover:underline">Archive</button>}
+            />
+            <div className="flex flex-col gap-3">
+              <ReportCard name="Candidate Dossier: QU-7721" type="Dossier" date="May 16, 2026" size="4.2 MB" />
+              <ReportCard name="EGFR Docking Summary" type="Analysis" date="May 15, 2026" size="12.8 MB" />
+              <ReportCard name="ADMET Risk Assessment" type="Validation" date="May 14, 2026" size="1.1 MB" />
+            </div>
+          </section>
+        </div>
+      </div>
+
+      {/* 6. RECENT EXPERIMENTS */}
+      <section className="space-y-4">
+        <SectionHeader 
+          title="Global Experiment Log" 
+          action={<button className="text-[10px] font-bold text-accent uppercase tracking-widest hover:underline">View Full Log</button>}
+        />
+        <ExperimentTable 
+          experiments={[
+            { name: "EGFR_HTS_Run_042", type: "Virtual Screening", status: "completed", runtime: "4h 12m", owner: "Sarah Chen", updatedAt: "2h ago" },
+            { name: "L858R_Quantum_Refinement", type: "QM/MM", status: "running", runtime: "12h 45m", owner: "David Kim", updatedAt: "Just now" },
+            { name: "Covalent_Docking_T790M", type: "Docking", status: "completed", runtime: "8h 20m", owner: "Sarah Chen", updatedAt: "5h ago" },
+            { name: "ADMET_Batch_Oncology_01", type: "Validation", status: "failed", runtime: "0h 05m", owner: "System", updatedAt: "1h ago" },
+            { name: "GNINA_Rescoring_Main", type: "Rescoring", status: "running", runtime: "2h 30m", owner: "AutoPilot", updatedAt: "10m ago" },
+          ]}
+        />
+      </section>
+
+      {/* Charts Section */}
+      <section className="space-y-4">
+        <SectionHeader title="Molecular Property Distributions" description="Aggregated chemical space metrics for the current screening batch." />
+        <ChartsSection />
+      </section>
     </div>
   );
 }

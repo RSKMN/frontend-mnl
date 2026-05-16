@@ -1,423 +1,108 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  getDockingResults,
-  getGeneratedMolecules,
-  getPipelineExperiments,
-  getPipelineResult,
-  getRankedCandidates,
-  getResultArtifacts,
-  getResultsOverview,
-  getSimulationResults,
-  getQuantumResults,
-} from "@/services/api";
-import type {
-  DockingResult,
-  RankedCandidatesResponse,
-  GeneratedMoleculeResult,
-  ResultArtifactsResponse,
-  ResultArtifact,
-  QuantumResult,
-  ResultsOverview,
-  SimulationResult,
-} from "@/types/api";
-import { ArtifactGrid } from "./components/artifact-grid";
-import { FilteredCandidatesSection } from "./components/filtered-candidates-section";
-import { DockingResultsTable } from "./components/docking-results-table";
-import { GeneratedMoleculesTable } from "./components/generated-molecules-table";
-import { ResultsFilterBar } from "./components/results-filter-bar";
-import type { ScoreBand, StabilityBand } from "./components/results-filter-types";
-import { MetricGrid } from "./components/metric-grid";
-import { SimulationResultsSection } from "./components/simulation-results-section";
-import { QuantumResultsSection } from "./components/quantum-results-section";
-import { SectionTabs } from "./components/section-tabs";
-import { type ResultSection } from "./components/results-types";
-import { ResultsPageSkeleton } from "@/components/shared/skeletons";
-import { ApiErrorState } from "@/components/shared/states";
-import { EmptyState } from "@/components/shared/states";
-import { toFriendlyErrorMessage } from "@/services/api";
-import {
-  DEMO_ARTIFACTS,
-  DEMO_DOCKING_RESULTS,
-  DEMO_FILTERED_CANDIDATES,
-  DEMO_GENERATED_MOLECULES,
-  DEMO_OVERVIEW,
-  DEMO_QUANTUM_RESULTS,
-  DEMO_SIMULATION_RESULTS,
-  DEMO_VIDEO_URL,
-} from "@/services/pipelineDemo";
+import React, { useState } from "react";
+import { 
+  PageHeader, 
+  ActionButtonGroup, 
+  ActionButton, 
+  ReportCard, 
+  SectionHeader,
+  EmptyState,
+  SectionTabs
+} from "@/components/ui";
 
-function filterArtifacts(items: ResultArtifact[], keywords: string[]): ResultArtifact[] {
-  return items.filter((artifact) => {
-    const searchable = `${artifact.name} ${artifact.path}`.toLowerCase();
-    return keywords.some((keyword) => searchable.includes(keyword));
-  });
-}
+export default function ReportsPage() {
+  const [activeTab, setActiveTab] = useState("all");
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-  return null;
-}
+  const REPORTS = [
+    { name: "Candidate Dossier: QU-7721-X", type: "Dossier", date: "May 16, 2026", status: "completed" as const, size: "4.2 MB", exportType: "PDF" },
+    { name: "EGFR T790M Docking Analysis", type: "Analysis", date: "May 15, 2026", status: "completed" as const, size: "12.8 MB", exportType: "SDF" },
+    { name: "ADMET Risk Assessment: Batch-04", type: "Validation", date: "May 14, 2026", status: "completed" as const, size: "1.1 MB", exportType: "PDF" },
+    { name: "Quantum Refinement Log: L858R", type: "Technical", date: "May 13, 2026", status: "running" as const, size: "---", exportType: "LOG" },
+    { name: "HER2 Lead Generation Summary", type: "Summary", date: "May 12, 2026", status: "completed" as const, size: "2.4 MB", exportType: "DOCX" },
+    { name: "Kinase Panel Selectivity Report", type: "Experimental", date: "May 10, 2026", status: "failed" as const, size: "0 MB", exportType: "PDF" },
+  ];
 
-function toNumber(value: unknown, fallback = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  }
-  return fallback;
-}
-
-function pickArray(payload: Record<string, unknown> | null, keys: string[]): unknown[] {
-  if (!payload) return [];
-  const nested = asRecord(payload.results);
-
-  for (const key of keys) {
-    const topLevel = payload[key];
-    if (Array.isArray(topLevel)) {
-      return topLevel;
-    }
-    if (nested) {
-      const nestedValue = nested[key];
-      if (Array.isArray(nestedValue)) {
-        return nestedValue;
-      }
-    }
-  }
-
-  return [];
-}
-
-export default function ResultsPage() {
-  const [activeSection, setActiveSection] = useState<ResultSection>("generated");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [scoreBand, setScoreBand] = useState<ScoreBand>("all");
-  const [stabilityBand, setStabilityBand] = useState<StabilityBand>("all");
-  const [overview, setOverview] = useState<ResultsOverview | null>(null);
-  const [generatedMolecules, setGeneratedMolecules] = useState<GeneratedMoleculeResult[]>([]);
-  const [dockingResults, setDockingResults] = useState<DockingResult[]>([]);
-  const [simulationResults, setSimulationResults] = useState<SimulationResult[]>([]);
-  const [quantumResults, setQuantumResults] = useState<QuantumResult[]>([]);
-  const [filteredRanked, setFilteredRanked] = useState<RankedCandidatesResponse | null>(null);
-  const [artifacts, setArtifacts] = useState<ResultArtifactsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isUsingDemoData, setIsUsingDemoData] = useState(false);
-  const [reloadTick, setReloadTick] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadResults() {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const [
-          overviewData,
-          generatedData,
-          dockingData,
-          simulationData,
-          quantumData,
-          filteredData,
-          artifactsData,
-        ] = await Promise.all([
-          getResultsOverview(),
-          getGeneratedMolecules(25),
-          getDockingResults(25),
-          getSimulationResults(60),
-          getQuantumResults(25),
-          getRankedCandidates("existing", 25),
-          getResultArtifacts(120),
-        ]);
-
-        if (!active) return;
-
-        const useDemoData =
-          generatedData.length === 0 &&
-          dockingData.length === 0 &&
-          simulationData.length === 0 &&
-          quantumData.length === 0 &&
-          (filteredData.items?.length ?? 0) === 0;
-
-        if (useDemoData) {
-          try {
-            const experiments = await getPipelineExperiments();
-            const latest = [...experiments].sort((a, b) => {
-              const left = new Date(a.created_at).getTime();
-              const right = new Date(b.created_at).getTime();
-              return right - left;
-            })[0];
-
-            if (latest?.experiment_id) {
-              const payload = asRecord(await getPipelineResult(latest.experiment_id));
-              const rows = pickArray(payload, ["generated", "generated_molecules", "molecules", "items", "rows", "data"]);
-              const dockingRows = pickArray(payload, ["docking", "docking_results", "docking_scores"]);
-
-              const mappedGenerated: GeneratedMoleculeResult[] = rows.map((item, index) => {
-                const row = asRecord(item) ?? {};
-                return {
-                  molecule_id: String(row.molecule_id ?? row.candidate_id ?? row.id ?? `candidate-${index + 1}`),
-                  smiles: String(row.smiles ?? row.canonical_smiles ?? row.structure ?? ""),
-                  molecular_weight: toNumber(row.molecular_weight ?? row.mw ?? row.MW),
-                  logp: toNumber(row.logp ?? row.log_p ?? row.LogP),
-                  qed: toNumber(row.qed ?? row.qed_score ?? row.score ?? row.qsvm_score),
-                };
-              });
-
-              const mappedFiltered: RankedCandidatesResponse = {
-                source: "generated",
-                file: "pipeline-results",
-                count: rows.length,
-                items: rows.map((item, index) => {
-                  const row = asRecord(item) ?? {};
-                  return {
-                    molecule_id: String(row.molecule_id ?? row.candidate_id ?? row.id ?? `candidate-${index + 1}`),
-                    score: toNumber(row.score ?? row.qed ?? row.qsvm_score ?? row.stability_score),
-                  };
-                }),
-              };
-
-              const mappedDocking: DockingResult[] = dockingRows.map((item, index) => {
-                const row = asRecord(item) ?? {};
-                return {
-                  molecule_id: String(row.molecule_id ?? row.candidate_id ?? row.id ?? `dock-${index + 1}`),
-                  binding_affinity: toNumber(row.binding_affinity ?? row.affinity ?? row.pred_affinity ?? row.score),
-                  h_bonds: toNumber(row.h_bonds ?? row.hbonds ?? row.hydrogen_bonds),
-                  target_protein: String(row.target_protein ?? row.target ?? row.protein ?? "Unknown target"),
-                };
-              });
-
-              const hasLiveRows = mappedGenerated.length > 0 || mappedDocking.length > 0;
-              if (hasLiveRows) {
-                setIsUsingDemoData(false);
-                setOverview({
-                  ...DEMO_OVERVIEW,
-                  counts: {
-                    ...DEMO_OVERVIEW.counts,
-                    generated_candidates: mappedGenerated.length,
-                    docking_result_files: mappedDocking.length,
-                    existing_ranked: mappedFiltered.items.length,
-                  },
-                });
-                setGeneratedMolecules(mappedGenerated);
-                setDockingResults(mappedDocking);
-                setSimulationResults(simulationData);
-                setQuantumResults(quantumData);
-                setFilteredRanked(mappedFiltered);
-                setArtifacts(artifactsData);
-                return;
-              }
-            }
-          } catch {
-            // Keep existing fallback behavior.
-          }
-        }
-
-        setIsUsingDemoData(useDemoData);
-        setOverview(useDemoData ? DEMO_OVERVIEW : overviewData);
-        setGeneratedMolecules(useDemoData ? DEMO_GENERATED_MOLECULES : generatedData);
-        setDockingResults(useDemoData ? DEMO_DOCKING_RESULTS : dockingData);
-        setSimulationResults(useDemoData ? DEMO_SIMULATION_RESULTS : simulationData);
-        setQuantumResults(useDemoData ? DEMO_QUANTUM_RESULTS : quantumData);
-        setFilteredRanked(useDemoData ? DEMO_FILTERED_CANDIDATES : filteredData);
-        setArtifacts(useDemoData ? DEMO_ARTIFACTS : artifactsData);
-      } catch (err) {
-        if (!active) return;
-        setError(toFriendlyErrorMessage(err, "Results are temporarily unavailable."));
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadResults();
-    return () => {
-      active = false;
-    };
-  }, [reloadTick]);
-
-  function handleRetry() {
-    setReloadTick((prev) => prev + 1);
-  }
-
-  function handleClearFilters() {
-    setSearchQuery("");
-    setScoreBand("all");
-    setStabilityBand("all");
-  }
-
-  const metricItems = useMemo(() => {
-    if (!overview) return [] as Array<{ label: string; value: string | number }>;
-    return Object.entries(overview.counts).map(([key, value]) => ({
-      label: key.replace(/_/g, " "),
-      value,
-    }));
-  }, [overview]);
-
-  const dockingArtifacts = useMemo(
-    () => filterArtifacts(artifacts?.items ?? [], ["dock", "docking", "vina", "pose"]),
-    [artifacts]
-  );
-
-  const simulationArtifacts = useMemo(
-    () => filterArtifacts(artifacts?.items ?? [], ["md", "rmsd", "stability", "traj", "simulation"]),
-    [artifacts]
-  );
-
-  const quantumArtifacts = useMemo(
-    () => filterArtifacts(artifacts?.items ?? [], ["qm", "quantum", "dft", "energy", "homo", "lumo"]),
-    [artifacts]
-  );
-
-  const hasAnyResults =
-    generatedMolecules.length > 0 ||
-    dockingResults.length > 0 ||
-    simulationResults.length > 0 ||
-    quantumResults.length > 0 ||
-    (filteredRanked?.items?.length ?? 0) > 0;
+  const filteredReports = activeTab === "all" ? REPORTS : REPORTS.filter(r => r.type.toLowerCase() === activeTab.toLowerCase());
 
   return (
-    <div className="page-shell ui-fade-in relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-cyan-500/10 to-transparent" />
+    <div className="page-shell ui-fade-in flex flex-col gap-8 pb-10">
+      <PageHeader 
+        title="Research Reports"
+        breadcrumb="Research / Reports & Dossiers"
+        description="Access generated scientific reports, validation dossiers, and molecular analysis exports across all discovery programs."
+        actions={
+          <ActionButtonGroup>
+            <ActionButton label="Archives" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>} />
+            <ActionButton label="Generate New" variant="primary" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>} />
+          </ActionButtonGroup>
+        }
+      />
 
-      <div className="ui-state-transition relative flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="page-title sm:text-3xl" style={{ color: "var(--text)" }}>
-            Results Research Dashboard
-          </h1>
-          <p className="page-subtitle mt-1" style={{ color: "var(--muted-text)" }}>
-            Consolidated evidence across candidate generation, docking, simulation, and quantum analysis.
-          </p>
-        </div>
-      </div>
-
-      <div className="ui-state-transition">
-        <SectionTabs activeSection={activeSection} onChange={setActiveSection} />
-      </div>
-
-      <div className="ui-state-transition">
-        <ResultsFilterBar
-          searchQuery={searchQuery}
-          onSearchQueryChange={setSearchQuery}
-          scoreBand={scoreBand}
-          onScoreBandChange={setScoreBand}
-          stabilityBand={stabilityBand}
-          onStabilityBandChange={setStabilityBand}
-          onClear={handleClearFilters}
-        />
-      </div>
-
-      {error ? (
-        <ApiErrorState
-          error={error}
-          onRetry={handleRetry}
-          title="Results are taking a little longer"
-          fallbackMessage="We could not load the latest results yet."
-        />
-      ) : null}
-
-      {loading ? <ResultsPageSkeleton /> : null}
-
-      {overview ? <MetricGrid items={metricItems} /> : null}
-
-      {!loading && !error && !hasAnyResults ? (
-        <EmptyState
-          title="No results available"
-          description="Run pipeline to see data and compare candidates across stages."
-          ctaLabel="Go to Workspace"
-          ctaHref="/workspace"
-          className="min-h-[260px]"
-        />
-      ) : null}
-
-      {!error ? (
-        <div className="ui-state-transition space-y-4">
-          {activeSection === "generated" ? (
-            <GeneratedMoleculesTable
-              items={generatedMolecules}
-              searchQuery={searchQuery}
-              scoreBand={scoreBand}
-              stabilityBand={stabilityBand}
-              loading={loading}
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-border/40 pb-4">
+          <div className="flex gap-6 overflow-x-auto no-scrollbar">
+            {["All Reports", "Dossiers", "Analysis", "Validation", "Technical"].map((tab) => (
+              <button 
+                key={tab}
+                onClick={() => setActiveTab(tab === "All Reports" ? "all" : tab)}
+                className={`whitespace-nowrap pb-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${
+                  (activeTab === "all" && tab === "All Reports") || activeTab === tab 
+                    ? "border-accent text-accent" 
+                    : "border-transparent text-muted-text/50 hover:text-text"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          <div className="relative w-full md:w-64">
+            <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+              <svg className="h-4 w-4 text-muted-text/40" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </div>
+            <input 
+              type="text" 
+              placeholder="Filter by name..." 
+              className="h-9 w-full rounded-lg border border-border/40 bg-card pl-9 pr-4 text-[11px] font-medium focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/50"
             />
-          ) : null}
-
-          {activeSection === "filtered" ? (
-            <FilteredCandidatesSection
-              rows={filteredRanked?.items ?? []}
-              searchQuery={searchQuery}
-              scoreBand={scoreBand}
-              stabilityBand={stabilityBand}
-              loading={loading}
-            />
-          ) : null}
-
-          {activeSection === "docking" ? (
-            <>
-              <DockingResultsTable
-                items={dockingResults}
-                searchQuery={searchQuery}
-                scoreBand={scoreBand}
-                stabilityBand={stabilityBand}
-                loading={loading}
-              />
-              {!loading ? (
-                <ArtifactGrid
-                  title={`Docking Artifacts (${dockingArtifacts.length})`}
-                  subtitle="Pose files, scoring outputs, and docked structure artifacts."
-                  items={dockingArtifacts}
-                />
-              ) : null}
-            </>
-          ) : null}
-
-          {activeSection === "simulation" ? (
-            <>
-              <SimulationResultsSection
-                items={simulationResults}
-                simulationVideoUrl={isUsingDemoData ? DEMO_VIDEO_URL : null}
-                searchQuery={searchQuery}
-                scoreBand={scoreBand}
-                stabilityBand={stabilityBand}
-                loading={loading}
-              />
-              {!loading ? (
-                <ArtifactGrid
-                  title={`Simulation Artifacts (${simulationArtifacts.length})`}
-                  subtitle="Trajectory summaries, RMSD exports, and MD analysis files."
-                  items={simulationArtifacts}
-                />
-              ) : null}
-            </>
-          ) : null}
-
-          {activeSection === "quantum" ? (
-            <>
-              <QuantumResultsSection
-                items={quantumResults}
-                searchQuery={searchQuery}
-                scoreBand={scoreBand}
-                stabilityBand={stabilityBand}
-                loading={loading}
-              />
-              {!loading ? (
-                <ArtifactGrid
-                  title={`Quantum Artifacts (${quantumArtifacts.length})`}
-                  subtitle="QM logs, descriptor tables, and electronic property exports."
-                  items={quantumArtifacts}
-                />
-              ) : null}
-            </>
-          ) : null}
+          </div>
         </div>
-      ) : null}
+
+        {filteredReports.length === 0 ? (
+          <EmptyState 
+            title="No Reports Found"
+            description="No reports match your current filter criteria. Try adjusting your search."
+          />
+        ) : (
+          <div className="grid gap-4">
+            <SectionHeader title="Available Documents" />
+            <div className="flex flex-col gap-3">
+              {filteredReports.map((report, i) => (
+                <ReportCard key={i} {...report} />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <section className="mt-4 rounded-2xl border border-dashed border-border/60 p-8 text-center bg-surface-subtle/20">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-12 w-12 rounded-full bg-accent/10 flex items-center justify-center">
+            <svg className="h-6 w-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-text">Automated Reporting System</h4>
+            <p className="text-xs text-muted-text/60 max-w-sm mx-auto">
+              Configure automated report generation in your program settings to receive scheduled analysis dossiers.
+            </p>
+          </div>
+          <button className="mt-2 text-[10px] font-black uppercase tracking-widest text-accent hover:underline">
+            Configure Reports
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

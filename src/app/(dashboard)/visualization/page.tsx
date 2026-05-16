@@ -1,515 +1,244 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useState } from "react";
+import PageHeader from "@/components/ui/PageHeader";
+import MetricCard from "@/components/ui/MetricCard";
+import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
+import StatusBadge from "@/components/ui/StatusBadge";
+import SectionHeader from "@/components/ui/SectionHeader";
+import ThreeDMoleculeViewer from "@/components/molecules/ThreeDMoleculeViewer";
 
-import {
-  ChemicalSpaceScatter,
-  type ChemicalSpaceColorMode,
-} from "@/components/embeddings";
-import { ThreeDMoleculeViewer } from "@/components/molecules";
-import SimulationViewer from "@/components/simulation/SimulationViewer";
-import { Card } from "@/components/ui";
-import {
-  getPipelineExperiments,
-  getPipelineResult,
-  type VisualizationEmbeddingPoint,
-  type VisualizationMoleculeStructure,
-} from "@/services";
-import {
-  DEMO_GENERATED_MOLECULES,
-  DEMO_SIMULATION_RESULTS,
-} from "@/services/pipelineDemo";
-import type { SimulationResult } from "@/types/api";
+// Mock data for the EGFR discovery program
+const POSES = [
+  { id: "Pose 01", affinity: -10.2, cnnScore: 0.942, rmsd: 1.2, status: "completed" },
+  { id: "Pose 02", affinity: -9.8, cnnScore: 0.885, rmsd: 0.8, status: "completed" },
+  { id: "Pose 03", affinity: -9.5, cnnScore: 0.810, rmsd: 1.5, status: "completed" },
+];
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-  return null;
-}
+const RESIDUES = [
+  { name: "MET793", type: "H-Bond", distance: "2.8Å", confidence: 98 },
+  { name: "LYS745", type: "Salt Bridge", distance: "3.2Å", confidence: 95 },
+  { name: "ASP855", type: "Hydrophobic", distance: "3.8Å", confidence: 92 },
+  { name: "THR790", type: "Gatekeeper", distance: "4.2Å", confidence: 99 },
+  { name: "GLY719", type: "Hydrophobic", distance: "3.5Å", confidence: 90 },
+];
 
-function toNumber(value: unknown, fallback = 0): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : fallback;
-  }
-  return fallback;
-}
-
-function findValue(row: Record<string, unknown>, keys: string[]): unknown {
-  for (const key of keys) {
-    if (key in row) {
-      return row[key];
-    }
-  }
-  return undefined;
-}
-
-function extractSection(payload: Record<string, unknown> | null, keys: string[]): unknown[] {
-  if (!payload) return [];
-
-  const sources: Array<Record<string, unknown>> = [payload];
-  const nested = asRecord(payload.results);
-  if (nested) {
-    sources.push(nested);
-  }
-
-  for (const source of sources) {
-    for (const key of keys) {
-      const value = source[key];
-      if (Array.isArray(value)) {
-        return value;
-      }
-    }
-  }
-
-  return [];
-}
-
-function normalizeMoleculeRows(payload: Record<string, unknown> | null): VisualizationMoleculeStructure[] {
-  const generated = extractSection(payload, ["generated", "generated_molecules"])
-    .map((row) => ({ row: asRecord(row), source: "generated" }))
-    .filter((item) => item.row !== null);
-  const filtered = extractSection(payload, ["filtered", "filtered_candidates"])
-    .map((row) => ({ row: asRecord(row), source: "filtered" }))
-    .filter((item) => item.row !== null);
-  const generic =
-    generated.length === 0 && filtered.length === 0
-      ? extractSection(payload, ["items", "rows", "data"])
-          .map((row) => ({ row: asRecord(row), source: "generated" }))
-          .filter((item) => item.row !== null)
-      : [];
-
-  const combined = [...generated, ...filtered, ...generic];
-  const seen = new Set<string>();
-  const normalized: VisualizationMoleculeStructure[] = [];
-
-  combined.forEach(({ row, source }, index) => {
-    if (!row) return;
-    const moleculeId = String(findValue(row, ["molecule_id", "candidate_id", "id"]) ?? `${source}-${index + 1}`);
-    const smiles = String(findValue(row, ["smiles", "canonical_smiles", "structure"]) ?? "").trim();
-    if (!smiles) return;
-    if (seen.has(moleculeId)) return;
-    seen.add(moleculeId);
-
-    normalized.push({
-      molecule_id: moleculeId,
-      dataset: source,
-      smiles,
-      mw: toNumber(findValue(row, ["molecular_weight", "mw"])),
-      logp: toNumber(findValue(row, ["logp", "log_p"])),
-      qed: toNumber(findValue(row, ["qed", "qed_score"])),
-      pdb: "",
-    });
-  });
-
-  return normalized.slice(0, 5);
-}
-
-function buildEmbeddings(molecules: VisualizationMoleculeStructure[]): VisualizationEmbeddingPoint[] {
-  return molecules.map((molecule, index) => {
-    const angle = (index + 1) * 0.83;
-    const radial = 1.0 + (index % 7) * 0.16;
-    return {
-      molecule_id: molecule.molecule_id,
-      dataset: molecule.dataset,
-      smiles: molecule.smiles,
-      x: Number((Math.cos(angle) * radial + molecule.logp * 0.15).toFixed(3)),
-      y: Number((Math.sin(angle) * radial + (molecule.mw - 250) / 500).toFixed(3)),
-      activity: Number(Math.max(0, Math.min(1, molecule.qed)).toFixed(3)),
-      drugLikeness: Number(Math.max(0, Math.min(1, molecule.qed)).toFixed(3)),
-    };
-  });
-}
-
-function buildDemoMolecules(): VisualizationMoleculeStructure[] {
-  return DEMO_GENERATED_MOLECULES.map((molecule) => ({
-    molecule_id: molecule.molecule_id,
-    dataset: "demo",
-    smiles: molecule.smiles,
-    mw: molecule.molecular_weight,
-    logp: molecule.logp,
-    qed: molecule.qed,
-    pdb: "",
-  })).slice(0, 5);
-}
-
-function normalizeSimulationRows(payload: Record<string, unknown> | null): SimulationResult[] {
-  const nested = asRecord(payload?.results);
-  const simulationNode = asRecord(nested?.simulation) ?? asRecord(payload?.simulation);
-  const primaryRmsdRows = Array.isArray(simulationNode?.rmsd) ? simulationNode.rmsd : null;
-  const simulationRows =
-    primaryRmsdRows ?? extractSection(payload, ["simulation", "simulation_results", "rmsd", "rmsd_results", "items", "rows", "data"]);
-
-  return simulationRows
-    .map((item, index) => {
-      const row = asRecord(item) ?? {};
-      return {
-        molecule_id: String(findValue(row, ["molecule_id", "candidate_id", "id"]) ?? `sim-${index + 1}`),
-        smiles: String(findValue(row, ["smiles", "canonical_smiles", "structure"]) ?? ""),
-        time: toNumber(findValue(row, ["time", "ns", "frame"])),
-        rmsd: toNumber(findValue(row, ["rmsd", "rmsd_value"])),
-      };
-    })
-    .filter((row) => Number.isFinite(row.time) && Number.isFinite(row.rmsd));
-}
-
-function SectionHeading({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <p className="viz-subtitle text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--accent)" }}>
-        {eyebrow}
-      </p>
-      <h2 className="viz-title text-xl tracking-tight" style={{ color: "var(--text)" }}>{title}</h2>
-      <p className="viz-subtitle max-w-3xl text-sm leading-6">{description}</p>
-    </div>
-  );
-}
+const INTERACTIONS = [
+  { label: "Hydrogen Bonds", count: 4, color: "bg-cyan-500" },
+  { label: "Hydrophobic Contacts", count: 12, color: "bg-emerald-500" },
+  { label: "Pi-Stacking", count: 2, color: "bg-indigo-500" },
+  { label: "Salt Bridges", count: 1, color: "bg-amber-500" },
+];
 
 export default function VisualizationPage() {
-  const [selectedMoleculeId, setSelectedMoleculeId] = useState("");
-  const [chemicalColorMode, setChemicalColorMode] =
-    useState<ChemicalSpaceColorMode>("activity");
-  const [embeddings, setEmbeddings] = useState<VisualizationEmbeddingPoint[]>([]);
-  const [simulationResults, setSimulationResults] = useState<SimulationResult[]>([]);
-  const [molecules, setMolecules] = useState<VisualizationMoleculeStructure[]>([]);
-  const [isLoadingVisualization, setIsLoadingVisualization] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-
-    async function bootstrapVisualizationData() {
-      try {
-        setIsLoadingVisualization(true);
-        const experiments = await getPipelineExperiments();
-        if (!active) return;
-
-        if (!experiments.length) {
-          const demoMolecules = buildDemoMolecules();
-          const demoEmbeddings = buildEmbeddings(demoMolecules);
-          setEmbeddings(demoEmbeddings);
-          setSimulationResults(DEMO_SIMULATION_RESULTS);
-          setMolecules(demoMolecules);
-          setSelectedMoleculeId(demoEmbeddings[0]?.molecule_id ?? "");
-          return;
-        }
-
-        const latestExperiment = [...experiments].sort((a, b) => {
-          const left = new Date(a.created_at).getTime();
-          const right = new Date(b.created_at).getTime();
-          return right - left;
-        })[0];
-
-        const pipelineResult = await getPipelineResult(latestExperiment.experiment_id);
-        if (!active) return;
-
-        const payload = asRecord(pipelineResult);
-        const realMolecules = normalizeMoleculeRows(payload);
-        const simulationRows = normalizeSimulationRows(payload);
-        const useDemoData = realMolecules.length === 0 && simulationRows.length === 0;
-
-        const moleculesToUse = useDemoData ? buildDemoMolecules() : realMolecules;
-        const simulationRowsToUse = useDemoData ? DEMO_SIMULATION_RESULTS : simulationRows;
-        const embeddingRows = buildEmbeddings(moleculesToUse);
-
-        setEmbeddings(embeddingRows);
-        setSimulationResults(simulationRowsToUse);
-        setMolecules(moleculesToUse);
-
-        setSelectedMoleculeId((current) => current || embeddingRows[0]?.molecule_id || "");
-      } finally {
-        if (active) {
-          setIsLoadingVisualization(false);
-        }
-      }
-    }
-
-    bootstrapVisualizationData();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!selectedMoleculeId && molecules.length > 0) {
-      setSelectedMoleculeId(molecules[0].molecule_id);
-    }
-  }, [molecules, selectedMoleculeId]);
-
-  const selectedMolecule = useMemo(
-    () => molecules.find((molecule) => molecule.molecule_id === selectedMoleculeId) ?? null,
-    [molecules, selectedMoleculeId],
-  );
-  const isStructureLoading = isLoadingVisualization && Boolean(selectedMoleculeId) && !selectedMolecule;
-
-  const availableSimulationIds = useMemo(
-    () => Array.from(new Set(simulationResults.map((result) => result.molecule_id))),
-    [simulationResults],
-  );
-
-  const selectedSimulationId = useMemo(() => {
-    if (availableSimulationIds.includes(selectedMoleculeId)) {
-      return selectedMoleculeId;
-    }
-
-    return availableSimulationIds[0] ?? null;
-  }, [availableSimulationIds, selectedMoleculeId]);
-
-  const selectedTrajectory = useMemo(() => {
-    if (!selectedSimulationId) return [];
-
-    return simulationResults
-      .filter((result) => result.molecule_id === selectedSimulationId)
-      .slice()
-      .sort((a, b) => a.time - b.time);
-  }, [selectedSimulationId, simulationResults]);
-
-  const viewerMoleculeOptions = useMemo(
-    () =>
-      molecules.map((molecule) => ({
-        id: molecule.molecule_id,
-        label: `${molecule.molecule_id} (${molecule.dataset})`,
-        source: { format: "smiles" as const, value: molecule.smiles, label: "SMILES" },
-      })),
-    [molecules],
-  );
-
-  const chemicalSpaceSelectedPoint = useMemo(() => {
-    return (
-      embeddings.find(
-        (point) => point.molecule_id === selectedMoleculeId,
-      ) ?? null
-    );
-  }, [embeddings, selectedMoleculeId]);
-
-  const handleChemicalPointSelect = useCallback(
-    (point: { molecule_id: string }) => {
-      setSelectedMoleculeId((current) =>
-        current === point.molecule_id ? current : point.molecule_id,
-      );
-    },
-    [],
-  );
+  const [selectedPose, setSelectedPose] = useState(POSES[0]);
+  const [activeTab, setActiveTab] = useState("interactions");
 
   return (
-    <div className="fade-in-soft mx-auto flex w-full max-w-[1480px] flex-col gap-7 pb-12">
-      <div
-        className="flex flex-col gap-4 rounded-2xl border p-5 shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
-        style={{
-          borderColor: "var(--border)",
-          background: "linear-gradient(135deg, color-mix(in srgb, var(--card) 96%, transparent), color-mix(in srgb, var(--bg) 88%, var(--card)))",
-          boxShadow: "0 18px 50px rgba(2, 6, 23, 0.12)",
-        }}
-      >
-        <div>
-          <h1 className="viz-title text-3xl tracking-tight" style={{ color: "var(--text)" }}>Visualization</h1>
-          <p className="viz-subtitle mt-2 max-w-3xl text-sm leading-6">
-            Review molecular structure, embedding topology, and simulation stability in a single stacked workspace.
-          </p>
-        </div>
+    <div className="space-y-8 pb-12">
+      {/* 1. Page Header */}
+      <PageHeader
+        title="Structural Discovery Workbench"
+        breadcrumb="Research / 3D structural discovery"
+        description="Immersive 3D molecular inspection of protein-ligand complexes. Analyze binding pocket residues, docking pose overlays, and residue-level interaction networks."
+        actions={
+          <ActionButtonGroup>
+            <ActionButton label="Export View" variant="outline" />
+            <ActionButton label="Compare Poses" variant="secondary" />
+            <ActionButton label="Ask Pharma LLM" variant="primary" />
+          </ActionButtonGroup>
+        }
+      />
 
-        <div className="flex flex-wrap gap-2 text-xs" style={{ color: "var(--muted-text)" }}>
-          <span className="viz-chip rounded-full px-3 py-1">
-            3D structure rendering
-          </span>
-          <span className="viz-chip rounded-full px-3 py-1">
-            UMAP chemical space
-          </span>
-          <span className="viz-chip rounded-full px-3 py-1">
-            RMSD trajectory review
-          </span>
-        </div>
+      {/* 2. Summary Metrics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <MetricCard label="Complex Stability" value="High" helperText="RMSD < 1.5Å" status="completed" />
+        <MetricCard label="Best Affinity" value="-10.2" unit="kcal/mol" helperText="Pose 01" status="completed" />
+        <MetricCard label="CNN Confidence" value="0.94" helperText="GNINA Rescore" status="active" />
+        <MetricCard label="H-Bonds" value="4" helperText="Active network" status="completed" />
+        <MetricCard label="Pocket Fit" value="Optimal" helperText="Surface complementarity" status="completed" />
       </div>
 
-      <Card
-        className="viz-surface overflow-hidden"
-        header={
-          <SectionHeading
-            eyebrow="Research Terminal"
-            title="Structural Operations Center"
-            description="High-fidelity 3D molecular review with integrated docking telemetry and real-time interaction modeling."
-          />
-        }
-        content={
-          <div className="space-y-6 transition-opacity duration-300 ease-out">
-            {isLoadingVisualization || isStructureLoading ? (
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-                <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {Array.from({ length: 3 }).map((_, idx) => (
-                      <div key={idx} className="rounded-2xl border px-4 py-3" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
-                        <div className="h-3 w-20 rounded-md skeleton-shimmer" style={{ background: "color-mix(in srgb, var(--bg) 55%, var(--card))" }} />
-                        <div className="mt-2 h-4 w-24 rounded-md skeleton-shimmer" style={{ background: "color-mix(in srgb, var(--bg) 55%, var(--card))" }} />
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
+        {/* Left Column: Viewer Workspace & Details */}
+        <div className="lg:col-span-3 space-y-8">
+          {/* 2. Viewer Workspace */}
+          <div className="ui-card-surface overflow-hidden relative group h-[700px]">
+            <ThreeDMoleculeViewer 
+              title="EGFR AlphaFold + QDF-EGFR-001"
+              subtitle="Pose 01: GNINA Rescored Structure"
+              className="h-full border-0 shadow-none"
+            />
+            
+            {/* Overlay Info */}
+            <div className="absolute top-20 left-6 z-20 pointer-events-none">
+              <div className="p-4 rounded-xl border space-y-3 shadow-xl backdrop-blur-md" style={{ background: "color-mix(in srgb, var(--card) 60%, transparent)", borderColor: "var(--border)" }}>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase text-accent/80 tracking-widest">Active Pose</span>
+                  <span className="text-sm font-black text-white">{selectedPose.id}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-text/60">Affinity</span>
+                  <span className="text-sm font-black text-emerald-500">{selectedPose.affinity} kcal/mol</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+            {/* 5. Residue Inspector */}
+            <div className="space-y-4">
+              <SectionHeader title="Residue Inspector" description="Key binding site contacts and interaction energies." />
+              <div className="space-y-3">
+                {RESIDUES.map(res => (
+                  <div key={res.name} className="ui-card-surface p-4 flex items-center justify-between group hover:border-accent/40 transition-all cursor-pointer">
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-lg bg-muted-bg flex items-center justify-center font-black text-xs text-accent">
+                        {res.name}
                       </div>
-                    ))}
-                  </div>
-                  <div className="overflow-hidden rounded-2xl border p-2" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
-                    <div className="h-[560px] rounded-xl skeleton-shimmer" style={{ background: "color-mix(in srgb, var(--bg) 55%, var(--card))" }} />
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  {Array.from({ length: 2 }).map((_, idx) => (
-                    <div key={idx} className="rounded-2xl border p-4" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
-                      <div className="h-3 w-24 rounded-md skeleton-shimmer" style={{ background: "color-mix(in srgb, var(--bg) 55%, var(--card))" }} />
-                      <div className="mt-3 h-3 w-full rounded-md skeleton-shimmer" style={{ background: "color-mix(in srgb, var(--bg) 55%, var(--card))" }} />
-                      <div className="mt-2 h-3 w-4/5 rounded-md skeleton-shimmer" style={{ background: "color-mix(in srgb, var(--bg) 55%, var(--card))" }} />
+                      <div>
+                        <div className="text-xs font-black text-text">{res.type}</div>
+                        <div className="text-[10px] text-muted-text">Distance: {res.distance}</div>
+                      </div>
                     </div>
-                  ))}
+                    <div className="text-right">
+                      <div className="text-[10px] font-black text-accent">{res.confidence}%</div>
+                      <div className="text-[9px] font-bold text-muted-text uppercase">Conf.</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 6. Pose List */}
+            <div className="space-y-4">
+              <SectionHeader title="Available Poses" description="Select structural poses for detailed interaction analysis." />
+              <div className="ui-card-surface overflow-hidden">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
+                      <th className="px-4 py-4">Pose</th>
+                      <th className="px-4 py-4 text-center">Affinity</th>
+                      <th className="px-4 py-4 text-center">CNN</th>
+                      <th className="px-4 py-4 text-center">RMSD</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/20">
+                    {POSES.map(pose => (
+                      <tr 
+                        key={pose.id} 
+                        className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedPose.id === pose.id ? 'bg-accent/[0.03]' : ''}`}
+                        onClick={() => setSelectedPose(pose)}
+                      >
+                        <td className="px-4 py-3 text-xs font-black text-text group-hover:text-accent">{pose.id}</td>
+                        <td className="px-4 py-3 text-center font-mono text-xs text-emerald-500">{pose.affinity}</td>
+                        <td className="px-4 py-3 text-center font-mono text-xs text-text">{pose.cnnScore}</td>
+                        <td className="px-4 py-3 text-center font-mono text-xs text-muted-text">{pose.rmsd}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <button className="w-full py-3 rounded-lg border border-dashed border-border/60 text-[10px] font-black uppercase tracking-widest text-muted-text hover:text-text hover:border-accent/40 transition-all">
+                Load More Poses
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Selectors & Controls */}
+        <div className="space-y-6">
+          {/* 3. Structure / Ligand Selector */}
+          <div className="ui-card-surface p-5 space-y-5">
+            <h4 className="text-xs font-black uppercase tracking-widest text-accent flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+              Structure Config
+            </h4>
+            
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-muted-text/60">Protein Structure</label>
+                <select className="w-full bg-muted-bg border border-border/40 rounded-lg px-3 py-2 text-xs text-text outline-none focus:border-accent/50 transition-all font-bold">
+                  <option>EGFR AlphaFold (P00533)</option>
+                  <option>EGFR Crystal (PDB: 1M17)</option>
+                  <option>EGFR Cryo-EM (PDB: 6V66)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-muted-text/60">Ligand Candidate</label>
+                <select className="w-full bg-muted-bg border border-border/40 rounded-lg px-3 py-2 text-xs text-text outline-none focus:border-accent/50 transition-all font-bold">
+                  <option>QDF-EGFR-001</option>
+                  <option>QDF-EGFR-014</option>
+                  <option>QDF-EGFR-027</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-muted-text/60">Binding Pocket</label>
+                <select className="w-full bg-muted-bg border border-border/40 rounded-lg px-3 py-2 text-xs text-text outline-none focus:border-accent/50 transition-all font-bold">
+                  <option>ATP-binding pocket</option>
+                  <option>Allosteric site (C-helix)</option>
+                  <option>Extracellular domain IV</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Overlay Controls */}
+          <div className="ui-card-surface p-5 space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-widest text-accent flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              View Layers
+            </h4>
+            <div className="space-y-2.5">
+              {[
+                { label: "Protein Surface", checked: false },
+                { label: "Cartoon Representation", checked: true },
+                { label: "Ligand Sticks", checked: true },
+                { label: "Hydrogen Bonds", checked: true },
+                { label: "Hydrophobic Contacts", checked: false },
+                { label: "Pi-Stacking", checked: false },
+                { label: "Pocket Residues", checked: true },
+                { label: "Electrostatic Surface", checked: false },
+              ].map(layer => (
+                <label key={layer.label} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted-bg/50 cursor-pointer transition-all">
+                  <span className="text-[11px] font-bold text-text-secondary">{layer.label}</span>
+                  <input type="checkbox" defaultChecked={layer.checked} className="w-3.5 h-3.5 rounded border-border/40 text-accent focus:ring-accent accent-accent" />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* 7. Interaction Summary */}
+          <div className="ui-card-surface p-5 space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-widest text-accent">Interaction Network</h4>
+            <div className="space-y-4">
+              {INTERACTIONS.map(int => (
+                <div key={int.label} className="space-y-1.5">
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-text/60">
+                    <span>{int.label}</span>
+                    <span className="text-text">{int.count}</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-border/20 rounded-full overflow-hidden">
+                    <div className={`h-full ${int.color}`} style={{ width: `${(int.count / 15) * 100}%` }} />
+                  </div>
                 </div>
-              </div>
-            ) : selectedMolecule ? (
-              <div className="space-y-4">
-                <div className="overflow-hidden rounded-2xl border p-0 shadow-premium" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
-                  <ThreeDMoleculeViewer
-                    title={selectedMolecule.molecule_id}
-                    subtitle="Interactive 3D structural analysis for oncology drug discovery."
-                    moleculeOptions={viewerMoleculeOptions}
-                    selectedMoleculeId={selectedMoleculeId}
-                    onMoleculeSelect={setSelectedMoleculeId}
-                    className="min-h-[650px] border-0 bg-transparent shadow-none"
-                  />
-                </div>
-              </div>
-            ) : null}
-          </div>
-        }
-      />
-
-      <Card
-        className="viz-surface overflow-hidden"
-        header={
-          <SectionHeading
-            eyebrow="Section 2"
-            title="Chemical Space Visualization"
-            description="Explore embeddings derived from real pipeline molecules and click a point to sync the 3D viewer."
-          />
-        }
-        content={
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-center gap-3 text-xs" style={{ color: "var(--muted-text)" }}>
-              <span className="viz-chip rounded-full px-3 py-1">
-                {embeddings.length} points loaded (real pipeline molecules)
-              </span>
-              <span className="viz-chip rounded-full px-3 py-1">
-                Color by {chemicalColorMode === "activity" ? "Activity" : "Drug-likeness"}
-              </span>
-              {chemicalSpaceSelectedPoint ? (
-                <span className="viz-chip active rounded-full px-3 py-1 text-cyan-900 dark:text-cyan-100">
-                  Selected {chemicalSpaceSelectedPoint.molecule_id} | A {chemicalSpaceSelectedPoint.activity.toFixed(2)} | DL {chemicalSpaceSelectedPoint.drugLikeness.toFixed(2)}
-                </span>
-              ) : (
-                <span className="viz-chip rounded-full px-3 py-1">
-                  Click a point to sync the molecule viewer
-                </span>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {([
-                { key: "activity", label: "Activity" },
-                { key: "drugLikeness", label: "Drug-likeness" },
-              ] as const).map((option) => {
-                const isActive = chemicalColorMode === option.key;
-
-                return (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => setChemicalColorMode(option.key)}
-                    className={`viz-chip rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      isActive
-                        ? "active"
-                        : "hover:opacity-90"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="viz-glow-soft overflow-hidden rounded-2xl border p-3" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
-              <ChemicalSpaceScatter
-                data={embeddings}
-                colorMode={chemicalColorMode}
-                selectedMoleculeId={selectedMoleculeId}
-                onPointSelect={handleChemicalPointSelect}
-                isLoading={isLoadingVisualization}
-              />
-              <div className="mt-3 rounded-xl border px-3 py-2 text-xs" style={{ borderColor: "var(--border)", background: "var(--muted-bg)", color: "var(--muted-text)" }}>
-                Hover for molecule details. Scroll to zoom, drag to pan, and click a point to highlight/select it.
-              </div>
+              ))}
             </div>
           </div>
-        }
-      />
 
-      <Card
-        className="viz-surface overflow-hidden"
-        header={
-          <SectionHeading
-            eyebrow="Section 3"
-            title="Simulation Viewer"
-            description="Review RMSD trajectory playback with play/pause controls and stability status from pipeline outputs."
-          />
-        }
-        content={
-          <div className="space-y-5">
-            <div className="flex flex-wrap gap-2">
-              {availableSimulationIds.length > 0 ? (
-                availableSimulationIds.map((id) => {
-                  const isActive = id === selectedSimulationId;
-
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setSelectedMoleculeId(id)}
-                      className={`viz-chip rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                        isActive
-                          ? "active"
-                          : "hover:opacity-90"
-                      }`}
-                    >
-                      {id}
-                    </button>
-                  );
-                })
-              ) : (
-                <span className="rounded-full border px-3 py-1 text-xs" style={{ borderColor: "var(--border)", background: "var(--muted-bg)", color: "var(--muted-text)" }}>
-                  No simulation trajectories loaded yet
-                </span>
-              )}
-            </div>
-
-            {selectedSimulationId && selectedTrajectory.length > 0 ? (
-              <SimulationViewer
-                moleculeId={selectedSimulationId}
-                frames={selectedTrajectory}
-                isLoading={isLoadingVisualization}
-              />
-            ) : isLoadingVisualization ? (
-              <SimulationViewer moleculeId={selectedMoleculeId} frames={[]} isLoading />
-            ) : (
-              <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-white/10 dark:bg-slate-950/50 dark:text-slate-400">
-                No simulation trajectory matched the selected molecule yet.
-              </div>
-            )}
+          {/* 8. Viewer Actions */}
+          <div className="flex flex-col gap-2">
+            <button className="w-full py-3 rounded-lg bg-accent text-bg font-black uppercase tracking-[0.2em] text-[10px] hover:bg-accent/90 shadow-lg shadow-accent/10 transition-all">
+              Initiate MD Refinement
+            </button>
+            <button className="w-full py-3 rounded-lg border border-border text-text font-black uppercase tracking-[0.2em] text-[10px] hover:bg-muted-bg transition-all">
+              Compare with Benchmark
+            </button>
           </div>
-        }
-      />
+        </div>
+      </div>
     </div>
   );
 }

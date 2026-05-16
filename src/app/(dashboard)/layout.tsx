@@ -58,7 +58,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Main",
     items: [
       { label: "Dashboard", href: "/dashboard", icon: "circleGauge" },
-      { label: "Research Projects", href: "/workspace", icon: "folderKanban" },
+      { label: "Research Projects", href: "/research-projects", icon: "folderKanban" },
       { label: "Experiments", href: "/history", icon: "flask" },
       { label: "Reports", href: "/results", icon: "fileText" },
     ],
@@ -112,7 +112,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 const PAGE_CONTEXTS: Array<{ href: string; title: string; breadcrumb: string }> = [
   { href: "/dashboard/history", title: "Experiment History", breadcrumb: "Research Projects / Pipeline history" },
-  { href: "/workspace", title: "Research Projects", breadcrumb: "Research Projects / EGFR NSCLC Discovery" },
+  { href: "/research-projects", title: "Research Projects", breadcrumb: "QuDrugForge™ / Research Projects" },
   { href: "/history", title: "Experiments", breadcrumb: "Research Projects / Experiment history" },
   { href: "/results", title: "Reports", breadcrumb: "Reports / Candidate evidence packages" },
   { href: "/targets", title: "Targets", breadcrumb: "Research / Target intelligence" },
@@ -121,14 +121,12 @@ const PAGE_CONTEXTS: Array<{ href: string; title: string; breadcrumb: string }> 
   { href: "/quantum", title: "Quantum", breadcrumb: "Research / Quantum scoring" },
   { href: "/simulation", title: "Simulations", breadcrumb: "Research / Molecular dynamics" },
   { href: "/validation", title: "ADMET", breadcrumb: "Research / Validation and ADMET" },
-  { href: "/visualization", title: "3D Viewer", breadcrumb: "Visualization / Molecular structure" },
-  { href: "/chemical-space", title: "Chemical Space", breadcrumb: "Visualization / Embedding map" },
-  { href: "/similarity", title: "Similarity", breadcrumb: "Visualization / Similarity search" },
-  { href: "/similarity-search", title: "Similarity", breadcrumb: "Visualization / Similarity engine" },
+  { href: "/visualization", title: "3D Viewer", breadcrumb: "Research / 3D structural discovery" },
+  { href: "/chemical-space", title: "Chemical Space", breadcrumb: "Research / Spatial intelligence" },
+  { href: "/similarity", title: "Similarity", breadcrumb: "Research / Structural similarity" },
   { href: "/models", title: "Models", breadcrumb: "AI / Model registry" },
   { href: "/copilot", title: "Pharma LLM", breadcrumb: "AI / Literature and workflow assistant" },
   { href: "/settings", title: "Settings", breadcrumb: "Organization / Platform controls" },
-  { href: "/home", title: "Dashboard Home", breadcrumb: "Research OS / Protected workspace" },
   { href: "/dashboard", title: "Dashboard", breadcrumb: "Research OS / Oncology Division" },
 ];
 
@@ -140,7 +138,7 @@ function Icon({ name, className = "h-4 w-4" }: { name: IconName; className?: str
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
-    strokeWidth: "1.8",
+    strokeWidth: "1.5",
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
     "aria-hidden": true,
@@ -181,6 +179,66 @@ function Icon({ name, className = "h-4 w-4" }: { name: IconName; className?: str
   return <svg {...common}>{paths[name]}</svg>;
 }
 
+function ResearchContextBar() {
+  return (
+    <div 
+      className="shrink-0 border-b px-6 py-2 flex items-center justify-between gap-6"
+      style={{ borderColor: "var(--border)", background: "var(--card)" }}
+    >
+      <div className="flex items-center gap-6 min-w-0">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Active Project</span>
+          <h2 className="text-sm font-black text-text truncate">EGFR NSCLC Discovery Program</h2>
+        </div>
+        
+        <div className="h-8 w-px bg-border/40 hidden md:block" />
+        
+        <div className="hidden md:flex flex-col">
+          <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Disease / Target</span>
+          <span className="text-[11px] font-bold text-text/80 truncate">Lung Cancer / EGFR (P00533)</span>
+        </div>
+
+        <div className="h-8 w-px bg-border/40 hidden lg:block" />
+
+        <div className="hidden lg:flex flex-col">
+          <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Current Stage</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-bold text-text/80 truncate">Docking & Quantum Reranking</span>
+            <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+          </div>
+        </div>
+
+        <div className="h-8 w-px bg-border/40 hidden xl:block" />
+
+        <div className="hidden xl:flex flex-col w-32">
+          <div className="flex items-center justify-between mb-0.5">
+            <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Progress</span>
+            <span className="text-[9px] font-black text-accent">68%</span>
+          </div>
+          <div className="h-1 w-full bg-border/20 rounded-full overflow-hidden">
+            <div className="h-full bg-accent" style={{ width: '68%' }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 shrink-0">
+        <Link 
+          href="/research-projects"
+          className="hidden sm:flex items-center gap-2 rounded border border-border/40 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-text hover:text-text hover:border-border transition-all"
+        >
+          Switch Project
+        </Link>
+        <button className="flex items-center gap-2 rounded bg-accent px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-bg hover:bg-accent/90 transition-all shadow-lg shadow-accent/10">
+          Run Pipeline
+        </button>
+        <button className="hidden sm:flex h-8 w-8 items-center justify-center rounded border border-border/40 text-muted-text hover:text-text transition-all" title="Generate Report">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 10-8 0v2a2 2 0 002 2h4a2 2 0 002-2zm3-9a9 9 0 1118 0 9 9 0 01-18 0z" /></svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function isRouteActive(pathname: string, href: string) {
   const [baseHref] = href.split("?");
   return pathname === baseHref || pathname.startsWith(`${baseHref}/`);
@@ -200,6 +258,22 @@ export default function DashboardLayout({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const pathname = usePathname();
   const pageContext = useMemo(() => getPageContext(pathname), [pathname]);
+
+  const showContextBar = useMemo(() => {
+    const contextRoutes = [
+      "/research-projects",
+      "/targets",
+      "/molecules",
+      "/docking",
+      "/quantum",
+      "/simulation",
+      "/validation",
+      "/visualization",
+      "/chemical-space",
+      "/similarity"
+    ];
+    return contextRoutes.some(route => pathname.startsWith(route));
+  }, [pathname]);
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -222,7 +296,7 @@ export default function DashboardLayout({
   return (
     <div className="h-screen overflow-hidden" style={{ background: "var(--bg)", color: "var(--text)" }}>
       <aside
-        className={`fixed inset-y-0 left-0 z-40 hidden border-r lg:flex ${isSidebarCollapsed ? "w-20" : "w-72"}`}
+        className={`fixed inset-y-0 left-0 z-40 hidden border-r lg:flex ${isSidebarCollapsed ? "w-20" : "w-64"}`}
         style={{ borderColor: "var(--border)", background: "var(--sidebar-bg)" }}
       >
         <div className="flex h-full min-w-0 flex-1 flex-col">
@@ -234,7 +308,7 @@ export default function DashboardLayout({
                 width={180}
                 height={43}
                 priority
-                className={isSidebarCollapsed ? "h-auto w-12 object-contain" : "h-auto w-44 max-w-full object-contain"}
+                className={isSidebarCollapsed ? "h-auto w-10 object-contain" : "h-auto w-40 max-w-full object-contain"}
               />
             </div>
 
@@ -265,16 +339,16 @@ export default function DashboardLayout({
           </div>
 
           <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
-            <div className="space-y-4">
+            <div className="space-y-3">
               {NAV_GROUPS.map((group) => (
                 <div key={group.label}>
                   {!isSidebarCollapsed ? (
-                    <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--muted-text)" }}>
+                    <div className="px-2.5 pb-1.5 text-[10px] font-bold uppercase tracking-[0.2em] opacity-50" style={{ color: "var(--muted-text)" }}>
                       {group.label}
                     </div>
                   ) : null}
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     {group.items.map((item) => {
                       const isActive = isRouteActive(pathname, item.matchHref ?? item.href);
 
@@ -306,7 +380,7 @@ export default function DashboardLayout({
                           title={isSidebarCollapsed ? item.label : undefined}
                         >
                           {isActive && !isSidebarCollapsed ? (
-                            <span className="absolute left-0 top-2.5 h-5 w-0.5 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
+                            <span className="absolute left-0 top-2 h-5 w-0.5 rounded-full" style={{ backgroundColor: "var(--accent)" }} />
                           ) : null}
                           <Icon name={item.icon} className="h-4 w-4 shrink-0" />
                           {!isSidebarCollapsed ? <span className="truncate">{item.label}</span> : null}
@@ -335,26 +409,25 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <div className="flex h-screen min-w-0 flex-col transition-[padding] duration-200 lg:pl-72" style={{ paddingLeft: isSidebarCollapsed ? "5rem" : undefined }}>
+      <div className="flex h-screen min-w-0 flex-col transition-[padding] duration-200 lg:pl-64" style={{ paddingLeft: isSidebarCollapsed ? "5rem" : undefined }}>
         <header
           className="z-30 shrink-0 border-b backdrop-blur-xl"
           style={{ borderColor: "var(--border)", background: "color-mix(in srgb, var(--bg) 92%, transparent)" }}
         >
-          <div className="grid min-h-16 grid-cols-1 items-center gap-3 px-4 py-3 sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,1fr)_auto] lg:px-8">
+          <div className="grid min-h-[56px] grid-cols-1 items-center gap-3 px-4 py-2 sm:px-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(16rem,1fr)_auto] lg:px-8">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: "var(--muted-text)" }}>
-                {pageContext.breadcrumb.split(" / ")[0]}
-              </p>
-              <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg" style={{ color: "var(--text)" }}>
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em]" style={{ color: "var(--muted-text)" }}>
+                <span>{pageContext.breadcrumb.split(" / ")[0]}</span>
+                <Icon name="chevronRight" className="h-2.5 w-2.5 opacity-40" />
+                <span>{pageContext.breadcrumb.split(" / ").slice(1).join(" / ")}</span>
+              </div>
+              <h1 className="mt-0.5 truncate text-base font-bold tracking-tight" style={{ color: "var(--text)" }}>
                 {pageContext.title}
               </h1>
-              <p className="mt-0.5 truncate text-xs" style={{ color: "var(--muted-text)" }}>
-                {pageContext.breadcrumb}
-              </p>
             </div>
 
             <label
-              className="hidden h-10 min-w-0 items-center gap-2 rounded-xl border px-3 lg:flex"
+              className="hidden h-9 min-w-0 items-center gap-2 rounded-lg border px-3 lg:flex"
               style={{ borderColor: "var(--border)", background: "var(--card)", color: "var(--muted-text)" }}
             >
               <Icon name="search" className="h-4 w-4 shrink-0" />
@@ -441,7 +514,7 @@ export default function DashboardLayout({
             </label>
           </div>
 
-          <nav className="border-t px-4 py-2 lg:hidden" style={{ borderColor: "var(--border)" }} aria-label="Mobile navigation">
+          <nav className="border-t px-4 py-1.5 lg:hidden" style={{ borderColor: "var(--border)" }} aria-label="Mobile navigation">
             <div className="flex gap-2 overflow-x-auto">
               {MOBILE_NAV_ITEMS.map((item) => {
                 const isActive = isRouteActive(pathname, item.matchHref ?? item.href);
@@ -467,7 +540,9 @@ export default function DashboardLayout({
           </nav>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-8">
+        {showContextBar && <ResearchContextBar />}
+
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6 lg:px-10">
           {children}
         </main>
       </div>

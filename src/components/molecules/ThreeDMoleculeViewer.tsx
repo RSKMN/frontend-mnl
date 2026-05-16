@@ -346,11 +346,11 @@ export default function ThreeDMoleculeViewer({
       </header>
 
       <div className="flex-1 grid gap-0 lg:grid-cols-[1fr_320px] min-h-0">
-        <div className="relative min-h-[400px] overflow-hidden bg-white">
+        <div className="relative min-h-[400px] overflow-hidden" style={{ background: "color-mix(in srgb, var(--card) 95%, black)" }}>
           <div ref={containerRef} className="absolute inset-0" />
 
           {/* Interaction Legend */}
-          <div className="absolute top-4 left-4 z-20 space-y-2 rounded-xl border bg-white/80 p-3 shadow-sm backdrop-blur-md" style={{ borderColor: "var(--border)" }}>
+          <div className="absolute top-4 left-4 z-20 space-y-2 rounded-xl border p-3 shadow-sm backdrop-blur-md" style={{ borderColor: "var(--border)", background: "color-mix(in srgb, var(--card) 80%, transparent)" }}>
             <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary/60 mb-2">Interaction Legend</p>
             <div className="space-y-1.5">
               {[
@@ -374,7 +374,8 @@ export default function ThreeDMoleculeViewer({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm"
+                className="absolute inset-0 z-50 flex flex-col items-center justify-center backdrop-blur-sm"
+                style={{ background: "color-mix(in srgb, var(--card) 90%, transparent)" }}
               >
                 <div className="relative mb-8 h-20 w-20">
                   <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
@@ -399,7 +400,7 @@ export default function ThreeDMoleculeViewer({
           </AnimatePresence>
 
           {error && (
-            <div className="absolute inset-0 z-40 flex items-center justify-center px-10 text-center bg-white/90">
+            <div className="absolute inset-0 z-40 flex items-center justify-center px-10 text-center" style={{ background: "color-mix(in srgb, var(--card) 90%, transparent)" }}>
               <div className="max-w-xs space-y-4">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-error/10 text-error">
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -419,19 +420,19 @@ export default function ThreeDMoleculeViewer({
             <div className="space-y-4">
               <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary/60">Simulation Telemetry</p>
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border bg-white p-3 shadow-sm" style={{ borderColor: "var(--border)" }}>
+                <div className="rounded-xl border p-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
                   <p className="text-[9px] font-bold text-text-secondary uppercase">Affinity</p>
                   <p className="text-lg font-black text-primary">-9.2 <span className="text-[10px] text-text-secondary/50">kcal/mol</span></p>
                 </div>
-                <div className="rounded-xl border bg-white p-3 shadow-sm" style={{ borderColor: "var(--border)" }}>
+                <div className="rounded-xl border p-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
                   <p className="text-[9px] font-bold text-text-secondary uppercase">H-Bonds</p>
                   <p className="text-lg font-black text-success">4 <span className="text-[10px] text-text-secondary/50">active</span></p>
                 </div>
-                <div className="rounded-xl border bg-white p-3 shadow-sm" style={{ borderColor: "var(--border)" }}>
+                <div className="rounded-xl border p-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
                   <p className="text-[9px] font-bold text-text-secondary uppercase">Quantum</p>
                   <p className="text-lg font-black text-accent">0.96 <span className="text-[10px] text-text-secondary/50">QSVM</span></p>
                 </div>
-                <div className="rounded-xl border bg-white p-3 shadow-sm" style={{ borderColor: "var(--border)" }}>
+                <div className="rounded-xl border p-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
                   <p className="text-[9px] font-bold text-text-secondary uppercase">Toxicity</p>
                   <p className="text-lg font-black text-success">Low <span className="text-[10px] text-text-secondary/50">score</span></p>
                 </div>
@@ -441,7 +442,7 @@ export default function ThreeDMoleculeViewer({
             {/* Ligand Metadata */}
             <div className="space-y-4">
               <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary/60">Ligand Metadata</p>
-              <div className="rounded-xl border bg-white p-4 space-y-3 shadow-sm" style={{ borderColor: "var(--border)" }}>
+              <div className="rounded-xl border p-4 space-y-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] font-bold text-text-secondary">MW</span>
                   <span className="text-[11px] font-black text-text">421.4 g/mol</span>
@@ -471,8 +472,9 @@ export default function ThreeDMoleculeViewer({
                     onClick={() => setRepresentation(mode)}
                     className={joinClasses(
                       "rounded-lg border px-2 py-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                      representation === mode ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "bg-white hover:bg-muted-bg"
+                      representation === mode ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" : "hover:bg-muted-bg"
                     )}
+                    style={{ background: representation === mode ? "" : "var(--card)", borderColor: representation === mode ? "" : "var(--border)" }}
                   >
                     {mode}
                   </button>
@@ -480,9 +482,9 @@ export default function ThreeDMoleculeViewer({
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => handleZoom(1.15)} className="rounded-lg border bg-white p-2 text-[10px] font-black uppercase tracking-widest hover:bg-muted-bg">Zoom +</button>
-                <button onClick={() => handleZoom(0.85)} className="rounded-lg border bg-white p-2 text-[10px] font-black uppercase tracking-widest hover:bg-muted-bg">Zoom -</button>
-                <button onClick={() => handleRotate("y", 15)} className="rounded-lg border bg-white p-2 text-[10px] font-black uppercase tracking-widest hover:bg-muted-bg">Rotate</button>
+                <button onClick={() => handleZoom(1.15)} className="rounded-lg border p-2 text-[10px] font-black uppercase tracking-widest hover:bg-muted-bg" style={{ background: "var(--card)", borderColor: "var(--border)" }}>Zoom +</button>
+                <button onClick={() => handleZoom(0.85)} className="rounded-lg border p-2 text-[10px] font-black uppercase tracking-widest hover:bg-muted-bg" style={{ background: "var(--card)", borderColor: "var(--border)" }}>Zoom -</button>
+                <button onClick={() => handleRotate("y", 15)} className="rounded-lg border p-2 text-[10px] font-black uppercase tracking-widest hover:bg-muted-bg" style={{ background: "var(--card)", borderColor: "var(--border)" }}>Rotate</button>
                 <button onClick={handleReset} className="rounded-lg border bg-primary/5 text-primary border-primary/20 p-2 text-[10px] font-black uppercase tracking-widest hover:bg-primary/10">Reset</button>
               </div>
             </div>

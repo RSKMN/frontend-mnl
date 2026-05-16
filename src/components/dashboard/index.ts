@@ -10,3 +10,6 @@ export { default as StatCard } from "./StatCard";
 export { default as SummaryCard } from "./SummaryCard";
 export { default as SummaryCards } from "./SummaryCards";
 export { default as TpsaVsLogpChart } from "./TpsaVsLogpChart";
+export { default as RankingsTable } from "./RankingsTable";
+export { default as ActivityPanel } from "./ActivityPanel";
+export { default as AssistantWidget } from "./AssistantWidget";

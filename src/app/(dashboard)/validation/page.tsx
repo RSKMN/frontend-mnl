@@ -1,232 +1,310 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
+import MetricCard from "@/components/ui/MetricCard";
+import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
+import StatusBadge from "@/components/ui/StatusBadge";
+import SectionHeader from "@/components/ui/SectionHeader";
 
-type Metric = {
-  label: string;
-  value: string;
-  status: "success" | "warning" | "error" | "default";
-};
-
-const VALIDATION_METRICS: Metric[] = [
-  { label: "Proof Gate Status", value: "Verified", status: "success" },
-  { label: "Evidence Status", value: "High Coverage", status: "success" },
-  { label: "Validation Confidence", value: "0.962", status: "default" },
-  { label: "Reproducibility Rate", value: "99.4%", status: "success" }
-];
-
-const MODEL_VAL_DATA = [
-  { model: "Activity Predictor", auroc: 0.942, accuracy: 0.89, f1: 0.91, precision: 0.92, recall: 0.90 },
-  { model: "ADMET Classifier", auroc: 0.885, accuracy: 0.84, f1: 0.86, precision: 0.85, recall: 0.87 },
-  { model: "Solubility Model", auroc: 0.910, accuracy: 0.87, f1: 0.88, precision: 0.89, recall: 0.87 },
+// Mock data for ADMET results
+const ADMET_RESULTS = [
+  {
+    candidate: "QDF-EGFR-001",
+    overallRisk: "Low",
+    herg: "Low",
+    cyp3a4: "Low",
+    cyp2d6: "Low",
+    bbb: "High",
+    clearance: "Med",
+    hepatotox: "Low",
+    lipinski: "Pass",
+    status: "completed"
+  },
+  {
+    candidate: "QDF-EGFR-014",
+    overallRisk: "Medium",
+    herg: "High",
+    cyp3a4: "Low",
+    cyp2d6: "Low",
+    bbb: "Med",
+    clearance: "Low",
+    hepatotox: "Low",
+    lipinski: "Pass",
+    status: "completed"
+  },
+  {
+    candidate: "QDF-EGFR-027",
+    overallRisk: "High",
+    herg: "Med",
+    cyp3a4: "High",
+    cyp2d6: "Low",
+    bbb: "Low",
+    clearance: "High",
+    hepatotox: "Med",
+    lipinski: "Fail",
+    status: "completed"
+  },
+  {
+    candidate: "QDF-EGFR-033",
+    overallRisk: "Low",
+    herg: "Low",
+    cyp3a4: "Low",
+    cyp2d6: "Low",
+    bbb: "Low",
+    clearance: "Low",
+    hepatotox: "Low",
+    lipinski: "Pass",
+    status: "active"
+  }
 ];
 
 export default function ValidationPage() {
-  const [activePanel, setActivePanel] = useState<string>("benchmarks");
+  const searchParams = useSearchParams();
+  const panel = searchParams.get("panel");
+  const isAdmetView = panel === "admet" || !panel; // Default to admet if no panel
 
-  const timeline = [
-    { stage: "Data Ingestion", status: "complete", date: "2024-05-10" },
-    { stage: "Model Training", status: "complete", date: "2024-05-11" },
-    { stage: "Virtual Screening", status: "complete", date: "2024-05-12" },
-    { stage: "Docking Validation", status: "complete", date: "2024-05-13" },
-    { stage: "Quantum Reranking", status: "complete", date: "2024-05-14" },
-    { stage: "Expert Review", status: "in-progress", date: "2024-05-15" }
-  ];
+  const [selectedResult, setSelectedResult] = useState(ADMET_RESULTS[0]);
 
   return (
-    <div className="page-shell">
-      <header className="page-header">
-        <div className="page-kicker">Scientific Integrity & Audit</div>
-        <h1 className="page-title">Validation & Research Evidence</h1>
-        <p className="page-subtitle">
-          A comprehensive audit trail of computational workflows, benchmarking results, and reproducibility metrics ensuring the scientific credibility of prioritized leads.
-        </p>
-      </header>
+    <div className="space-y-8 pb-12">
+      {/* 1. Page Header */}
+      <PageHeader
+        title={isAdmetView ? "ADMET & Toxicity Risk" : "Scientific Validation"}
+        breadcrumb={isAdmetView ? "Oncology Research / ADMET Profiling" : "Oncology Research / Validation Audit"}
+        description={isAdmetView 
+          ? "Evaluate Absorption, Distribution, Metabolism, Excretion, and Toxicity profiles for top candidates. Inspect drug-likeness and toxicity endpoints."
+          : "Audit computational workflows, benchmarking results, and reproducibility metrics for prioritized research leads."
+        }
+        actions={
+          <ActionButtonGroup>
+            <ActionButton label="Export Risk Report" variant="outline" />
+            <ActionButton label="Compare Profiles" variant="secondary" />
+            <ActionButton label="Ask Pharma LLM" variant="primary" />
+          </ActionButtonGroup>
+        }
+      />
 
-      {/* Validation Overview Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {VALIDATION_METRICS.map((m) => (
-          <div key={m.label} className="ui-card-surface p-6">
-            <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">{m.label}</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-white">{m.value}</div>
-              <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
-                m.status === 'success' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
-              }`}>
-                {m.status === 'success' ? 'Passed' : 'Calculated'}
-              </span>
+      {/* 2. ADMET Summary Metrics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <MetricCard label="Screened" value="150" helperText="Total candidates" status="completed" />
+        <MetricCard label="Low Risk" value="45" helperText="Passed all gates" status="completed" />
+        <MetricCard label="hERG Alerts" value="12" helperText="Cardiac risk" status="failed" />
+        <MetricCard label="CYP Alerts" value="8" helperText="Metabolic risk" status="warning" />
+        <MetricCard label="BBB Positive" value="18" helperText="CNS penetration" status="active" />
+        <MetricCard label="Lipinski Pass" value="92%" helperText="Drug-likeness" status="completed" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        {/* Left Column: Risk Table & Flags */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* 3. ADMET Risk Table */}
+          <div className="space-y-4">
+            <SectionHeader title="ADMET Discovery Ledger" description="Comprehensive risk assessment across multiple physiological and toxicological endpoints." />
+            <div className="ui-card-surface overflow-hidden">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
+                    <th className="px-4 py-4">Candidate</th>
+                    <th className="px-4 py-4 text-center">Risk</th>
+                    <th className="px-4 py-4 text-center">hERG</th>
+                    <th className="px-4 py-4 text-center">CYP3A4</th>
+                    <th className="px-4 py-4 text-center">BBB</th>
+                    <th className="px-4 py-4 text-center">Lipinski</th>
+                    <th className="px-4 py-4 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {ADMET_RESULTS.map(res => (
+                    <tr 
+                      key={res.candidate} 
+                      className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedResult.candidate === res.candidate ? 'bg-accent/[0.03]' : ''}`}
+                      onClick={() => setSelectedResult(res)}
+                    >
+                      <td className="px-4 py-3 font-mono text-xs font-bold text-text group-hover:text-accent">{res.candidate}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${
+                          res.overallRisk === 'Low' ? 'text-success' : res.overallRisk === 'Medium' ? 'text-warning' : 'text-error'
+                        }`}>
+                          {res.overallRisk}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-[10px] font-black ${res.herg === 'High' ? 'text-error' : res.herg === 'Med' ? 'text-warning' : 'text-success'}`}>
+                          {res.herg[0]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-[10px] font-black ${res.cyp3a4 === 'High' ? 'text-error' : 'text-success'}`}>
+                          {res.cyp3a4[0]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-[10px] font-black ${res.bbb === 'High' ? 'text-accent' : 'text-muted-text/40'}`}>
+                          {res.bbb === 'High' ? 'Y' : 'N'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-[10px] font-black ${res.lipinski === 'Pass' ? 'text-success' : 'text-error'}`}>
+                          {res.lipinski}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <StatusBadge status={res.status as any} size="sm" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        ))}
-      </section>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-8">
-          {/* Benchmark Summary */}
-          <section className="ui-card-surface overflow-hidden">
-            <div className="p-6 border-b border-white/5 flex items-center justify-between">
-              <h3 className="font-bold">Computational Benchmarking Summary</h3>
-              <div className="flex gap-2">
-                <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-bold uppercase">Scaffold Split</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-bold uppercase">v3.2.1</span>
-              </div>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div>
-                  <div className="flex justify-between text-xs mb-2">
-                    <span className="text-slate-400">Docking Pose Recovery (RMSD &lt; 2.0Å)</span>
-                    <span className="text-emerald-400 font-bold">88.2%</span>
+          {/* 7. Risk Flags */}
+          <div className="space-y-4">
+             <SectionHeader title="Priority Alerts" description="Heuristic-based warnings requiring immediate pharmacologist review." />
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { type: "error", title: "hERG Risk Elevated", msg: "High probability of cardiotoxicity for QDF-EGFR-014.", cand: "QDF-EGFR-014" },
+                  { type: "warning", title: "CYP3A4 Inhibition", msg: "Strong metabolic interference likely for QDF-EGFR-027.", cand: "QDF-EGFR-027" },
+                  { type: "active", title: "BBB Penetration", msg: "Uncertain CNS partitioning detected for QDF-EGFR-088.", cand: "QDF-EGFR-088" },
+                  { type: "warning", title: "Lipophilic Warning", msg: "High LogP (> 5.0) may lead to poor solubility and aggregation.", cand: "QDF-EGFR-045" }
+                ].map((flag, i) => (
+                  <div key={i} className={`p-4 rounded-xl border flex gap-4 ${
+                    flag.type === 'error' ? 'bg-error/5 border-error/20' : 
+                    flag.type === 'warning' ? 'bg-warning/5 border-warning/20' : 
+                    'bg-accent/5 border-accent/20'
+                  }`}>
+                    <div className="shrink-0 mt-0.5">
+                      <svg className={`w-5 h-5 ${
+                        flag.type === 'error' ? 'text-error' : flag.type === 'warning' ? 'text-warning' : 'text-accent'
+                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-black uppercase tracking-widest text-text mb-0.5">{flag.title}</div>
+                      <p className="text-[10px] text-muted-text leading-relaxed">{flag.msg}</p>
+                      <span className="text-[9px] font-black text-accent mt-2 block">{flag.cand}</span>
+                    </div>
                   </div>
-                  <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500" style={{ width: "88.2%" }} />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-xs mb-2">
-                    <span className="text-slate-400">Reference Inhibitor Rediscovery</span>
-                    <span className="text-cyan-400 font-bold">Top 1%</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-cyan-500" style={{ width: "95%" }} />
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="p-3 rounded-lg bg-slate-900 border border-white/5">
-                  <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">Benchmark Datasets</div>
-                  <p className="text-xs text-slate-300">DUD-E, CASF-2016, LIT-PCBA, Internal Kinase Panel v4</p>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-900 border border-white/5">
-                  <div className="text-[10px] text-slate-500 uppercase font-bold mb-1">ADMET Benchmarks</div>
-                  <p className="text-xs text-slate-300">Tox21 Challenge, ClinTox, SIDER v2.1</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Model Validation Table */}
-          <section className="ui-card-surface overflow-hidden">
-             <div className="p-6 border-b border-white/5">
-              <h3 className="font-bold">ML Model Performance Metrics</h3>
-            </div>
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-900/50 text-[11px] font-bold text-slate-500 uppercase">
-                  <th className="px-6 py-4">Model Pipeline</th>
-                  <th className="px-6 py-4">AUROC</th>
-                  <th className="px-6 py-4">Accuracy</th>
-                  <th className="px-6 py-4">F1 Score</th>
-                  <th className="px-6 py-4">Precision</th>
-                  <th className="px-6 py-4">Recall</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {MODEL_VAL_DATA.map((row) => (
-                  <tr key={row.model} className="hover:bg-white/5 transition-colors text-sm">
-                    <td className="px-6 py-4 font-bold text-slate-200">{row.model}</td>
-                    <td className="px-6 py-4 font-mono text-cyan-400">{row.auroc.toFixed(3)}</td>
-                    <td className="px-6 py-4 font-mono text-slate-400">{row.accuracy.toFixed(2)}</td>
-                    <td className="px-6 py-4 font-mono text-slate-400">{row.f1.toFixed(2)}</td>
-                    <td className="px-6 py-4 font-mono text-slate-400">{row.precision.toFixed(2)}</td>
-                    <td className="px-6 py-4 font-mono text-slate-400">{row.recall.toFixed(2)}</td>
-                  </tr>
                 ))}
-              </tbody>
-            </table>
-          </section>
-
-          {/* Research Evidence Cards */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { title: "Docking Evidence", text: "Multi-pose consensus scoring with Glide/AutoDock Vina. RMSD stability confirmed across top 5 clusters.", color: "indigo" },
-              { title: "GNINA Evidence", text: "CNN-based scoring integration for protein-ligand interaction refinement.", color: "cyan" },
-              { title: "QM Evidence", text: "Density Functional Theory (DFT) calculations for electronic property validation of transition states.", color: "emerald" },
-              { title: "Simulation Evidence", text: "Free Energy Perturbation (FEP) runs showing convergence within 0.5 kcal/mol.", color: "amber" }
-            ].map((ev) => (
-              <div key={ev.title} className="ui-card-surface p-6 border-l-4" style={{ borderColor: `var(--${ev.color}, ${ev.color === 'indigo' ? '#6366f1' : ev.color === 'cyan' ? '#06b6d4' : ev.color === 'emerald' ? '#10b981' : '#f59e0b'})` }}>
-                <h4 className="font-bold mb-2 text-slate-200">{ev.title}</h4>
-                <p className="text-xs text-slate-500 leading-relaxed">{ev.text}</p>
-              </div>
-            ))}
-          </section>
+             </div>
+          </div>
         </div>
 
-        <div className="space-y-8">
-          {/* Validation Timeline */}
-          <section className="ui-card-surface p-6">
-            <h3 className="font-bold mb-6">Workflow Progression</h3>
-            <div className="space-y-6">
-              {timeline.map((item, i) => (
-                <div key={item.stage} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className={`w-3 h-3 rounded-full ${item.status === 'complete' ? 'bg-emerald-500' : 'bg-slate-700 animate-pulse'}`} />
-                    {i < timeline.length - 1 && <div className="w-px flex-1 bg-slate-800 my-1" />}
-                  </div>
-                  <div className="pb-4">
-                    <div className="text-xs font-bold text-slate-200">{item.stage}</div>
-                    <div className="text-[10px] text-slate-500">{item.date}</div>
-                  </div>
+        {/* Right Column: Deep Dive Panels */}
+        <div className="space-y-6">
+          {/* 4. Toxicity Endpoint Panel */}
+          <div className="ui-card-surface p-5 space-y-4">
+            <h4 className="text-xs font-black uppercase tracking-widest text-accent flex items-center gap-2">
+               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+               Toxicity Profiling: {selectedResult.candidate}
+            </h4>
+            <div className="space-y-3">
+               {[
+                 { label: "hERG Inhibition", risk: selectedResult.herg, val: 12 },
+                 { label: "Hepatotoxicity", risk: selectedResult.overallRisk === 'High' ? 'Med' : 'Low', val: 4 },
+                 { label: "Mutagenicity (Ames)", risk: "Low", val: 1 },
+                 { label: "Cardiotoxicity", risk: selectedResult.herg === 'High' ? 'High' : 'Low', val: 8 },
+                 { label: "CYP Inhibition", risk: selectedResult.cyp3a4, val: 24 },
+                 { label: "Skin Sensitization", risk: "Low", val: 2 }
+               ].map(tox => (
+                 <div key={tox.label} className="flex items-center justify-between p-2 rounded bg-muted-bg/50 border border-border/20">
+                    <span className="text-[10px] font-bold text-muted-text">{tox.label}</span>
+                    <div className="flex items-center gap-3">
+                       <div className="w-16 h-1 bg-border/20 rounded-full overflow-hidden">
+                          <div className={`h-full ${tox.risk === 'High' ? 'bg-error' : tox.risk === 'Med' ? 'bg-warning' : 'bg-success'}`} style={{ width: `${tox.risk === 'High' ? 85 : tox.risk === 'Med' ? 45 : 15}%` }} />
+                       </div>
+                       <span className={`text-[9px] font-black uppercase ${tox.risk === 'High' ? 'text-error' : tox.risk === 'Med' ? 'text-warning' : 'text-success'}`}>
+                          {tox.risk}
+                       </span>
+                    </div>
+                 </div>
+               ))}
+            </div>
+          </div>
+
+          {/* 5. Drug-likeness Panel */}
+          <div className="ui-card-surface p-5 space-y-4">
+             <h4 className="text-xs font-black uppercase tracking-widest text-accent">Physicochemical Properties</h4>
+             <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded-lg bg-muted-bg/50 border border-border/20">
+                   <span className="text-[9px] font-bold text-muted-text/50 uppercase block mb-1">Lipinski Rule</span>
+                   <span className={`text-xs font-black ${selectedResult.lipinski === 'Pass' ? 'text-success' : 'text-error'}`}>
+                      {selectedResult.lipinski === 'Pass' ? 'COMPLIANT' : 'FAIL'}
+                   </span>
                 </div>
-              ))}
-            </div>
-          </section>
+                <div className="p-3 rounded-lg bg-muted-bg/50 border border-border/20">
+                   <span className="text-[9px] font-bold text-muted-text/50 uppercase block mb-1">QED Score</span>
+                   <span className="text-xs font-black text-text">0.742</span>
+                </div>
+                <div className="p-3 rounded-lg bg-muted-bg/50 border border-border/20">
+                   <span className="text-[9px] font-bold text-muted-text/50 uppercase block mb-1">LogP (Octanol/W)</span>
+                   <span className="text-xs font-black text-text">3.42</span>
+                </div>
+                <div className="p-3 rounded-lg bg-muted-bg/50 border border-border/20">
+                   <span className="text-[9px] font-bold text-muted-text/50 uppercase block mb-1">TPSA (Å²)</span>
+                   <span className="text-xs font-black text-text">84.5</span>
+                </div>
+                <div className="p-3 rounded-lg bg-muted-bg/50 border border-border/20">
+                   <span className="text-[9px] font-bold text-muted-text/50 uppercase block mb-1">Molecular Weight</span>
+                   <span className="text-xs font-black text-text">428.4</span>
+                </div>
+                <div className="p-3 rounded-lg bg-muted-bg/50 border border-border/20">
+                   <span className="text-[9px] font-bold text-muted-text/50 uppercase block mb-1">Rotatable Bonds</span>
+                   <span className="text-xs font-black text-text">6</span>
+                </div>
+             </div>
+          </div>
 
-          {/* Reproducibility Audit */}
-          <section className="ui-card-surface p-6 space-y-4">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-slate-400">Reproducibility Audit</h3>
-            <div className="p-4 rounded-xl bg-slate-950 border border-white/5 space-y-3 font-mono text-[10px]">
-              <div className="flex justify-between">
-                <span className="text-slate-500">Artifact SHA:</span>
-                <span className="text-slate-300">7f2a1b9...</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Env Snapshot:</span>
-                <span className="text-slate-300">cuda-12.1-v4</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-500">Audit Status:</span>
-                <span className="text-emerald-500">Verified</span>
-              </div>
-            </div>
-            <p className="text-[10px] text-slate-500 italic">
-              All computational hypotheses are anchored by immutable artifact manifests stored in the research data layer.
-            </p>
-          </section>
+          {/* 6. Radar Chart Placeholder */}
+          <div className="ui-card-surface p-5 space-y-4">
+             <h4 className="text-xs font-black uppercase tracking-widest text-accent">ADMET Radar Profile</h4>
+             <div className="aspect-square relative flex items-center justify-center">
+                {/* Mock Radar Chart SVG */}
+                <svg className="w-full h-full text-border/40" viewBox="0 0 100 100">
+                   <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 2" />
+                   <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 2" />
+                   <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 2" />
+                   <circle cx="50" cy="50" r="10" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 2" />
+                   
+                   <line x1="50" y1="10" x2="50" y2="90" stroke="currentColor" strokeWidth="0.5" />
+                   <line x1="10" y1="50" x2="90" y2="50" stroke="currentColor" strokeWidth="0.5" />
+                   
+                   {/* Data Polygon */}
+                   <path 
+                     d="M50 15 L80 50 L50 85 L20 50 Z" 
+                     fill="var(--accent-alpha)" 
+                     stroke="var(--accent)" 
+                     strokeWidth="1.5"
+                     className="opacity-40"
+                   />
 
-          {/* Downloadable Artifacts */}
-          <section className="ui-card-surface p-6 space-y-3">
-            <h3 className="font-bold mb-4">Export Validation Reports</h3>
-            {[
-              "Technical Validation Summary (PDF)",
-              "ML Model Weights Manifest (JSON)",
-              "Benchmarking Raw Data (CSV)",
-              "Scientific Evidence Package (ZIP)"
-            ].map((file) => (
-              <button key={file} className="w-full text-left p-3 rounded-lg border border-white/5 hover:bg-white/5 transition-colors flex items-center justify-between group">
-                <span className="text-xs text-slate-400 group-hover:text-slate-200">{file}</span>
-                <svg className="w-4 h-4 text-slate-600 group-hover:text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                   {/* Labels */}
+                   <text x="50" y="8" textAnchor="middle" className="text-[5px] font-black fill-muted-text/60">ABSORPTION</text>
+                   <text x="92" y="52" textAnchor="start" className="text-[5px] font-black fill-muted-text/60">DISTRIBUTION</text>
+                   <text x="50" y="96" textAnchor="middle" className="text-[5px] font-black fill-muted-text/60">METABOLISM</text>
+                   <text x="8" y="52" textAnchor="end" className="text-[5px] font-black fill-muted-text/60">EXCRETION</text>
                 </svg>
-              </button>
-            ))}
-          </section>
+                <div className="absolute inset-0 flex items-center justify-center">
+                   <div className="text-center">
+                      <div className="text-[10px] font-black text-text">ADMET-Q Score</div>
+                      <div className="text-lg font-black text-accent">0.86</div>
+                   </div>
+                </div>
+             </div>
+          </div>
 
-          {/* Scientific Review Cards */}
-          <section className="space-y-4">
-            <div className="ui-card-surface p-5 bg-indigo-500/5 border-indigo-500/20">
-               <div className="text-[10px] font-bold text-indigo-400 uppercase mb-2">Computational Hypothesis</div>
-               <p className="text-xs text-slate-400 leading-relaxed">
-                 Ligand-induced fit at the T790M gatekeeper residue likely stabilizes the Type-II binding pose, as evidenced by simulation-assisted prioritization.
-               </p>
-            </div>
-            <div className="ui-card-surface p-5 bg-emerald-500/5 border-emerald-500/20">
-               <div className="text-[10px] font-bold text-emerald-400 uppercase mb-2">Candidate Ranking Evidence</div>
-               <p className="text-xs text-slate-400 leading-relaxed">
-                 Hybrid reranking significantly improves hit rates by incorporating electronic density effects missed by classical force-fields.
-               </p>
-            </div>
-          </section>
+          {/* Next Actions */}
+          <div className="flex flex-col gap-2">
+            <button className="w-full py-3 rounded-lg bg-accent text-bg font-black uppercase tracking-[0.2em] text-[10px] hover:bg-accent/90 shadow-lg shadow-accent/10 transition-all">
+              Send Safe Leads to Docking
+            </button>
+            <button className="w-full py-3 rounded-lg border border-border text-text font-black uppercase tracking-[0.2em] text-[10px] hover:bg-muted-bg transition-all">
+              Initiate Liver-on-a-Chip Sim
+            </button>
+          </div>
         </div>
       </div>
     </div>

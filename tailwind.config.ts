@@ -39,6 +39,10 @@ const config: Config = {
           DEFAULT: "var(--error)",
           foreground: "#ffffff",
         },
+        warning: {
+          DEFAULT: "var(--warning)",
+          foreground: "#ffffff",
+        },
         text: {
           DEFAULT: "var(--text)",
           secondary: "var(--text-secondary)",
