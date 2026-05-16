@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import MetricCard from "@/components/ui/MetricCard";
@@ -60,7 +60,7 @@ const ADMET_RESULTS = [
   }
 ];
 
-export default function ValidationPage() {
+function ValidationPageContent() {
   const searchParams = useSearchParams();
   const panel = searchParams.get("panel");
   const isAdmetView = panel === "admet" || !panel; // Default to admet if no panel
@@ -308,5 +308,13 @@ export default function ValidationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ValidationPage() {
+  return (
+    <Suspense fallback={<div>Loading Validation...</div>}>
+      <ValidationPageContent />
+    </Suspense>
   );
 }

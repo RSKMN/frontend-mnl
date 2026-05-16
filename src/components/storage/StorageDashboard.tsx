@@ -95,7 +95,7 @@ export default function StorageDashboard() {
     <div className="flex flex-col gap-8 pb-12">
       {/* 1. Page Header */}
       <PageHeader
-        title="Storage \u0026 Asset Management"
+        title="Storage & Asset Management"
         breadcrumb="Infrastructure / Data Storage"
         description="Centralized repository for scientific assets, molecular libraries, and experiment artifacts. Manage data integrity and resource quotas."
         actions={

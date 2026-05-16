@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 
 import { isAuthenticated, removeToken } from "@/services";
 import { ThemeToggle, PharmaAssistantWidget } from "@/components/shared";
@@ -255,7 +255,7 @@ function getPageContext(pathname: string) {
   return PAGE_CONTEXTS.find((item) => isRouteActive(pathname, item.href)) ?? PAGE_CONTEXTS[PAGE_CONTEXTS.length - 1];
 }
 
-export default function DashboardLayout({
+function DashboardLayoutContent({
   children,
 }: Readonly<{
   children: ReactNode;
@@ -268,6 +268,11 @@ export default function DashboardLayout({
   const searchParams = useSearchParams();
   const currentSearch = searchParams.toString();
   const pageContext = useMemo(() => getPageContext(pathname), [pathname]);
+
+  const handleLogout = () => {
+    removeToken();
+    router.replace("/login");
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -557,5 +562,17 @@ export default function DashboardLayout({
         <PharmaAssistantWidget />
       </div>
     </div>
+  );
+}
+
+export default function DashboardLayout({
+  children,
+}: Readonly<{
+  children: ReactNode;
+}>) {
+  return (
+    <Suspense fallback={<div className="min-h-screen" style={{ background: "var(--bg)" }} />}>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </Suspense>
   );
 }

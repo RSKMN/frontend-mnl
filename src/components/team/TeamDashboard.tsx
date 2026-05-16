@@ -99,7 +99,7 @@ export default function TeamDashboard() {
     <div className="flex flex-col gap-8 pb-12">
       {/* 1. Page Header */}
       <PageHeader
-        title="Team \u0026 Collaboration"
+        title="Team & Collaboration"
         breadcrumb="Organization / User Management"
         description="Manage organization members, research roles, and workspace-level permissions for shared drug discovery programs."
         actions={
@@ -173,7 +173,7 @@ export default function TeamDashboard() {
 
           {/* 4. Role & Permission Overview */}
           <section className="space-y-4">
-            <SectionHeader title="Role \u0026 Permission Matrix" description="Standardized capability sets across organization roles." />
+            <SectionHeader title="Role & Permission Matrix" description="Standardized capability sets across organization roles." />
             <div className="ui-card-surface overflow-hidden">
                <table className="w-full text-left text-[11px]">
                   <thead>

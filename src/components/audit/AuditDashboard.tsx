@@ -50,7 +50,7 @@ export default function AuditDashboard() {
     <div className="flex flex-col gap-8 pb-12">
       {/* 1. Page Header */}
       <PageHeader
-        title="Audit Logs \u0026 Traceability"
+        title="Audit Logs & Traceability"
         breadcrumb="Organization / Security"
         description="Comprehensive audit trail of research activities, security events, and administrative changes for compliance and reproducibility."
         actions={
@@ -162,9 +162,9 @@ export default function AuditDashboard() {
                  <div key={i} className="flex items-center justify-between group">
                     <div className="flex flex-col">
                        <span className={`text-[11px] font-bold ${item.event.includes('Failed') ? 'text-error' : 'text-text/80'}`}>{item.event}</span>
-                       <span className="text-[10px] text-muted-text/40">{item.user} \u2022 {item.time}</span>
+                       <span className="text-[10px] text-muted-text/40">{item.user} • {item.time}</span>
                     </div>
-                    <button className="text-muted-text/20 group-hover:text-accent transition-colors">\u203a</button>
+                    <button className="text-muted-text/20 group-hover:text-accent transition-colors">›</button>
                  </div>
                ))}
             </div>
@@ -181,7 +181,7 @@ export default function AuditDashboard() {
                        <span className="text-[11px] font-bold text-text/80">{item.event}</span>
                        <div className="flex gap-2 text-[10px] text-muted-text/40 uppercase font-black tracking-widest">
                           <span>{item.user}</span>
-                          <span>\u2022</span>
+                          <span>•</span>
                           <span>{item.time}</span>
                        </div>
                     </div>
@@ -194,7 +194,7 @@ export default function AuditDashboard() {
           <section className="space-y-4">
             <div className="ui-card-surface p-6 bg-emerald-500/[0.03] border-emerald-500/20 flex flex-col items-center text-center gap-3">
                <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-2xl font-black">
-                  \u2713
+                  ✓
                </div>
                <div className="space-y-1">
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Audit Compliance</h4>

@@ -46,7 +46,7 @@ export default function GeneralSettings() {
   return (
     <div className="flex flex-col gap-10 pb-20">
       <PageHeader
-        title="Settings \u0026 Configuration"
+        title="Settings & Configuration"
         breadcrumb="Platform / Administration"
         description="Manage your professional profile, workspace environments, research defaults, and platform security."
         actions={
@@ -62,8 +62,8 @@ export default function GeneralSettings() {
         <aside className="lg:col-span-3 space-y-2">
            {[
              "Profile", "Workspace", "Research Defaults", "Security", 
-             "Notifications", "API Preferences", "Data \u0026 Storage", "Danger Zone"
-           ].map(item =\u003e (
+             "Notifications", "API Preferences", "Data & Storage", "Danger Zone"
+           ].map(item => (
              <button key={item} className={`w-full text-left px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
                item === 'Profile' ? 'bg-accent/10 text-accent' : 'text-muted-text/40 hover:bg-muted-bg/50 hover:text-muted-text'
              }`}>
@@ -74,12 +74,12 @@ export default function GeneralSettings() {
 
         {/* Settings Content */}
         <div className="lg:col-span-9 space-y-12">
-           {/* Profile \u0026 Workspace Sections */}
-           {SETTINGS_GROUPS.map(group =\u003e (
+           {/* Profile & Workspace Sections */}
+           {SETTINGS_GROUPS.map(group => (
              <section key={group.id} className="space-y-6">
                 <SectionHeader title={group.title} />
                 <div className="ui-card-surface p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                   {group.fields.map(field =\u003e (
+                   {group.fields.map(field => (
                      <div key={field.label} className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-muted-text/60">{field.label}</label>
                         <div className="relative">
@@ -91,8 +91,8 @@ export default function GeneralSettings() {
                                field.disabled ? 'opacity-50 cursor-not-allowed' : ''
                              }`}
                            />
-                           {field.type === 'select' \u0026\u0026 (
-                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-text/40">\u25be</div>
+                           {field.type === 'select' && (
+                             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-muted-text/40">▾</div>
                            )}
                         </div>
                      </div>
@@ -128,9 +128,9 @@ export default function GeneralSettings() {
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-text/40">Active Sessions</h4>
                     <div className="ui-card-surface bg-muted-bg/10 border-border/20 p-4 flex justify-between items-center">
                        <div className="flex items-center gap-3">
-                          <span className="text-xl">\ud83d\udcbb</span>
+                          <span className="text-xl">💻</span>
                           <div className="flex flex-col">
-                             <span className="text-[11px] font-bold text-text">Chrome on macOS \u2022 San Francisco, US</span>
+                             <span className="text-[11px] font-bold text-text">Chrome on macOS • San Francisco, US</span>
                              <span className="text-[9px] font-black uppercase text-accent tracking-widest">Current Session</span>
                           </div>
                        </div>
@@ -150,7 +150,7 @@ export default function GeneralSettings() {
                    { label: "Report Generated", desc: "Notify when a candidate dossier is ready.", default: false },
                    { label: "Billing Alert", desc: "Alert when credit usage exceeds 80%.", default: true },
                    { label: "Integration Sync Failed", desc: "Notify on external service connection issues.", default: true },
-                 ].map(item =\u003e (
+                 ].map(item => (
                    <div key={item.label} className="flex justify-between items-center group">
                       <div className="space-y-0.5">
                          <h4 className="text-[11px] font-black text-text/80 uppercase tracking-widest">{item.label}</h4>
@@ -190,29 +190,29 @@ export default function GeneralSettings() {
                     </div>
                  </div>
                  <div className="flex items-center gap-2 text-warning bg-warning/5 border border-warning/20 p-4 rounded-xl">
-                    <span className="text-lg">\u26a0\ufe0f</span>
+                    <span className="text-lg">⚠️</span>
                     <p className="text-[10px] font-bold">Enabling webhook signing is recommended for production security.</p>
                  </div>
               </div>
            </section>
 
-           {/* Data \u0026 Storage */}
+           {/* Data & Storage */}
            <section className="space-y-6">
-              <SectionHeader title="Data \u0026 Storage Preferences" />
+              <SectionHeader title="Data & Storage Preferences" />
               <div className="ui-card-surface p-8 space-y-6">
                  {[
                    { label: "Artifact Retention", value: "90 Days", type: "select" },
                    { label: "Auto-delete Temporary Files", value: "Enabled", type: "toggle", checked: true },
                    { label: "Checksum Validation", value: "All Uploads", type: "select" },
                    { label: "Report Archive Policy", value: "Permanent", type: "select" },
-                 ].map(item =\u003e (
+                 ].map(item => (
                    <div key={item.label} className="flex justify-between items-center">
                       <div className="space-y-0.5">
                          <h4 className="text-[11px] font-black text-text/80 uppercase tracking-widest">{item.label}</h4>
                       </div>
                       {item.type === 'select' ? (
                         <div className="h-9 px-4 bg-muted-bg/30 border border-border/40 rounded-lg flex items-center text-[10px] font-bold text-text cursor-pointer hover:border-accent/40 transition-colors">
-                           {item.value} \u25be
+                           {item.value} ▾
                         </div>
                       ) : (
                         <div className="h-5 w-9 rounded-full bg-accent relative cursor-pointer">

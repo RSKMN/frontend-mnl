@@ -24,7 +24,7 @@ const COMPUTE_METRICS = [
 const QUEUES = [
   { name: "Docking Queue", running: 2, queued: 5, wait: "12m", priority: "High" },
   { name: "GNINA Queue", running: 1, queued: 8, wait: "42m", priority: "Medium" },
-  { name: "Quantum Reranking Queue", running: 1, queued: 0, wait: "\u003c 1m", priority: "High" },
+  { name: "Quantum Reranking Queue", running: 1, queued: 0, wait: "< 1m", priority: "High" },
   { name: "Simulation Queue", running: 2, queued: 1, wait: "4h", priority: "Normal" },
   { name: "Report Generation Queue", running: 0, queued: 0, wait: "0m", priority: "Low" },
 ];
@@ -87,7 +87,7 @@ export default function ComputeDashboard() {
     <div className="flex flex-col gap-8 pb-12">
       {/* 1. Page Header */}
       <PageHeader
-        title="Compute \u0026 Workload"
+        title="Compute & Workload"
         breadcrumb="Infrastructure / Scientific Compute"
         description="Monitor GPU utilization, quantum job execution, and simulation workloads across hybrid HPC resources."
         actions={
@@ -307,7 +307,7 @@ export default function ComputeDashboard() {
       
       {/* 7. Runtime Breakdown Charts */}
       <section className="space-y-4">
-        <SectionHeader title="Runtime Trends \u0026 Benchmarks" description="Historical analysis of pipeline execution efficiency and resource utilization." />
+        <SectionHeader title="Runtime Trends & Benchmarks" description="Historical analysis of pipeline execution efficiency and resource utilization." />
         <ChartsSection />
       </section>
     </div>

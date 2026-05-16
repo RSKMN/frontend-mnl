@@ -12,7 +12,7 @@ import {
 
 const API_METRICS = [
   { label: "API Requests", value: "24.2k", helperText: "Last 30 days", status: "active" as const },
-  { label: "Active Keys", value: "4", helperText: "Production \u0026 Dev", status: "completed" as const },
+  { label: "Active Keys", value: "4", helperText: "Production & Dev", status: "completed" as const },
   { label: "Error Rate", value: "0.12", unit: "%", trend: { value: 0.05, isUp: false }, status: "completed" as const },
   { label: "Average Latency", value: "142", unit: "ms", trend: { value: 12, isUp: false }, status: "completed" as const },
   { label: "Rate Limit Usage", value: "12", unit: "%", helperText: "Peak: 42%", status: "active" as const },
@@ -27,7 +27,7 @@ const API_KEYS = [
     created: "Oct 12, 2025", 
     lastUsed: "2m ago", 
     status: "active", 
-    key: "qdf_live_\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u20221234" 
+    key: "qdf_live_••••••••••••1234" 
   },
   { 
     name: "CI/CD Pipeline", 
@@ -36,7 +36,7 @@ const API_KEYS = [
     created: "Jan 04, 2026", 
     lastUsed: "1h ago", 
     status: "active", 
-    key: "qdf_live_\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u20225589" 
+    key: "qdf_live_••••••••••••5589" 
   },
   { 
     name: "Local Testing", 
@@ -45,7 +45,7 @@ const API_KEYS = [
     created: "May 10, 2026", 
     lastUsed: "12h ago", 
     status: "active", 
-    key: "qdf_test_\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u20220042" 
+    key: "qdf_test_••••••••••••0042" 
   },
 ];
 
@@ -154,7 +154,7 @@ export default function ApiDashboard() {
                       </td>
                       <td className="px-6 py-4">
                          <div className="flex flex-wrap gap-1">
-                            {key.scope.split(", ").map(s =\u003e (
+                            {key.scope.split(", ").map(s => (
                               <span key={s} className="px-1.5 py-0.5 rounded bg-accent/5 text-[9px] font-bold text-accent border border-accent/10">{s}</span>
                             ))}
                          </div>
@@ -231,11 +231,11 @@ export default function ApiDashboard() {
           <section className="space-y-4">
             <SectionHeader title="Endpoint Explorer" />
             <div className="flex flex-col gap-3">
-              {ENDPOINTS.map(group =\u003e (
+              {ENDPOINTS.map(group => (
                 <div key={group.group} className="space-y-2">
                    <h5 className="text-[10px] font-black text-muted-text/40 uppercase tracking-widest pl-2">{group.group}</h5>
                    <div className="space-y-1.5">
-                      {group.items.map(item =\u003e (
+                      {group.items.map(item => (
                         <div key={item.path} className="ui-card-surface p-3 flex flex-col gap-1 border-accent/5 hover:border-accent/20 transition-all cursor-pointer">
                           <div className="flex items-center gap-2">
                             <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
@@ -257,10 +257,10 @@ export default function ApiDashboard() {
             <SectionHeader title="SDK Examples" />
             <div className="ui-card-surface overflow-hidden">
                <div className="flex border-b border-border/40">
-                  {(['python', 'javascript', 'curl'] as const).map(lang =\u003e (
+                  {(['python', 'javascript', 'curl'] as const).map(lang => (
                     <button 
                       key={lang}
-                      onClick={() =\u003e setActiveSdk(lang)}
+                      onClick={() => setActiveSdk(lang)}
                       className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
                         activeSdk === lang ? 'bg-accent/10 text-accent border-b-2 border-accent' : 'text-muted-text/40 hover:bg-muted-bg/50'
                       }`}
@@ -284,7 +284,7 @@ export default function ApiDashboard() {
                  { event: "report.generated", count: 124, color: "bg-accent" },
                  { event: "validation.warning", count: 18, color: "bg-warning" },
                  { event: "pipeline.failed", count: 5, color: "bg-error" },
-               ].map(hook =\u003e (
+               ].map(hook => (
                  <div key={hook.event} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                        <div className={`h-2 w-2 rounded-full ${hook.color}`} />

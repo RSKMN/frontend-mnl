@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import MetricCard from "@/components/ui/MetricCard";
@@ -43,7 +43,7 @@ const GNINA_LOGS = [
   "[GNINA] Finalizing run. Process complete."
 ];
 
-export default function DockingWorkspace() {
+function DockingWorkspaceContent() {
   const searchParams = useSearchParams();
   const engine = searchParams.get("engine");
   const isGnina = engine === "gnina";
@@ -295,5 +295,13 @@ export default function DockingWorkspace() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DockingWorkspace() {
+  return (
+    <Suspense fallback={<div>Loading docking workspace...</div>}>
+      <DockingWorkspaceContent />
+    </Suspense>
   );
 }

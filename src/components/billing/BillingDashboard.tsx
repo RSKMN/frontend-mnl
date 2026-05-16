@@ -37,9 +37,9 @@ export default function BillingDashboard() {
     <div className="flex flex-col gap-8 pb-12">
       {/* 1. Page Header */}
       <PageHeader
-        title="Billing \u0026 Subscription"
+        title="Billing & Subscription"
         breadcrumb="Organization / Finance"
-        description="Manage your research subscription, compute credit allocation, and financial records for the QuDrugForge\u2122 platform."
+        description="Manage your research subscription, compute credit allocation, and financial records for the QuDrugForge™ platform."
         actions={
           <ActionButtonGroup>
             <ActionButton label="Upgrade Plan" variant="primary" />
@@ -49,7 +49,7 @@ export default function BillingDashboard() {
         }
       />
 
-      {/* Current Plan \u0026 Usage Metrics */}
+      {/* Current Plan & Usage Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1">
            <div className="ui-card-surface p-6 h-full border-accent/20 bg-accent/[0.02]">
@@ -60,7 +60,7 @@ export default function BillingDashboard() {
               <div className="space-y-6">
                  <div>
                     <h4 className="text-2xl font-black text-text">Research Pro</h4>
-                    <p className="text-xs font-bold text-muted-text mt-1">Monthly Billing \u2022 $2,499/mo</p>
+                    <p className="text-xs font-bold text-muted-text mt-1">Monthly Billing • $2,499/mo</p>
                  </div>
                  <div className="space-y-3 py-6 border-y border-border/20">
                     <div className="flex justify-between items-center text-xs font-bold">
@@ -83,7 +83,7 @@ export default function BillingDashboard() {
         
         <div className="lg:col-span-2">
            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 h-full">
-              {BILLING_METRICS.map((metric, i) =\u003e (
+              {BILLING_METRICS.map((metric, i) => (
                 <MetricCard key={i} {...metric} />
               ))}
            </div>
@@ -118,9 +118,9 @@ export default function BillingDashboard() {
                          {[
                            { label: "Quantum Reranking", val: 55, color: "bg-accent" },
                            { label: "Molecular Dynamics", val: 25, color: "bg-indigo-500" },
-                           { label: "Docking \u0026 GNINA", val: 15, color: "bg-emerald-500" },
+                           { label: "Docking & GNINA", val: 15, color: "bg-emerald-500" },
                            { label: "Other", val: 5, color: "bg-muted-text/20" },
-                         ].map(item =\u003e (
+                         ].map(item => (
                            <div key={item.label} className="space-y-1">
                               <div className="flex justify-between text-[10px] font-bold">
                                  <span className="text-muted-text/60">{item.label}</span>
@@ -158,7 +158,7 @@ export default function BillingDashboard() {
                       { cat: "Team Seats", detail: "12 Active Users", rate: "$50.00/seat", amount: "$600.00" },
                       { cat: "Report Generation", detail: "96 Validation Dossiers", rate: "Included", amount: "$0.00" },
                       { cat: "Premium Integrations", detail: "BioNeMo, AlphaFold API", rate: "Flat", amount: "$235.80" },
-                    ].map(item =\u003e (
+                    ].map(item => (
                       <tr key={item.cat} className="group hover:bg-muted-bg/20 transition-colors">
                         <td className="px-6 py-4">
                           <span className="text-xs font-bold text-text">{item.cat}</span>
@@ -186,7 +186,7 @@ export default function BillingDashboard() {
             <SectionHeader title="Recent Invoices" />
             <div className="ui-card-surface overflow-hidden">
                <div className="divide-y divide-border/20">
-                  {INVOICES.map(inv =\u003e (
+                  {INVOICES.map(inv => (
                     <div key={inv.id} className="p-4 flex items-center justify-between hover:bg-muted-bg/20 transition-colors">
                        <div className="flex flex-col">
                           <span className="text-xs font-bold text-text">{inv.id}</span>
@@ -195,7 +195,7 @@ export default function BillingDashboard() {
                        <div className="flex items-center gap-4">
                           <span className="text-xs font-mono font-bold text-text">{inv.amount}</span>
                           <button className="h-8 w-8 flex items-center justify-center rounded border border-border text-muted-text hover:text-accent hover:border-accent transition-all" title="Download PDF">
-                             \u2193
+                             ↓
                           </button>
                        </div>
                     </div>
@@ -209,22 +209,22 @@ export default function BillingDashboard() {
           <section className="space-y-4">
             <SectionHeader title="Platform Tiers" />
             <div className="flex flex-col gap-3">
-               {PLANS.map(plan =\u003e (
+               {PLANS.map(plan => (
                  <div key={plan.name} className={`ui-card-surface p-5 border-dashed border-2 flex flex-col gap-4 ${plan.active ? 'border-accent/40 bg-accent/[0.01]' : 'border-border/40 opacity-60'}`}>
                     <div className="flex justify-between items-start">
                        <h5 className="text-[11px] font-black uppercase tracking-widest text-text">{plan.name}</h5>
-                       {plan.active \u0026\u0026 <span className="text-[9px] font-black text-accent uppercase">Current</span>}
+                       {plan.active && <span className="text-[9px] font-black text-accent uppercase">Current</span>}
                     </div>
                     <div className="text-xl font-black text-text">{plan.price}<span className="text-[10px] font-medium text-muted-text ml-1">{plan.price === 'Custom' ? '' : '/mo'}</span></div>
                     <div className="space-y-1.5">
-                       {plan.features.slice(0, 3).map(f =\u003e (
+                       {plan.features.slice(0, 3).map(f => (
                          <div key={f} className="flex items-center gap-2 text-[10px] font-medium text-muted-text/80">
-                            <span className="text-accent text-lg">\u2022</span>
+                            <span className="text-accent text-lg">•</span>
                             {f}
                          </div>
                        ))}
                     </div>
-                    {!plan.active \u0026\u0026 <button className="w-full py-2 text-[10px] font-black uppercase text-muted-text border border-border rounded hover:border-accent hover:text-accent transition-all">Switch Tier</button>}
+                    {!plan.active && <button className="w-full py-2 text-[10px] font-black uppercase text-muted-text border border-border rounded hover:border-accent hover:text-accent transition-all">Switch Tier</button>}
                  </div>
                ))}
             </div>

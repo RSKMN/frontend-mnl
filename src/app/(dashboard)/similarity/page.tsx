@@ -181,7 +181,7 @@ export default function SimilarityPage() {
                       <td className="px-4 py-4 text-xs font-bold text-text-secondary">{n.scaffold}</td>
                       <td className="px-4 py-4 text-xs font-medium text-text-secondary">{n.activity}</td>
                       <td className="px-4 py-4 text-center">
-                        <StatusBadge status={n.risk.toLowerCase() as any} label={n.risk} size="xs" />
+                        <StatusBadge status={n.risk.toLowerCase() as any} label={n.risk} size="sm" />
                       </td>
                     </tr>
                   ))}
