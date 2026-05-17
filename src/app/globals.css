@@ -78,9 +78,13 @@ html[data-theme="dark"] {
 body {
   color: var(--text);
   background: var(--bg);
-  font-family: var(--font-body), Inter, sans-serif;
+  font-family: SF Pro Text, Inter, Helvetica Neue, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+code, pre, kbd, samp, .font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace !important;
 }
 
 
@@ -307,7 +311,7 @@ section {
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
-  font-family: var(--font-heading), sans-serif;
+  font-family: SF Pro Text, Inter, Helvetica Neue, Helvetica, Arial, sans-serif;
 }
 
 .page-subtitle {

@@ -54,8 +54,10 @@ const config: Config = {
 
       },
       fontFamily: {
-        heading: ["var(--font-heading)", "Space Grotesk", "Sora", "Segoe UI", "sans-serif"],
-        body: ["var(--font-body)", "Inter", "Manrope", "Segoe UI", "sans-serif"],
+        sans: ["SF Pro Text", "Inter", "Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"],
+        heading: ["SF Pro Text", "Inter", "Space Grotesk", "Sora", "Segoe UI", "sans-serif"],
+        body: ["SF Pro Text", "Inter", "Helvetica Neue", "Helvetica", "Arial", "sans-serif"],
       },
       fontSize: {
         xs: ["0.75rem", { lineHeight: "1rem" }],
