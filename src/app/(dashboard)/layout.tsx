@@ -308,7 +308,10 @@ function DashboardLayoutContent({
   }
 
   return (
-    <div className="h-screen overflow-hidden" style={{ background: "var(--bg)", color: "var(--text)" }}>
+    <div className="h-screen overflow-hidden aurora-bg relative" style={{ background: "var(--bg)", color: "var(--text)" }}>
+      {/* Cinematic grid mesh background overlay */}
+      <div className="absolute inset-0 bg-grid-noise pointer-events-none opacity-30 z-0" aria-hidden="true" />
+
       <aside
         className={`fixed inset-y-0 left-0 z-40 hidden border-r lg:flex ${isSidebarCollapsed ? "w-20" : "w-64"}`}
         style={{ borderColor: "var(--border)", background: "var(--sidebar-bg)" }}
@@ -423,7 +426,7 @@ function DashboardLayoutContent({
         </div>
       </aside>
 
-      <div className="flex h-screen min-w-0 flex-col transition-[padding] duration-200 lg:pl-64" style={{ paddingLeft: isSidebarCollapsed ? "5rem" : undefined }}>
+      <div className="relative z-10 flex h-screen min-w-0 flex-col transition-[padding] duration-200 lg:pl-64" style={{ paddingLeft: isSidebarCollapsed ? "5rem" : undefined }}>
         <header
           className="z-30 shrink-0 border-b backdrop-blur-xl"
           style={{ borderColor: "var(--border)", background: "color-mix(in srgb, var(--bg) 92%, transparent)" }}

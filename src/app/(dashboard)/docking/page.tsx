@@ -97,7 +97,7 @@ function DockingWorkspaceContent() {
             /* GNINA: CNN Rescoring Table */
             <div className="space-y-4">
               <SectionHeader title="CNN Rescoring Results" description="Refined affinity predictions using deep learning convolutional neural networks." />
-              <div className="ui-card-surface overflow-hidden">
+              <div className="ui-card-surface overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
@@ -159,7 +159,7 @@ function DockingWorkspaceContent() {
 
               <div className="space-y-4">
                 <SectionHeader title="Affinity Results" description="Comparative analysis of ligand binding affinities." />
-                <div className="ui-card-surface overflow-hidden">
+                <div className="ui-card-surface overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
                       <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">

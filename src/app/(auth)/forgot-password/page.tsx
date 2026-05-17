@@ -3,8 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { Button, Input } from "../../../components/ui";
-import { AuthStatusMessage } from "../_components/AuthStatusMessage";
+import { Button } from "@/components/ui";
+import { 
+  AuthCard, 
+  AuthHeader, 
+  AuthInput, 
+  AuthStatusMessage 
+} from "../_components";
 import { validateEmail } from "../_hooks/useAuthCredentialsForm";
 
 export default function ForgotPasswordPage() {
@@ -32,29 +37,29 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setSuccessMessage("Reset link sent (mock)");
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      setSuccessMessage("Verification link sent! Please check your institutional inbox.");
     } catch {
-      setApiError("Unable to send reset link.");
+      setApiError("Unable to send verification link. Please check network logs.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <section className="space-y-6">
-      <header className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--text)" }}>Forgot password</h2>
-        <p className="text-sm" style={{ color: "var(--muted-text)" }}>We will send a reset link to your email.</p>
-      </header>
+    <AuthCard>
+      <AuthHeader 
+        title="Key Recovery" 
+        subtitle="Submit your registered institutional email to request a new cryptographic access key." 
+      />
 
-      <form className="space-y-4" onSubmit={handleSubmit} noValidate>
-        <Input
+      <form className="space-y-4 mt-6" onSubmit={handleSubmit} noValidate>
+        <AuthInput
           id="forgot-password-email"
           name="email"
           type="email"
           autoComplete="email"
-          label="Email"
+          label="Registered Institutional Email"
           placeholder="researcher@quinfosys.com"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -62,6 +67,11 @@ export default function ForgotPasswordPage() {
           error={showEmailError ? emailError : undefined}
           disabled={isLoading}
           required
+          icon={
+            <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 12a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
         />
 
         {apiError ? <AuthStatusMessage type="error" message={apiError} /> : null}
@@ -69,21 +79,25 @@ export default function ForgotPasswordPage() {
 
         <Button
           type="submit"
-          className="w-full"
+          className="ui-button w-full rounded-xl py-3 text-sm font-semibold mt-2"
           disabled={!isValid || isLoading}
           isLoading={isLoading}
-          loadingText="Sending link..."
+          loadingText="Verifying identity..."
         >
-          Send reset link
+          Send Verification Link
         </Button>
       </form>
 
-      <p className="text-center text-sm" style={{ color: "var(--muted-text)" }}>
-        Remembered your password?{" "}
-        <Link href="/login" className="transition" style={{ color: "var(--accent)" }}>
+      <p className="mt-6 text-center text-xs" style={{ color: "var(--muted-text)" }}>
+        Remembered your key?{" "}
+        <Link 
+          href="/login" 
+          className="hover:underline font-semibold transition-colors duration-150" 
+          style={{ color: "var(--accent)" }}
+        >
           Back to sign in
         </Link>
       </p>
-    </section>
+    </AuthCard>
   );
 }

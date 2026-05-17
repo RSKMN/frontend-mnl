@@ -69,8 +69,8 @@ export default function AuditDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
           {/* 3. Filters Placeholder */}
           <section className="space-y-4">
              <div className="ui-card-surface p-4 flex flex-wrap items-center gap-4 border-dashed border-border/40">
@@ -99,7 +99,7 @@ export default function AuditDashboard() {
           {/* 4. Audit Log Table */}
           <section className="space-y-4">
             <SectionHeader title="Activity Stream" description="Granular record of all system interactions and data mutations." />
-            <div className="ui-card-surface overflow-hidden">
+            <div className="ui-card-surface overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">

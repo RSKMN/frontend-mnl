@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   MetricCard,
   SectionHeader,
@@ -9,6 +9,9 @@ import {
   ActionButton,
   ActionButtonGroup,
   Card,
+  Skeleton,
+  TableSkeleton,
+  OfflineState,
 } from "@/components/ui";
 import { ChartsSection } from "@/components/dashboard";
 
@@ -83,6 +86,8 @@ const ALERTS = [
 ];
 
 export default function ComputeDashboard() {
+  const [simulatedState, setSimulatedState] = useState<"normal" | "loading" | "offline">("normal");
+
   return (
     <div className="flex flex-col gap-8 pb-12">
       {/* 1. Page Header */}
@@ -92,12 +97,66 @@ export default function ComputeDashboard() {
         description="Monitor GPU utilization, quantum job execution, and simulation workloads across hybrid HPC resources."
         actions={
           <ActionButtonGroup>
-            <ActionButton label="Export Usage" />
-            <ActionButton label="Adjust Priority" />
+            <div className="flex items-center gap-2 mr-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-text/60">UI State:</span>
+              <select 
+                value={simulatedState}
+                onChange={(e) => setSimulatedState(e.target.value as any)}
+                className="bg-muted-bg border border-border/40 text-text rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider outline-none focus:border-accent cursor-pointer"
+              >
+                <option value="normal">🟢 Operational</option>
+                <option value="loading">🟡 Loading Skeletons</option>
+                <option value="offline">☁️ Queue Offline</option>
+              </select>
+            </div>
             <ActionButton label="Request Credits" variant="primary" />
           </ActionButtonGroup>
         }
       />
+
+      {/* State Rendering */}
+      {simulatedState === "loading" && (
+        <div className="space-y-8 animate-pulse">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="ui-card-surface p-4 space-y-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-6 w-20" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <TableSkeleton rows={4} />
+            </div>
+            <div className="space-y-4">
+              <div className="ui-card-surface p-5 space-y-4">
+                <Skeleton className="h-4 w-24" />
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {simulatedState === "offline" && (
+        <div className="space-y-8">
+          <OfflineState
+            title="Compute Scheduler Queue Offline"
+            description="The centralized scientific workload scheduling queue is currently unreachable, rendering cluster job telemetry unavailable."
+            reason="HPC Slurm scheduler daemon unresponsive | Heartbeat timeout"
+            action={
+              <ActionButton label="Re-initialize Queue Relay" variant="primary" onClick={() => setSimulatedState("normal")} />
+            }
+          />
+        </div>
+      )}
+
+      {simulatedState === "normal" && (
+        <>
 
       {/* 2. Compute Summary Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -106,8 +165,8 @@ export default function ComputeDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
           {/* 3. Usage Overview */}
           <section className="space-y-4">
             <SectionHeader title="Usage Overview" description="Real-time resource allocation and runtime trends across active workflows." />
@@ -167,7 +226,7 @@ export default function ComputeDashboard() {
           {/* 5. Running Jobs Table */}
           <section className="space-y-4">
             <SectionHeader title="Active Compute Jobs" description="Detailed execution tracking for currently running scientific workloads." />
-            <div className="ui-card-surface overflow-hidden">
+            <div className="ui-card-surface overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
@@ -304,6 +363,8 @@ export default function ComputeDashboard() {
           </section>
         </div>
       </div>
+      </>
+      )}
       
       {/* 7. Runtime Breakdown Charts */}
       <section className="space-y-4">

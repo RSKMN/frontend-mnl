@@ -131,10 +131,15 @@ export default function ThreeDMoleculeViewer({
 
         if (!containerRef.current || !alive) return;
 
+        const isDark = typeof document !== "undefined" && (document.documentElement.classList.contains("dark") || document.documentElement.getAttribute("data-theme") === "dark");
+        const bgColor = isDark ? "#020617" : "white";
+
         if (!viewerRef.current) {
           viewerRef.current = $3DmolMod.createViewer(containerRef.current, {
-            backgroundColor: "white",
+            backgroundColor: bgColor,
           });
+        } else {
+          viewerRef.current.setBackgroundColor(bgColor);
         }
 
         viewerRef.current.clear();
@@ -185,7 +190,10 @@ export default function ThreeDMoleculeViewer({
         if (surfaceEnabled && showSurfaceControl) {
           viewerRef.current.addSurface(
             $3DmolMod.SurfaceType.VDW,
-            { opacity: 0.85, color: "white" },
+            { 
+              opacity: isDark ? 0.45 : 0.65, 
+              color: isDark ? "#22d3ee" : "#06b6d4" 
+            },
             { hetflag: false },
           );
         }

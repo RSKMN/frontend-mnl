@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   MetricCard,
   SectionHeader,
@@ -9,6 +9,10 @@ import {
   ActionButton,
   ActionButtonGroup,
   Card,
+  Skeleton,
+  TableSkeleton,
+  EmptyState,
+  ErrorState,
 } from "@/components/ui";
 
 const STORAGE_METRICS = [
@@ -91,6 +95,8 @@ const RECENT_UPLOADS = [
 ];
 
 export default function StorageDashboard() {
+  const [simulatedState, setSimulatedState] = useState<"normal" | "loading" | "empty" | "error">("normal");
+
   return (
     <div className="flex flex-col gap-8 pb-12">
       {/* 1. Page Header */}
@@ -100,13 +106,85 @@ export default function StorageDashboard() {
         description="Centralized repository for scientific assets, molecular libraries, and experiment artifacts. Manage data integrity and resource quotas."
         actions={
           <ActionButtonGroup>
+            <div className="flex items-center gap-2 mr-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-text/60">UI State:</span>
+              <select 
+                value={simulatedState}
+                onChange={(e) => setSimulatedState(e.target.value as any)}
+                className="bg-muted-bg border border-border/40 text-text rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider outline-none focus:border-accent cursor-pointer"
+              >
+                <option value="normal">🟢 Operational</option>
+                <option value="loading">🟡 Loading Skeletons</option>
+                <option value="empty">⚪ Empty Datasets</option>
+                <option value="error">🔴 Import Failure</option>
+              </select>
+            </div>
             <ActionButton label="Upload Dataset" variant="primary" />
             <ActionButton label="Import From Integration" />
-            <ActionButton label="Export Artifacts" />
-            <ActionButton label="Validate Storage" />
           </ActionButtonGroup>
         }
       />
+
+      {/* State Rendering */}
+      {simulatedState === "loading" && (
+        <div className="space-y-8 animate-pulse">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="ui-card-surface p-4 space-y-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-6 w-20" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <TableSkeleton rows={4} />
+            </div>
+            <div className="space-y-4">
+              <div className="ui-card-surface p-5 space-y-4">
+                <Skeleton className="h-4 w-24" />
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {simulatedState === "empty" && (
+        <div className="space-y-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {STORAGE_METRICS.map((metric, i) => (
+              <MetricCard key={i} {...metric} value="--" helperText="No datasets uploaded" />
+            ))}
+          </div>
+          <EmptyState
+            title="No Scientific Datasets Uploaded"
+            description="Bridge your discovery workspace with external molecular libraries, SDF structures, or ADMET assay lists by uploading your first target file."
+            action={
+              <ActionButton label="Upload First Dataset" variant="primary" onClick={() => setSimulatedState("normal")} />
+            }
+          />
+        </div>
+      )}
+
+      {simulatedState === "error" && (
+        <div className="space-y-8">
+          <ErrorState
+            title="Molecular Coordinate Ingestion Failed"
+            explanation="The parsed structure library contains non-standard atom mappings or incomplete coordinate blocks that violate physical forcefield constraints."
+            debugHint="ParserError: Incomplete coordinates found in PDB block ATOM 882 for residues LEU858 | Parser: pdb-ligand-reader-v2.bin"
+            action={
+              <ActionButton label="Re-upload Corrected Dataset" variant="primary" onClick={() => setSimulatedState("normal")} />
+            }
+          />
+        </div>
+      )}
+
+      {simulatedState === "normal" && (
+        <>
 
       {/* 2. Storage Summary Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -115,8 +193,8 @@ export default function StorageDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
           {/* 3. Storage Usage Breakdown */}
           <section className="space-y-4">
             <SectionHeader title="Storage Usage Breakdown" description="Distribution of storage consumption across scientific data categories." />
@@ -154,7 +232,7 @@ export default function StorageDashboard() {
           {/* 4. Dataset Library */}
           <section className="space-y-4">
             <SectionHeader title="Dataset Library" description="Primary research datasets and imported ligand libraries." />
-            <div className="ui-card-surface overflow-hidden">
+            <div className="ui-card-surface overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
@@ -278,6 +356,8 @@ export default function StorageDashboard() {
           </section>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

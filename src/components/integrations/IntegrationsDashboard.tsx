@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   MetricCard,
   SectionHeader,
@@ -8,6 +8,11 @@ import {
   PageHeader,
   ActionButton,
   ActionButtonGroup,
+  Skeleton,
+  TableSkeleton,
+  EmptyState,
+  ErrorState,
+  OfflineState,
 } from "@/components/ui";
 
 const INTEGRATION_METRICS = [
@@ -48,6 +53,8 @@ const SYNC_ACTIVITY = [
 ];
 
 export default function IntegrationsDashboard() {
+  const [simulatedState, setSimulatedState] = useState<"normal" | "loading" | "empty" | "error" | "offline">("normal");
+
   return (
     <div className="flex flex-col gap-8 pb-12">
       {/* 1. Page Header */}
@@ -57,13 +64,109 @@ export default function IntegrationsDashboard() {
         description="Connect and manage external scientific databases, cloud storage providers, and specialized compute engines."
         actions={
           <ActionButtonGroup>
+            <div className="flex items-center gap-2 mr-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-text/60">UI State:</span>
+              <select 
+                value={simulatedState}
+                onChange={(e) => setSimulatedState(e.target.value as any)}
+                className="bg-muted-bg border border-border/40 text-text rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider outline-none focus:border-accent cursor-pointer"
+              >
+                <option value="normal">🟢 Operational</option>
+                <option value="loading">🟡 Loading Skeletons</option>
+                <option value="empty">⚪ Empty Connections</option>
+                <option value="error">🔴 Sync Job Failure</option>
+                <option value="offline">☁️ Health Offline</option>
+              </select>
+            </div>
             <ActionButton label="Connect Integration" variant="primary" />
             <ActionButton label="Import Dataset" />
-            <ActionButton label="Test Connection" />
-            <ActionButton label="View Sync Logs" />
           </ActionButtonGroup>
         }
       />
+
+      {/* State Rendering */}
+      {simulatedState === "loading" && (
+        <div className="space-y-8 animate-pulse">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="ui-card-surface p-4 space-y-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-6 w-20" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="ui-card-surface p-5 space-y-4">
+                  <div className="flex gap-3">
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-12" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-4">
+              <div className="ui-card-surface p-5 space-y-4">
+                <Skeleton className="h-4 w-24" />
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {simulatedState === "empty" && (
+        <div className="space-y-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {INTEGRATION_METRICS.map((metric, i) => (
+              <MetricCard key={i} {...metric} value="--" helperText="No connected services" />
+            ))}
+          </div>
+          <EmptyState
+            title="No External Integrations Connected"
+            description="Bridge your discovery workspace with external molecular datasets, S3 storage vaults, or AlphaFold structures by setting up your first service integrations."
+            action={
+              <ActionButton label="Connect First Integration" variant="primary" onClick={() => setSimulatedState("normal")} />
+            }
+          />
+        </div>
+      )}
+
+      {simulatedState === "error" && (
+        <div className="space-y-8">
+          <ErrorState
+            title="AWS S3 Synchronization Failed"
+            explanation="The platform was unable to synchronize synthesized docking dossiers to the organizational S3 object repository due to authorization signature mismatch."
+            debugHint="S3SignatureError: SignatureDoesNotMatch (code: 403) on bucket: qdf-oncology-vault-us-east-1"
+            action={
+              <ActionButton label="Retry Sync Cycle" variant="primary" onClick={() => setSimulatedState("normal")} />
+            }
+          />
+        </div>
+      )}
+
+      {simulatedState === "offline" && (
+        <div className="space-y-8">
+          <OfflineState
+            title="Integration Health Telemetry Offline"
+            description="The centralized health relay gateway is currently unresponsive, rendering external API gateway latencies unmeasurable."
+            reason="Service heartbeat timeout | Health-Relay connection refused on port 9091"
+            action={
+              <ActionButton label="Re-evaluate Connections" variant="primary" onClick={() => setSimulatedState("normal")} />
+            }
+          />
+        </div>
+      )}
+
+      {simulatedState === "normal" && (
+        <>
 
       {/* 2. Integration Summary Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -72,8 +175,8 @@ export default function IntegrationsDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
           {/* 3. Connected Integrations */}
           <section className="space-y-4">
             <SectionHeader title="Connected Integrations" description="Active services integrated into your research workspace." />
@@ -180,6 +283,8 @@ export default function IntegrationsDashboard() {
           </section>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

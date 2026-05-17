@@ -330,7 +330,7 @@ export default function MoleculesPage() {
       {/* 7. Comparison Tray / Selected Candidates */}
       {selectedIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-4xl px-4 animate-in slide-in-from-bottom-4 duration-300">
-          <div className="ui-card-surface bg-card/95 backdrop-blur-xl border-accent/30 shadow-2xl p-4 flex items-center justify-between gap-8">
+          <div className="ui-card-surface bg-card/95 backdrop-blur-xl border-accent/30 shadow-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8">
              <div className="flex items-center gap-6">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black uppercase text-accent tracking-[0.2em]">Selected</span>

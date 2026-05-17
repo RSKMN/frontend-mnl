@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   MetricCard,
   SectionHeader,
@@ -8,6 +8,9 @@ import {
   PageHeader,
   ActionButton,
   ActionButtonGroup,
+  Skeleton,
+  PermissionState,
+  TableSkeleton,
 } from "@/components/ui";
 
 const BILLING_METRICS = [
@@ -33,6 +36,8 @@ const PLANS = [
 ];
 
 export default function BillingDashboard() {
+  const [simulatedState, setSimulatedState] = useState<"normal" | "loading" | "restricted">("normal");
+
   return (
     <div className="flex flex-col gap-8 pb-12">
       {/* 1. Page Header */}
@@ -42,14 +47,67 @@ export default function BillingDashboard() {
         description="Manage your research subscription, compute credit allocation, and financial records for the QuDrugForge™ platform."
         actions={
           <ActionButtonGroup>
+            <div className="flex items-center gap-2 mr-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-text/60">UI State:</span>
+              <select 
+                value={simulatedState}
+                onChange={(e) => setSimulatedState(e.target.value as any)}
+                className="bg-muted-bg border border-border/40 text-text rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider outline-none focus:border-accent cursor-pointer"
+              >
+                <option value="normal">🟢 Operational</option>
+                <option value="loading">🟡 Loading Skeletons</option>
+                <option value="restricted">🔒 Access Restricted</option>
+              </select>
+            </div>
             <ActionButton label="Upgrade Plan" variant="primary" />
             <ActionButton label="Add Credits" />
-            <ActionButton label="Contact Sales" />
           </ActionButtonGroup>
         }
       />
 
-      {/* Current Plan & Usage Metrics */}
+      {/* State Rendering */}
+      {simulatedState === "loading" && (
+        <div className="space-y-8 animate-pulse">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1 ui-card-surface p-6 space-y-4">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-8 w-40" />
+              <div className="space-y-2 py-4 border-y border-border/20">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+              </div>
+            </div>
+            <div className="lg:col-span-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="ui-card-surface p-5 space-y-3">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <TableSkeleton rows={4} />
+        </div>
+      )}
+
+      {simulatedState === "restricted" && (
+        <div className="space-y-8">
+          <PermissionState
+            title="Billing Administration Restricted"
+            description="Your user role lacks permission to review pricing packages, view historical invoices, or purchase compute allocations."
+            requiredRole="Financial Administrator or Platform Owner"
+            action={
+              <ActionButton label="Request Access Escalation" variant="primary" onClick={() => alert("Finance access requested.")} />
+            }
+          />
+        </div>
+      )}
+
+      {simulatedState === "normal" && (
+        <>
+          {/* Current Plan & Usage Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-1">
            <div className="ui-card-surface p-6 h-full border-accent/20 bg-accent/[0.02]">
@@ -90,8 +148,8 @@ export default function BillingDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
           {/* Compute Credits Detail */}
           <section className="space-y-4">
              <SectionHeader title="Compute Credits Allocation" description="Detailed breakdown of scientific workload costs and credit consumption." />
@@ -140,7 +198,7 @@ export default function BillingDashboard() {
           {/* Billing Breakdown Table */}
           <section className="space-y-4">
             <SectionHeader title="Billing Breakdown" description="Itemized monthly usage across all platform resources." />
-            <div className="ui-card-surface overflow-hidden">
+            <div className="ui-card-surface overflow-x-auto">
                <table className="w-full text-left">
                   <thead>
                     <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
@@ -231,6 +289,8 @@ export default function BillingDashboard() {
           </section>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

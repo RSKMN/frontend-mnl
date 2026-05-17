@@ -1,5 +1,6 @@
 import Link from "next/link";
 import StatusBadge, { StatusType } from "./StatusBadge";
+import { CardLift } from "./SafeMotion";
 
 interface ResearchProjectProps {
   id: string;
@@ -35,7 +36,8 @@ export default function ResearchProjectCard({
 }: ResearchProjectProps) {
   return (
     <Link href={`/research-projects/${id}`} className={`block ${className}`}>
-      <div className="ui-card-surface group flex flex-col gap-4 p-5 transition-all hover:border-accent/40 hover:shadow-xl hover:shadow-accent/5 h-full">
+      <CardLift className="h-full">
+        <div className="ui-card-surface group flex flex-col gap-4 p-5 transition-all hover:border-accent/40 hover:shadow-xl hover:shadow-accent/5 h-full">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h3 className="truncate text-sm font-bold tracking-tight text-text group-hover:text-accent transition-colors">{name}</h3>
@@ -89,7 +91,8 @@ export default function ResearchProjectCard({
             />
           </div>
         </div>
-      </div>
+        </div>
+      </CardLift>
     </Link>
   );
 }

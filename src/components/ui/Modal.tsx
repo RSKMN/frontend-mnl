@@ -30,6 +30,24 @@ export function Modal({
   const [isRendered, setIsRendered] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(isOpen);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const modalRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        if (modalRef.current) {
+          const focusable = modalRef.current.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex="0"]'
+          );
+          if (focusable.length > 0) {
+            (focusable[0] as HTMLElement).focus();
+          } else {
+            modalRef.current.focus();
+          }
+        }
+      }, 50);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (closeTimerRef.current) {
@@ -104,8 +122,10 @@ export function Modal({
       />
 
       <section
+        ref={modalRef}
+        tabIndex={-1}
         className={joinClasses(
-          "ui-card-surface relative z-10 w-full max-w-xl shadow-premium transition-all duration-300 overflow-hidden",
+          "ui-card-surface relative z-10 w-full max-w-xl shadow-premium transition-all duration-300 overflow-hidden outline-none",
           isVisible ? "scale-100 translate-y-0 opacity-100" : "scale-95 translate-y-4 opacity-0",
         )}
         role="dialog"

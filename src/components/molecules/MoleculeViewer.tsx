@@ -24,9 +24,10 @@ const updateStyle = (style: string, viewer: any, $3DmolMod: any) => {
     viewer.setStyle({}, { sphere: {} });
   } else if (style === "surface") {
     viewer.setStyle({}, { stick: { radius: 0.15 } });
+    const isDark = typeof document !== "undefined" && (document.documentElement.classList.contains("dark") || document.documentElement.getAttribute("data-theme") === "dark");
     viewer.addSurface($3DmolMod.SurfaceType.VDW, {
-      opacity: 0.85,
-      color: 'white',
+      opacity: isDark ? 0.45 : 0.65,
+      color: isDark ? '#22d3ee' : '#06b6d4',
     }, {hetflag: false});
   }
   viewer.render();
@@ -105,11 +106,15 @@ export default function MoleculeViewer({ moleculeId }: MoleculeViewerProps) {
         
         if (!containerRef.current || !active) return;
         
+        const isDark = typeof document !== "undefined" && (document.documentElement.classList.contains("dark") || document.documentElement.getAttribute("data-theme") === "dark");
+        const bgColor = isDark ? "#0b0f19" : "white";
+
         if (!viewerRef.current) {
           viewerRef.current = $3DmolMod.createViewer(containerRef.current, {
-            // 6. Set a clean white background
-            backgroundColor: "white",
+            backgroundColor: bgColor,
           });
+        } else {
+          viewerRef.current.setBackgroundColor(bgColor);
         }
         
         // 2. Prevent memory leaks by clearing previous models and surfaces

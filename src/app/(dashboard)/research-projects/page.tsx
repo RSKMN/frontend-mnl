@@ -9,7 +9,8 @@ import {
   SectionHeader,
   EmptyState,
   StatusBadge,
-  StatusType
+  StatusType,
+  FadeIn
 } from "@/components/ui";
 
 const PROJECTS = [
@@ -118,7 +119,7 @@ export default function WorkspacePage() {
   });
 
   return (
-    <div className="page-shell ui-fade-in flex flex-col gap-8 pb-10">
+    <FadeIn className="page-shell flex flex-col gap-8 pb-10">
       <PageHeader 
         title="Research Projects"
         breadcrumb="QuDrugForge™ / Research Projects"
@@ -287,7 +288,7 @@ export default function WorkspacePage() {
           </div>
         </div>
       </div>
-    </div>
+    </FadeIn>
   );
 }
 

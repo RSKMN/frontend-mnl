@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   MetricCard,
   SectionHeader,
@@ -8,6 +8,9 @@ import {
   PageHeader,
   ActionButton,
   ActionButtonGroup,
+  Skeleton,
+  PermissionState,
+  TableSkeleton,
 } from "@/components/ui";
 
 const TEAM_METRICS = [
@@ -95,6 +98,8 @@ const PROJECT_GROUPS = [
 ];
 
 export default function TeamDashboard() {
+  const [simulatedState, setSimulatedState] = useState<"normal" | "loading" | "restricted">("normal");
+
   return (
     <div className="flex flex-col gap-8 pb-12">
       {/* 1. Page Header */}
@@ -104,12 +109,67 @@ export default function TeamDashboard() {
         description="Manage organization members, research roles, and workspace-level permissions for shared drug discovery programs."
         actions={
           <ActionButtonGroup>
+            <div className="flex items-center gap-2 mr-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-text/60">UI State:</span>
+              <select 
+                value={simulatedState}
+                onChange={(e) => setSimulatedState(e.target.value as any)}
+                className="bg-muted-bg border border-border/40 text-text rounded-lg px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider outline-none focus:border-accent cursor-pointer"
+              >
+                <option value="normal">🟢 Operational</option>
+                <option value="loading">🟡 Loading Skeletons</option>
+                <option value="restricted">🔒 Access Restricted</option>
+              </select>
+            </div>
             <ActionButton label="Invite Member" variant="primary" />
             <ActionButton label="Manage Roles" />
-            <ActionButton label="Export Team List" />
           </ActionButtonGroup>
         }
       />
+
+      {/* State Rendering */}
+      {simulatedState === "loading" && (
+        <div className="space-y-8 animate-pulse">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="ui-card-surface p-4 space-y-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-6 w-20" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <TableSkeleton rows={4} />
+            </div>
+            <div className="space-y-4">
+              <div className="ui-card-surface p-5 space-y-4">
+                <Skeleton className="h-4 w-24" />
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-5/6" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {simulatedState === "restricted" && (
+        <div className="space-y-8">
+          <PermissionState
+            title="Team & Access Control Restricted"
+            description="Your user access level does not allow modification of team members, invitation of external reviewers, or role reallocations."
+            requiredRole="Organization Administrator or Program Director"
+            action={
+              <ActionButton label="Request Role Escalation" variant="primary" onClick={() => alert("Role elevation request dispatched.")} />
+            }
+          />
+        </div>
+      )}
+
+      {simulatedState === "normal" && (
+        <>
 
       {/* 2. Team Summary Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -118,12 +178,12 @@ export default function TeamDashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
           {/* 3. Members Table */}
           <section className="space-y-4">
             <SectionHeader title="Team Members" description="Active research personnel and collaborators within your organization." />
-            <div className="ui-card-surface overflow-hidden">
+            <div className="ui-card-surface overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
@@ -174,7 +234,7 @@ export default function TeamDashboard() {
           {/* 4. Role & Permission Overview */}
           <section className="space-y-4">
             <SectionHeader title="Role & Permission Matrix" description="Standardized capability sets across organization roles." />
-            <div className="ui-card-surface overflow-hidden">
+            <div className="ui-card-surface overflow-x-auto">
                <table className="w-full text-left text-[11px]">
                   <thead>
                     <tr className="bg-muted-bg/30 text-[9px] font-black uppercase tracking-widest text-muted-text/60 border-b border-border/40">
@@ -272,6 +332,8 @@ export default function TeamDashboard() {
           </section>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

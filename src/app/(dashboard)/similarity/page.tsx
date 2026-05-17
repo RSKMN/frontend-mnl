@@ -157,7 +157,7 @@ export default function SimilarityPage() {
           {/* 5. Nearest Neighbor Table */}
           <div className="space-y-4">
             <SectionHeader title="Nearest Structural Neighbors" description="Prioritized list of structural relatives identified via fingerprint search." />
-            <div className="ui-card-surface overflow-hidden">
+            <div className="ui-card-surface overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">

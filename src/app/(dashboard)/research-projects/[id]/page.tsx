@@ -255,10 +255,16 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
       </div>
 
       {/* 3. TABS */}
-      <div className="flex items-center gap-1 border-b border-border/40 mb-8 overflow-x-auto no-scrollbar">
+      <div 
+        role="tablist" 
+        aria-label="Project Workspace Tabs" 
+        className="flex items-center gap-1 border-b border-border/40 mb-8 overflow-x-auto no-scrollbar"
+      >
         {tabs.map((tab) => (
           <button
             key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 pb-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 whitespace-nowrap ${
               activeTab === tab 

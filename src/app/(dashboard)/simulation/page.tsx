@@ -135,7 +135,7 @@ export default function SimulationPage() {
           {/* 4. Stability Results Table */}
           <div className="space-y-4">
             <SectionHeader title="Stability Ledger" description="Detailed MD trajectory analytics and H-bond occupancy data." />
-            <div className="ui-card-surface overflow-hidden">
+            <div className="ui-card-surface overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">

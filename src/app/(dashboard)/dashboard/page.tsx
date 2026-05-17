@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   getDataset,
@@ -22,11 +23,20 @@ import {
   ActionButton,
   ActionButtonGroup,
   SectionHeader,
+  FadeIn,
 } from "@/components/ui";
-import { AssistantWidget, ChartsSection } from "@/components/dashboard";
 import { DashboardPageSkeleton } from "@/components/shared/skeletons";
 import { ApiErrorState } from "@/components/shared/states";
 import { toFriendlyErrorMessage } from "@/services/api";
+
+const ChartsSection = dynamic(() => import("@/components/dashboard/Charts"), {
+  ssr: false,
+  loading: () => <div className="h-64 rounded-xl animate-pulse bg-muted-bg/30 border border-border/20" />,
+});
+
+const AssistantWidget = dynamic(() => import("@/components/dashboard/AssistantWidget"), {
+  ssr: false,
+});
 
 export default function DashboardPage() {
   const selectedDataset = useUiStore((s) => s.selectedDataset);
@@ -139,7 +149,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="page-shell ui-fade-in flex flex-col gap-8 pb-10">
+    <FadeIn className="page-shell flex flex-col gap-8 pb-10">
       {/* 1. PAGE HEADER */}
       <PageHeader 
         title="EGFR NSCLC Discovery Program"
@@ -312,6 +322,6 @@ export default function DashboardPage() {
         <SectionHeader title="Molecular Property Distributions" description="Aggregated chemical space metrics for the current screening batch." />
         <ChartsSection />
       </section>
-    </div>
+    </FadeIn>
   );
 }

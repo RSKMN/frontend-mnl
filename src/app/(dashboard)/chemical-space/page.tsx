@@ -1,12 +1,22 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import PageHeader from "@/components/ui/PageHeader";
 import MetricCard from "@/components/ui/MetricCard";
 import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
-import EmbeddingPlot from "@/components/embeddings/EmbeddingPlot";
+
+const EmbeddingPlot = dynamic(() => import("@/components/embeddings/EmbeddingPlot"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[600px] flex flex-col items-center justify-center rounded-2xl border animate-pulse bg-muted-bg/30 border-border/20">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <span className="mt-4 text-xs font-black uppercase tracking-widest text-muted-text/50">Loading Chemical Space Manifold...</span>
+    </div>
+  ),
+});
 import type { EmbeddingPoint } from "@/types/api";
 
 // Mock data for Chemical Space topography

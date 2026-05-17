@@ -1,12 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import PageHeader from "@/components/ui/PageHeader";
 import MetricCard from "@/components/ui/MetricCard";
 import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
-import ThreeDMoleculeViewer from "@/components/molecules/ThreeDMoleculeViewer";
+
+const ThreeDMoleculeViewer = dynamic(() => import("@/components/molecules/ThreeDMoleculeViewer"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full min-h-[600px] flex flex-col items-center justify-center rounded-2xl border animate-pulse bg-muted-bg/30 border-border/20">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <span className="mt-4 text-xs font-black uppercase tracking-widest text-muted-text/50">Initializing 3D Workbench...</span>
+    </div>
+  ),
+});
 
 // Mock data for the EGFR discovery program
 const POSES = [

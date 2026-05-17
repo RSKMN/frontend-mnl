@@ -35,12 +35,12 @@ export default function ExperimentTable({
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-border/40 bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60">
-              <th className="px-6 py-4">Experiment Name</th>
-              <th className="px-6 py-4">Type</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Runtime</th>
-              <th className="px-6 py-4">Owner</th>
-              <th className="px-6 py-4 text-right">Updated</th>
+              <th scope="col" className="px-6 py-4">Experiment Name</th>
+              <th scope="col" className="px-6 py-4">Type</th>
+              <th scope="col" className="px-6 py-4">Status</th>
+              <th scope="col" className="px-6 py-4">Runtime</th>
+              <th scope="col" className="px-6 py-4">Owner</th>
+              <th scope="col" className="px-6 py-4 text-right">Updated</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/40">

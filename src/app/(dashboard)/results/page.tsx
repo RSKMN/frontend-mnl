@@ -77,7 +77,7 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
         <div className="flex flex-col gap-8">
           {/* Featured Dossiers */}
           <div className="space-y-4">
