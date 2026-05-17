@@ -17,7 +17,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-text antialiased selection:bg-primary/20 selection:text-primary">
         <Script id="theme-init" strategy="beforeInteractive">
-          {`(function(){try{var key='qdrugforge.theme';var stored=localStorage.getItem(key);var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var theme=(stored==='light'||stored==='dark')?stored:(prefersDark?'dark':'light');var root=document.documentElement;root.dataset.theme=theme;root.style.colorScheme=theme;if(theme==='dark'){root.classList.add('dark');}else{root.classList.remove('dark');}}catch(e){}})();`}
+          {`(function(){try{var key='qdrugforge.theme';var stored=localStorage.getItem(key);var theme=(stored==='light'||stored==='dark')?stored:'light';var root=document.documentElement;root.dataset.theme=theme;root.style.colorScheme=theme;if(theme==='dark'){root.classList.add('dark');}else{root.classList.remove('dark');}}catch(e){}})();`}
         </Script>
         <DemoProvider>
           {children}

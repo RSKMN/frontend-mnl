@@ -17,15 +17,10 @@ export function useTheme() {
   // Initialize theme on mount
   useEffect(() => {
     const stored = localStorage.getItem(THEME_KEY) as Theme | null;
-    const prefersDark = window.matchMedia(
-      '(prefers-color-scheme: dark)'
-    ).matches;
     const initialTheme =
       stored === 'light' || stored === 'dark'
         ? stored
-        : prefersDark
-          ? 'dark'
-          : 'light';
+        : 'light';
 
     setTheme(initialTheme);
     applyTheme(initialTheme);

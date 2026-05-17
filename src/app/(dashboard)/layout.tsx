@@ -251,6 +251,105 @@ function isRouteActive(pathname: string, href: string, currentSearch: string = "
   return pathname === baseHref || (baseHref !== "/" && pathname.startsWith(`${baseHref}/`));
 }
 
+function isSidebarItemActive(pathname: string, currentSearch: string, label: string): boolean {
+  const normPath = pathname.toLowerCase().replace(/\/$/, "");
+  const normSearch = currentSearch.toLowerCase();
+
+  switch (label) {
+    case "Dashboard":
+      return normPath === "/dashboard";
+    case "Research Projects":
+      return normPath === "/research-projects" || 
+             normPath.startsWith("/research-projects/") || 
+             normPath === "/projects" || 
+             normPath.startsWith("/projects/");
+    case "Experiments":
+      return normPath === "/history" || 
+             normPath.startsWith("/history/") || 
+             normPath === "/experiments" || 
+             normPath.startsWith("/experiments/");
+    case "Reports":
+      return normPath === "/results" || 
+             normPath.startsWith("/results/") || 
+             normPath === "/reports" || 
+             normPath.startsWith("/reports/");
+    case "Targets":
+      return normPath === "/targets" || normPath.startsWith("/targets/");
+    case "Molecules":
+      return normPath === "/molecules" || normPath.startsWith("/molecules/");
+    case "Docking":
+      return (normPath === "/docking" || normPath.startsWith("/docking/")) && !normSearch.includes("engine=gnina");
+    case "GNINA":
+      return normPath === "/gnina" || 
+             normPath.startsWith("/gnina/") || 
+             ((normPath === "/docking" || normPath.startsWith("/docking/")) && normSearch.includes("engine=gnina"));
+    case "Quantum":
+      return normPath === "/quantum" || normPath.startsWith("/quantum/");
+    case "Simulations":
+      return normPath === "/simulation" || 
+             normPath.startsWith("/simulation/") || 
+             normPath === "/simulations" || 
+             normPath.startsWith("/simulations/");
+    case "ADMET":
+      return normPath === "/admet" || 
+             normPath.startsWith("/admet/") || 
+             normPath === "/validation" || 
+             normPath.startsWith("/validation/") ||
+             ((normPath === "/validation" || normPath.startsWith("/validation/")) && normSearch.includes("panel=admet"));
+    case "3D Viewer":
+      return normPath === "/visualization" || 
+             normPath.startsWith("/visualization/") || 
+             normPath === "/3d-viewer" || 
+             normPath.startsWith("/3d-viewer/") || 
+             normPath === "/viewer" || 
+             normPath.startsWith("/viewer/");
+    case "Chemical Space":
+      return normPath === "/chemical-space" || normPath.startsWith("/chemical-space/");
+    case "Similarity":
+      return normPath === "/similarity" || normPath.startsWith("/similarity/");
+    case "Models":
+      return normPath === "/models" || normPath.startsWith("/models/");
+    case "Pharma LLM":
+      return normPath === "/copilot" || 
+             normPath.startsWith("/copilot/") || 
+             normPath === "/pharma-llm" || 
+             normPath.startsWith("/pharma-llm/");
+    case "Compute":
+      return normPath === "/compute" || 
+             normPath.startsWith("/compute/") || 
+             (normPath === "/settings" && normSearch.includes("section=compute"));
+    case "Storage":
+      return normPath === "/storage" || 
+             normPath.startsWith("/storage/") || 
+             (normPath === "/settings" && normSearch.includes("section=storage"));
+    case "API":
+      return normPath === "/api" || 
+             normPath.startsWith("/api/") || 
+             (normPath === "/settings" && normSearch.includes("section=api"));
+    case "Integrations":
+      return normPath === "/integrations" || 
+             normPath.startsWith("/integrations/") || 
+             (normPath === "/settings" && normSearch.includes("section=integrations"));
+    case "Team":
+      return normPath === "/team" || 
+             normPath.startsWith("/team/") || 
+             (normPath === "/settings" && normSearch.includes("section=team"));
+    case "Billing":
+      return normPath === "/billing" || 
+             normPath.startsWith("/billing/") || 
+             (normPath === "/settings" && normSearch.includes("section=billing"));
+    case "Audit Logs":
+      return normPath === "/audit" || 
+             normPath === "/audit-logs" || 
+             normPath.startsWith("/audit-logs/") || 
+             (normPath === "/settings" && normSearch.includes("section=audit"));
+    case "Settings":
+      return normPath === "/settings" && !normSearch.includes("section=");
+    default:
+      return false;
+  }
+}
+
 function getPageContext(pathname: string) {
   return PAGE_CONTEXTS.find((item) => isRouteActive(pathname, item.href)) ?? PAGE_CONTEXTS[PAGE_CONTEXTS.length - 1];
 }
@@ -367,7 +466,7 @@ function DashboardLayoutContent({
 
                   <div className="space-y-1">
                     {group.items.map((item) => {
-                      const isActive = isRouteActive(pathname, item.matchHref ?? item.href, currentSearch);
+                      const isActive = isSidebarItemActive(pathname, currentSearch, item.label);
 
                       return (
                         <Link
@@ -534,7 +633,7 @@ function DashboardLayoutContent({
           <nav className="border-t px-4 py-1.5 lg:hidden" style={{ borderColor: "var(--border)" }} aria-label="Mobile navigation">
             <div className="flex gap-2 overflow-x-auto">
               {MOBILE_NAV_ITEMS.map((item) => {
-                const isActive = isRouteActive(pathname, item.matchHref ?? item.href);
+                const isActive = isSidebarItemActive(pathname, currentSearch, item.label);
 
                 return (
                   <Link

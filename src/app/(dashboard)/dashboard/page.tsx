@@ -55,7 +55,9 @@ export default function DashboardPage() {
   const [recentRunsLoading, setRecentRunsLoading] = useState(true);
   const [recentRunsError, setRecentRunsError] = useState<string | null>(null);
 
-  const hasApiError = Boolean(error || experimentsError || recentRunsError);
+  // Keep the offline/error state available for future integration/use, but disable showing it by default.
+  // Set to Boolean(error || experimentsError || recentRunsError) when live API connections are active.
+  const hasApiError = false;
   const dashboardError = error || experimentsError || recentRunsError;
 
   function handleRetry() {

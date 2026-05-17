@@ -71,21 +71,23 @@ export function isDemoMode(): boolean {
   // 1. Check LocalStorage (highest priority for client-side overrides)
   if (typeof window !== "undefined") {
     try {
-      if (localStorage.getItem("demo_mode") === "true") return true;
+      const stored = localStorage.getItem("demo_mode");
+      if (stored === "false") return false;
+      if (stored === "true") return true;
     } catch (e) {}
   }
 
   // 2. Check Environment Variable (standard way)
-  // We use a safe check that works in both server and browser bundles
   const envValue = 
     (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_DEMO_MODE) || 
     (typeof window !== "undefined" && (window as any)._NEXT_DATA_?.runtimeConfig?.NEXT_PUBLIC_DEMO_MODE);
 
-  if (envValue === "true" || envValue === true || envValue === "1") {
-    return true;
+  if (envValue === "false" || envValue === false || envValue === "0") {
+    return false;
   }
 
-  return false;
+  // Default to true for presentation/mock presentation mode!
+  return true;
 }
 
 const API_TIMEOUT_MS =
