@@ -38,7 +38,7 @@ function normalizeBaseUrl(value: string): string {
 function resolveApiBaseUrl(): string {
   const configured =
     typeof process !== "undefined"
-      ? process.env?.NEXT_PUBLIC_API_URL
+      ? (process.env?.NEXT_PUBLIC_API_URL || process.env?.NEXT_PUBLIC_API_BASE_URL)
       : undefined;
 
   if (configured && configured.trim()) {

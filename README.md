@@ -149,5 +149,56 @@ To transition this prototype to a fully functional application, the following ba
 - **Components:** Prefer leveraging existing components inside `src/components/ui/` before creating new ones.
 - **Data Fetching:** Keep mock logic modularized in `services/api.ts` to allow easy swapping to `fetch` calls in the future.
 
+## Frontend E2E Testing
+
+The frontend features a fully automated, CI-ready end-to-end testing suite written in **Playwright**.
+
+### 1. Installation & Setup
+To set up and run E2E tests locally:
+
+1. **Install Playwright dependencies**
+   ```bash
+   npm install
+   ```
+2. **Install browser engines**
+   ```bash
+   npx playwright install
+   ```
+
+### 2. Running E2E Tests
+
+Ensure your Next.js development server is running on `http://localhost:3000` (or allow Playwright's automatic web server to start it for you).
+
+- **Run all E2E tests (Headless)**
+   ```bash
+   npm run test:e2e
+   ```
+- **Open Playwright Interactive UI**
+   ```bash
+   npm run test:e2e:ui
+   ```
+- **Run tests in Headed Mode**
+   ```bash
+   npm run test:e2e:headed
+   ```
+- **View HTML Test Reports**
+   ```bash
+   npm run test:e2e:report
+   ```
+
+### 3. Testing Modes
+
+The E2E suite supports two execution modes, controlled via `.env.e2e`:
+
+- **Mock Mode (`E2E_MODE=mock`)**: 
+  - Standard baseline default. Runs entirely offline using the Next.js prototype's built-in high-fidelity mock data. No live backend services or database engines required. Extremely fast and reliable.
+- **Real Mode (`E2E_MODE=real`)**:
+  - Requires the `qudrugforge-backend` to be running at `http://127.0.0.1:8001`.
+  - Exercises full endpoint connectivity for authentication, workspaces, target listings, file persistence, and simulations.
+
+### 4. Troubleshooting
+- **Failing on Console Errors**: Playwright tests are configured to fail on severe, unhandled Javascript exceptions. If you see console errors, check that no third-party assets are throwing syntax errors in the browser. Safe React Hydration warnings are automatically filtered.
+- **Port Conflicts**: Ensure Next.js is not already bound to another port. Playwright targets `http://localhost:3000` by default.
+
 ## License
 License not specified.

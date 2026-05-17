@@ -1,0 +1,4 @@
+smiles,name,disease
+CN1CCC[C@H]1c2cccnc2,Nicotine,Alzheimer
+CC(=O)Oc1ccccc1C(=O)O,Aspirin,Inflammation
+CN(C)C(=N)N=C(N)N,Metformin,Diabetes
