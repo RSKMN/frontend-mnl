@@ -233,7 +233,7 @@ function buildUrl(
 
 /** Core request helper with timeout, JSON parsing, and normalized API errors */
 async function request<T>(
-  method: "GET" | "POST" | "PUT" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
   path: string,
   options: ApiRequestOptions = {}
 ): Promise<T> {
@@ -246,6 +246,16 @@ async function request<T>(
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
   if (body !== undefined && !isFormData && !mergedHeaders.has("Content-Type")) {
     mergedHeaders.set("Content-Type", "application/json");
+  }
+
+  // Automatic token injection from localStorage
+  if (typeof window !== "undefined") {
+    try {
+      const token = localStorage.getItem("auth_token");
+      if (token && !mergedHeaders.has("Authorization")) {
+        mergedHeaders.set("Authorization", `Bearer ${token}`);
+      }
+    } catch (e) {}
   }
 
   let response: Response;
@@ -313,17 +323,41 @@ export async function put<T>(path: string, options: ApiRequestOptions = {}): Pro
   return request<T>("PUT", path, options);
 }
 
+export async function patch<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  return request<T>("PATCH", path, options);
+}
+
 export async function del<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   return request<T>("DELETE", path, options);
 }
 
 export const apiDelete = del;
 
+// Aligned with Step 3 specifications:
+export function getApiBaseUrl(): string {
+  return API_BASE_URL;
+}
+
+export const apiGet = get;
+export const apiPost = post;
+export const apiPatch = patch;
+export const apiPut = put;
+
+export async function apiUpload<T>(path: string, formData: FormData, options: ApiRequestOptions = {}): Promise<T> {
+  return post<T>(path, { ...options, body: formData });
+}
+
+export function buildFileDownloadUrl(fileId: string): string {
+  return `${API_BASE_URL}/files/${fileId}/download`;
+}
+
 export const apiClient = {
   get,
   post,
   put,
+  patch,
   delete: del,
+  upload: apiUpload,
 };
 
 function sleep(ms: number): Promise<void> {
@@ -825,14 +859,27 @@ export async function getValidationStatus(experimentId: string): Promise<Workspa
 
 
 /** Fetch experiment history from the backend pipeline router. */
-export async function getPipelineExperiments(): Promise<PipelineExperimentItem[]> {
+export async function getPipelineExperiments(projectId?: string): Promise<PipelineExperimentItem[]> {
   if (isDemoMode()) {
     return mockApi.getExperiments();
   }
   try {
+    const activeProj = projectId || (typeof window !== "undefined" ? localStorage.getItem("active_project_id") : undefined);
+    if (activeProj) {
+      const res = await apiFetch<{ data?: { items?: any[] } }>(`/projects/${activeProj}/experiments`);
+      if (res?.data?.items) {
+        return res.data.items.map((item: any) => ({
+          experiment_id: item.id || item.experiment_id,
+          protein: item.name || item.protein || "Protein",
+          status: item.status,
+          created_at: item.created_at || item.createdAt || new Date().toISOString()
+        }));
+      }
+    }
     const data = await apiFetch<PipelineExperimentsResponse>("/pipeline/experiments");
     return Array.isArray(data.experiments) ? data.experiments : [];
-  } catch {
+  } catch (err) {
+    console.error("DEBUG: getPipelineExperiments error:", err);
     return mockApi.getExperiments();
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   ActionButtonGroup, 
   ActionButton, 
@@ -15,6 +15,7 @@ import {
   StatusType
 } from "@/components/ui";
 import { AssistantWidget, ChartsSection } from "@/components/dashboard";
+import { apiClient } from "@/services";
 
 interface ProjectDetailProps {
   params: {
@@ -32,6 +33,7 @@ interface InputDataCardProps {
   required?: boolean;
   optional?: boolean;
   warning?: string;
+  onUpload?: (file: File) => void;
 }
 
 function InputDataCard({ 
@@ -43,7 +45,8 @@ function InputDataCard({
   value, 
   required, 
   optional, 
-  warning 
+  warning,
+  onUpload
 }: InputDataCardProps) {
   const getStatusColor = () => {
     switch (status) {
@@ -55,6 +58,8 @@ function InputDataCard({
     }
   };
 
+  const inputId = `file-input-${title.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}`;
+
   return (
     <div className={`ui-card-surface p-5 flex flex-col gap-4 border-l-4 ${
       status === 'Missing' && required ? 'border-l-error/60' : 
@@ -62,6 +67,19 @@ function InputDataCard({
       status === 'Validated' ? 'border-l-success/60' : 
       'border-l-border/40'
     }`}>
+      {onUpload && (
+        <input
+          type="file"
+          id={inputId}
+          accept={formats}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onUpload(f);
+          }}
+          className="hidden"
+        />
+      )}
+      
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -84,11 +102,21 @@ function InputDataCard({
             <svg className="h-3.5 w-3.5 text-muted-text/40 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             <span className="text-[10px] font-bold text-text/80 truncate">{fileName}</span>
           </div>
-          <button className="text-[9px] font-black text-accent uppercase tracking-widest hover:underline">Change</button>
+          <button 
+            type="button" 
+            onClick={() => onUpload && document.getElementById(inputId)?.click()}
+            className="text-[9px] font-black text-accent uppercase tracking-widest hover:underline"
+          >
+            Change
+          </button>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          <button className="flex items-center justify-center gap-2 rounded border border-dashed border-border/60 p-2.5 text-[10px] font-black uppercase tracking-widest text-muted-text/60 hover:border-accent/40 hover:text-accent transition-all group">
+          <button 
+            type="button"
+            onClick={() => onUpload && document.getElementById(inputId)?.click()}
+            className="flex items-center justify-center gap-2 rounded border border-dashed border-border/60 p-2.5 text-[10px] font-black uppercase tracking-widest text-muted-text/60 hover:border-accent/40 hover:text-accent transition-all group"
+          >
             <svg className="h-3.5 w-3.5 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
             Upload / Select
           </button>
@@ -173,8 +201,99 @@ const RECENT_ACTIVITY = [
 ];
 
 export default function ProjectDetailPage({ params }: ProjectDetailProps) {
-  const project = PROJECTS_DB[params.id] || PROJECTS_DB["egfr-nsclc"];
+  const [project, setProject] = useState<any>(PROJECTS_DB[params.id] || PROJECTS_DB["egfr-nsclc"]);
   const [activeTab, setActiveTab] = useState("Overview");
+  const [inputs, setInputs] = useState<any>(null);
+  const [completeness, setCompleteness] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchProjectData = async () => {
+    try {
+      setIsLoading(true);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("active_project_id", params.id);
+      }
+      const res = await apiClient.get<any>(`/projects/${params.id}`);
+      if (res.success && res.data) {
+        const p = res.data;
+        setProject({
+          name: p.name,
+          disease: p.disease_type || "General Oncology",
+          target: p.cancer_type || "Multiple Targets",
+          uniprot: "P00533",
+          stage: "Target Discovery",
+          status: p.status || "active",
+          workspace: localStorage.getItem("active_workspace_name") || "Research Workspace",
+          team: "Quinfosys Research Division",
+          lastUpdated: "Just now",
+          objective: p.description || "Development of mutant-selective discovery programs.",
+          collaborators: ["SC", "DK", "ER", "MW"],
+        });
+      }
+
+      const inputsRes = await apiClient.get<any>(`/projects/${params.id}/inputs`);
+      if (inputsRes.success && inputsRes.data) {
+        setInputs(inputsRes.data);
+      }
+
+      const compRes = await apiClient.get<any>(`/projects/${params.id}/inputs/completeness`);
+      if (compRes.success && compRes.data) {
+        setCompleteness(compRes.data);
+      }
+    } catch (err) {
+      console.error("Failed to load project details from backend, using fallback:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjectData();
+  }, [params.id]);
+
+  const handleUploadInputFile = async (field: string, file: File) => {
+    try {
+      setIsLoading(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      const backendFileType = field.endsWith("_file_id") ? field.slice(0, -8) : "other";
+      formData.append("file_type", backendFileType);
+      formData.append("source_module", "project_inputs");
+
+      const uploadRes = await apiClient.upload<any>(`/projects/${params.id}/files/upload`, formData);
+      if (uploadRes.success && uploadRes.data && uploadRes.data.file) {
+        const fileId = uploadRes.data.file.file_id || uploadRes.data.file.id;
+
+        const assignRes = await apiClient.patch<any>(`/projects/${params.id}/inputs/files`, {
+          body: {
+            [field]: fileId
+          }
+        });
+
+        if (assignRes.success) {
+          alert(`File "${file.name}" uploaded and assigned successfully!`);
+          fetchProjectData();
+        } else {
+          alert("Failed to assign file to inputs.");
+        }
+      } else {
+        alert("Failed to upload file to project storage.");
+      }
+    } catch (err) {
+      alert("Upload failed: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getCardInfo = (field: string, fallbackStatus: any, fallbackName: string) => {
+    if (!inputs) return { status: fallbackStatus, fileName: fallbackName };
+    const fileId = inputs[field];
+    if (fileId) {
+      return { status: "Uploaded" as const, fileName: `assigned_file_${fileId.slice(-6)}` };
+    }
+    return { status: "Missing" as const, fileName: undefined };
+  };
 
   const tabs = [
     "Overview", "Input Data", "Targets", "Molecules", "Docking", 
@@ -392,7 +511,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                 />
               </div>
             </section>
-
+ 
             {/* B. Protein Structure */}
             <section className="space-y-4">
               <SectionHeader title="B. Protein Structure" description="Structural evidence for molecular docking and simulations." />
@@ -400,30 +519,30 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                 <InputDataCard 
                   title="Protein FASTA"
                   description="Amino acid sequence of the target."
-                  status="Uploaded"
                   formats=".fasta, .fa, .txt"
-                  fileName="EGFR_P00533.fasta"
+                  {...getCardInfo("protein_fasta_file_id", "Uploaded", "EGFR_P00533.fasta")}
+                  onUpload={(file) => handleUploadInputFile("protein_fasta_file_id", file)}
                   required
                 />
                 <InputDataCard 
                   title="Protein PDB / mmCIF"
                   description="Experimental crystal structure."
-                  status="Uploaded"
                   formats=".pdb, .cif, .mmcif"
-                  fileName="6V6O_human_egfr.pdb"
+                  {...getCardInfo("protein_structure_file_id", "Uploaded", "6V6O_human_egfr.pdb")}
+                  onUpload={(file) => handleUploadInputFile("protein_structure_file_id", file)}
                   required
                 />
                 <InputDataCard 
                   title="AlphaFold Structure"
                   description="AI-predicted protein folding data."
-                  status="Uploaded"
                   formats=".pdb, .json"
-                  fileName="AF-P00533-F1-model_v4.pdb"
+                  {...getCardInfo("alphafold_structure_file_id", "Uploaded", "AF-P00533-F1-model_v4.pdb")}
+                  onUpload={(file) => handleUploadInputFile("alphafold_structure_file_id", file)}
                   optional
                 />
               </div>
             </section>
-
+ 
             {/* C. Binding Site & Ligands */}
             <section className="space-y-4">
               <SectionHeader title="C. Binding Site & Ligands" description="Define the catalytic pocket or allosteric binding site." />
@@ -431,29 +550,31 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                 <InputDataCard 
                   title="Binding Site / Pocket Box"
                   description="Define pocket residues or 3D grid box coordinates."
-                  status="Warning"
-                  fileName="EGFR_ATP_Pocket.json"
+                  status={inputs?.binding_site ? "Validated" : "Warning"}
+                  value={inputs?.binding_site ? `Mode: ${inputs.binding_site.mode} | Box Size: (${inputs.binding_site.box?.size_x || 20}, ${inputs.binding_site.box?.size_y || 20}, ${inputs.binding_site.box?.size_z || 20})` : undefined}
+                  fileName={inputs?.binding_site ? undefined : "EGFR_ATP_Pocket.json"}
                   required
-                  warning="Coordinates overlap with solvent."
+                  warning={inputs?.binding_site ? undefined : "Coordinates overlap with solvent."}
                 />
                 <InputDataCard 
                   title="Known Reference Ligand"
                   description="Co-crystallized or known potent inhibitor."
-                  status="Uploaded"
                   formats=".sdf, .mol2"
-                  fileName="Osimertinib_ref.sdf"
+                  {...getCardInfo("reference_ligand_file_id", "Uploaded", "Osimertinib_ref.sdf")}
+                  onUpload={(file) => handleUploadInputFile("reference_ligand_file_id", file)}
                   required
                 />
                 <InputDataCard 
                   title="Known Actives / Inactives"
                   description="Experimental data for training rescoring models."
-                  status="Missing"
                   formats=".csv, .sdf"
+                  {...getCardInfo("assay_data_file_id", "Missing", "")}
+                  onUpload={(file) => handleUploadInputFile("assay_data_file_id", file)}
                   required
                 />
               </div>
             </section>
-
+ 
             {/* D. Compound Libraries */}
             <section className="space-y-4">
               <SectionHeader title="D. Compound Libraries" description="Chemical space to be explored via the discovery pipeline." />
@@ -461,21 +582,22 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                 <InputDataCard 
                   title="SMILES Compound Library"
                   description="List of molecules for virtual screening."
-                  status="Uploaded"
                   formats=".csv, .smi"
-                  fileName="Zinc_LeadLike_15k.csv"
+                  {...getCardInfo("compound_library_file_id", "Uploaded", "Zinc_LeadLike_15k.csv")}
+                  onUpload={(file) => handleUploadInputFile("compound_library_file_id", file)}
                   required
                 />
                 <InputDataCard 
                   title="SDF 3D Library"
                   description="Pre-conformed molecular structures."
-                  status="Optional"
                   formats=".sdf"
+                  {...getCardInfo("tumor_mutation_file_id", "Optional", "")}
+                  onUpload={(file) => handleUploadInputFile("tumor_mutation_file_id", file)}
                   optional
                 />
               </div>
             </section>
-
+ 
             {/* E. Experimental Assay Data */}
             <section className="space-y-4">
               <SectionHeader title="E. Experimental Assay Data" description="Upload IC50, Ki, Kd values for target validation." />
@@ -483,20 +605,21 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                 <InputDataCard 
                   title="Assay Data (IC50/Ki/Kd/EC50)"
                   description="Upload experimental binding affinity and potency metrics."
-                  status="Uploaded"
                   formats=".csv, .xlsx"
-                  fileName="EGFR_Inhibitor_Assays.xlsx"
+                  {...getCardInfo("assay_data_file_id", "Uploaded", "EGFR_Inhibitor_Assays.xlsx")}
+                  onUpload={(file) => handleUploadInputFile("assay_data_file_id", file)}
                   required
                 />
                 <InputDataCard 
                   title="Mutation / RNA / IHC Data"
                   description="Target-specific genomic, expression, or IHC data."
-                  status="Missing"
+                  {...getCardInfo("rna_ihc_file_id", "Missing", "")}
+                  onUpload={(file) => handleUploadInputFile("rna_ihc_file_id", file)}
                   optional
                 />
               </div>
             </section>
-
+ 
             {/* F. ADMET & Toxicity */}
             <section className="space-y-4">
               <SectionHeader title="F. ADMET & Toxicity" description="Safety parameters and physiological constraints." />
@@ -504,14 +627,14 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                 <InputDataCard 
                   title="ADMET / Toxicity Data"
                   description="Known safety profiles for relevant scaffolds."
-                  status="Uploaded"
                   formats=".csv, .xlsx, .json"
-                  fileName="ADMET_Scoring_Model.json"
+                  {...getCardInfo("admet_data_file_id", "Uploaded", "ADMET_Scoring_Model.json")}
+                  onUpload={(file) => handleUploadInputFile("admet_data_file_id", file)}
                   required
                 />
               </div>
             </section>
-
+ 
             {/* G. Optional Omics / Cell Data */}
             <section className="space-y-4">
               <SectionHeader title="G. Optional Omics / Cell Response" description="Advanced biological response data." />
@@ -519,13 +642,15 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                 <InputDataCard 
                   title="Cell-line Response"
                   description="Growth inhibition or viability data."
-                  status="Missing"
+                  {...getCardInfo("organoid_response_file_id", "Missing", "")}
+                  onUpload={(file) => handleUploadInputFile("organoid_response_file_id", file)}
                   optional
                 />
                 <InputDataCard 
                   title="Organoid Data"
                   description="3D patient-derived model data."
-                  status="Missing"
+                  {...getCardInfo("organoid_response_file_id", "Missing", "")}
+                  onUpload={(file) => handleUploadInputFile("organoid_response_file_id", file)}
                   optional
                 />
               </div>

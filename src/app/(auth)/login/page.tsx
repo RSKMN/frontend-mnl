@@ -15,7 +15,7 @@ import {
   SSOProvider
 } from "../_components";
 import { useAuthCredentialsForm } from "../_hooks/useAuthCredentialsForm";
-import { setToken } from "@/services";
+import { setToken, login, toFriendlyErrorMessage } from "@/services";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,15 +55,18 @@ export default function LoginPage() {
     setSuccessMessage(null);
     setIsLoading(true);
 
-    // Mock API Call delay (brief Loading state)
-    setTimeout(() => {
-      setToken(`mock-auth-token-${Date.now()}`);
-      setSuccessMessage("Credentials signature verified. Preparing workspace...");
+    try {
+      const response = await login(email, password);
+      setToken(response.token);
+      setSuccessMessage(response.message || "Signed in successfully. Preparing workspace...");
       setTimeout(() => {
         router.push("/workspace-selector");
         setIsLoading(false);
       }, 700);
-    }, 600);
+    } catch (err) {
+      setFormError(toFriendlyErrorMessage(err, "Invalid email or security password. Please try again."));
+      setIsLoading(false);
+    }
   };
 
   const handleSSOLogin = (provider: SSOProvider) => {

@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState, Suspense } from "react";
 
-import { isAuthenticated, removeToken } from "@/services";
+import { isAuthenticated, removeToken, apiClient } from "@/services";
 import { ThemeToggle, PharmaAssistantWidget } from "@/components/shared";
 import logo from "../../../logo.png";
 
@@ -368,6 +368,10 @@ function DashboardLayoutContent({
   const currentSearch = searchParams.toString();
   const pageContext = useMemo(() => getPageContext(pathname), [pathname]);
 
+  const [userInfo, setUserInfo] = useState<{ full_name: string; email: string } | null>(null);
+  const [activeWorkspaceName, setActiveWorkspaceName] = useState<string>("Research Workspace");
+  const [activeWorkspaceRole, setActiveWorkspaceRole] = useState<string>("member");
+
   const handleLogout = () => {
     removeToken();
     router.replace("/login");
@@ -400,6 +404,31 @@ function DashboardLayoutContent({
     }
 
     setCanAccess(true);
+
+    const fetchUserAndWorkspaces = async () => {
+      try {
+        const res = await apiClient.get<any>("/auth/me");
+        if (res.success && res.data) {
+          const user = res.data.user;
+          setUserInfo({ full_name: user.full_name, email: user.email });
+
+          const localWsId = localStorage.getItem("active_workspace_id");
+          const workspaces = res.data.workspaces || [];
+          const activeWs = workspaces.find((w: any) => w.id === localWsId) || workspaces[0];
+
+          if (activeWs) {
+            setActiveWorkspaceName(activeWs.name);
+            setActiveWorkspaceRole(activeWs.role);
+            localStorage.setItem("active_workspace_id", activeWs.id);
+            localStorage.setItem("active_workspace_name", activeWs.name);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load user session context:", err);
+      }
+    };
+
+    fetchUserAndWorkspaces();
   }, [router]);
 
   if (!canAccess || !mounted) {
@@ -442,10 +471,10 @@ function DashboardLayoutContent({
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold" style={{ color: "var(--text)" }}>
-                      Research Workspace
+                      {activeWorkspaceName}
                     </p>
-                    <p className="mt-0.5 truncate text-[11px]" style={{ color: "var(--muted-text)" }}>
-                      Oncology Division
+                    <p className="mt-0.5 truncate text-[11px] capitalize" style={{ color: "var(--muted-text)" }}>
+                      {activeWorkspaceRole} Division
                     </p>
                   </div>
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: "var(--success)" }} />
@@ -589,9 +618,13 @@ function DashboardLayoutContent({
                     className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold"
                     style={{ background: "var(--accent)", color: "var(--bg)" }}
                   >
-                    RU
+                    {userInfo?.full_name
+                      ? userInfo.full_name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
+                      : "RU"}
                   </span>
-                  <span className="hidden text-sm font-medium xl:inline">Research User</span>
+                  <span className="hidden text-sm font-medium xl:inline">
+                    {userInfo?.full_name || "Research User"}
+                  </span>
                   <Icon name="chevronDown" className="hidden h-3.5 w-3.5 xl:block" />
                 </summary>
                 <div
@@ -599,8 +632,12 @@ function DashboardLayoutContent({
                   style={{ borderColor: "var(--border)", background: "var(--card)" }}
                 >
                   <div className="px-2 py-2">
-                    <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Research User</p>
-                    <p className="text-xs" style={{ color: "var(--muted-text)" }}>Oncology Division</p>
+                    <p className="text-sm font-semibold truncate" style={{ color: "var(--text)" }}>
+                      {userInfo?.full_name || "Research User"}
+                    </p>
+                    <p className="text-xs truncate" style={{ color: "var(--muted-text)" }}>
+                      {activeWorkspaceName}
+                    </p>
                   </div>
                   <button
                     type="button"

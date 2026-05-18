@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
 import PageHeader from "@/components/ui/PageHeader";
 import MetricCard from "@/components/ui/MetricCard";
 import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
+import { apiClient } from "@/services";
 
 const EmbeddingPlot = dynamic(() => import("@/components/embeddings/EmbeddingPlot"), {
   ssr: false,
@@ -19,54 +20,11 @@ const EmbeddingPlot = dynamic(() => import("@/components/embeddings/EmbeddingPlo
 });
 import type { EmbeddingPoint } from "@/types/api";
 
-// Mock data for Chemical Space topography
+// Mock data fallbacks
 const MOCK_POINTS: EmbeddingPoint[] = [
-  // QDF-EGFR-001 (The Hero)
-  { x: 12.5, y: -8.2, molecule_id: "QDF-EGFR-001", dataset: "Generated", qed: 0.85, mw: 421.4, logp: 3.82, source: "generated" },
-  // FDA Drugs (Clusters of green)
-  ...Array.from({ length: 50 }).map((_, i) => ({
-    x: -15 + Math.random() * 10,
-    y: 10 + Math.random() * 10,
-    molecule_id: `FDA-${100 + i}`,
-    dataset: "FDA",
-    qed: 0.7 + Math.random() * 0.2,
-    mw: 300 + Math.random() * 200,
-    logp: 2 + Math.random() * 2,
-    source: "fda" as const
-  })),
-  // Screening Hits (Clusters of amber)
-  ...Array.from({ length: 150 }).map((_, i) => ({
-    x: 5 + Math.random() * 20,
-    y: 5 + Math.random() * 15,
-    molecule_id: `HIT-${500 + i}`,
-    dataset: "Screening",
-    qed: 0.5 + Math.random() * 0.3,
-    mw: 350 + Math.random() * 150,
-    logp: 1 + Math.random() * 4,
-    source: "dataset" as const
-  })),
-  // Generated Candidates (Clusters of indigo)
-  ...Array.from({ length: 300 }).map((_, i) => ({
-    x: 10 + Math.random() * 15,
-    y: -15 + Math.random() * 20,
-    molecule_id: `GEN-${800 + i}`,
-    dataset: "Generated",
-    qed: 0.6 + Math.random() * 0.3,
-    mw: 400 + Math.random() * 100,
-    logp: 3 + Math.random() * 2,
-    source: "generated" as const
-  })),
-  // Out-of-domain (Scattered gray)
-  ...Array.from({ length: 40 }).map((_, i) => ({
-    x: -25 + Math.random() * 10,
-    y: -20 + Math.random() * 15,
-    molecule_id: `OOD-${i}`,
-    dataset: "OOD",
-    qed: 0.3 + Math.random() * 0.2,
-    mw: 500 + Math.random() * 300,
-    logp: 5 + Math.random() * 3,
-    source: "dataset" as const
-  })),
+  { x: 1.5, y: -2.2, molecule_id: "QDF-EGFR-001", dataset: "Generated", qed: 0.85, mw: 421.4, logp: 3.82, source: "generated" },
+  { x: -3.1, y: 4.2, molecule_id: "FDA-101", dataset: "FDA", qed: 0.72, mw: 320.5, logp: 2.1, source: "fda" },
+  { x: 2.4, y: 1.8, molecule_id: "HIT-501", dataset: "Screening", qed: 0.65, mw: 380.0, logp: 3.2, source: "dataset" }
 ];
 
 const CLUSTERS = [
@@ -75,7 +33,6 @@ const CLUSTERS = [
   { name: "indazole-like", count: 210, avgScore: -8.5, novelty: "High", color: "bg-emerald-500" },
   { name: "macrocycle-like", count: 120, avgScore: -8.2, novelty: "Extreme", color: "bg-amber-500" },
   { name: "approved-drug-like", count: 73, avgScore: -7.5, novelty: "Low", color: "bg-success" },
-  { name: "out-of-domain", count: 18, avgScore: -6.4, novelty: "N/A", color: "bg-muted-text/30" },
 ];
 
 const SCAFFOLDS = [
@@ -88,14 +45,73 @@ const SCAFFOLDS = [
 const PROPERTIES = [
   { label: "Molecular Weight", val: "421.4", unit: "g/mol", dist: [20, 40, 80, 100, 60, 30] },
   { label: "LogP (Lipophilicity)", val: "3.82", unit: "o/w", dist: [10, 30, 70, 90, 80, 40] },
-  { label: "TPSA", val: "84.5", unit: "Å²", dist: [40, 60, 90, 70, 40, 20] },
   { label: "QED (Drug-likeness)", val: "0.85", unit: "score", dist: [5, 15, 45, 95, 75, 25] },
-  { label: "SA Score", val: "2.1", unit: "score", dist: [80, 90, 60, 40, 20, 10] },
 ];
 
 export default function ChemicalSpacePage() {
+  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+  const [points, setPoints] = useState<EmbeddingPoint[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<EmbeddingPoint>(MOCK_POINTS[0]);
   const [colorMode, setColorMode] = useState<"dataset" | "qed">("dataset");
+  const [isRecomputing, setIsRecomputing] = useState(false);
+
+  const fetchPoints = async (forceRecompute: boolean = false) => {
+    try {
+      const projectId = localStorage.getItem("active_project_id");
+      if (!projectId) return;
+
+      const res = await apiClient.get<any>(`/projects/${projectId}/chemical-space`, {
+        params: forceRecompute ? { recompute: true } : undefined
+      });
+
+      if (res.success && res.data && res.data.points && res.data.points.length > 0) {
+        const mapped = res.data.points.map((p: any) => ({
+          x: p.x,
+          y: p.y,
+          molecule_id: p.compound_id || p.molecule_id,
+          dataset: p.status || "Generated",
+          qed: p.qed || 0.0,
+          mw: p.mw || 0.0,
+          logp: p.logp || 0.0,
+          source: p.status === "uploaded" ? "dataset" : "generated"
+        }));
+        setPoints(mapped);
+        setSelectedPoint(mapped[0]);
+        setDataSource("REAL BACKEND DATA");
+      }
+    } catch (err) {
+      console.error("Failed to load chemical space points", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPoints();
+  }, []);
+
+  const handleRecompute = async () => {
+    setIsRecomputing(true);
+    try {
+      const projectId = localStorage.getItem("active_project_id");
+      if (!projectId) return;
+
+      const res = await apiClient.post<any>(`/projects/${projectId}/chemical-space/recompute`, {
+        body: {
+          method: "deterministic_placeholder",
+          limit: 1000,
+          store: true
+        }
+      });
+      if (res.success) {
+        await fetchPoints();
+      }
+    } catch (err) {
+      console.error("Recompute chemical space coordinates failed", err);
+    } finally {
+      setIsRecomputing(false);
+    }
+  };
+
+  const displayPoints = points.length > 0 ? points : MOCK_POINTS;
 
   return (
     <div className="space-y-8 pb-12">
@@ -106,16 +122,30 @@ export default function ChemicalSpacePage() {
         description="Navigate the multidimensional landscape of molecular embeddings. Identify scaffold clusters, analyze diversity gradients, and detect novel regions relative to known pharmaceutical space."
         actions={
           <ActionButtonGroup>
-            <ActionButton label="Highlight Top Candidates" variant="outline" />
+            <ActionButton 
+              label={isRecomputing ? "Recomputing..." : "Recompute Space"} 
+              variant="primary" 
+              onClick={handleRecompute} 
+              disabled={isRecomputing} 
+            />
             <ActionButton label="Export Embedding" variant="secondary" />
-            <ActionButton label="Ask Pharma LLM" variant="primary" />
           </ActionButtonGroup>
         }
       />
 
+      {/* Dynamic Data Provenance Badge */}
+      <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
+        <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
+        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+          dataSource === "REAL BACKEND DATA" ? "bg-accent/20 text-accent" : "bg-warning/20 text-warning"
+        }`}>
+          {dataSource}
+        </span>
+      </div>
+
       {/* 2. Chemical Space Summary Metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <MetricCard label="Embedded Molecules" value="1,500" helperText="Total active manifold" status="completed" />
+        <MetricCard label="Embedded Molecules" value={String(displayPoints.length)} helperText="Total active manifold" status="completed" />
         <MetricCard label="Scaffold Clusters" value="42" helperText="Unique structural types" status="completed" />
         <MetricCard label="Novel Region Leads" value="186" helperText="Low similarity to FDA" status="active" />
         <MetricCard label="Approved Neighbors" value="73" helperText="Similar to known drugs" status="completed" />
@@ -128,7 +158,7 @@ export default function ChemicalSpacePage() {
           {/* 3. Embedding Visualization Panel */}
           <div className="h-[600px] relative">
             <EmbeddingPlot 
-              data={MOCK_POINTS} 
+              data={displayPoints} 
               colorMode={colorMode} 
               onPointClick={(p) => setSelectedPoint(p)} 
             />
@@ -187,7 +217,10 @@ export default function ChemicalSpacePage() {
                   <div key={prop.label} className="ui-card-surface p-4">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest">{prop.label}</span>
-                      <span className="text-[10px] font-black text-primary">{prop.val} <span className="text-[8px] text-muted-text/50">{prop.unit}</span></span>
+                      <span className="text-[10px] font-black text-primary">
+                        {prop.label === "QED (Drug-likeness)" ? selectedPoint.qed : (prop.label === "Molecular Weight" ? selectedPoint.mw : selectedPoint.logp)} 
+                        <span className="text-[8px] text-muted-text/50"> {prop.unit}</span>
+                      </span>
                     </div>
                     <div className="h-6 flex items-end gap-1">
                       {prop.dist.map((v, i) => (
@@ -212,30 +245,26 @@ export default function ChemicalSpacePage() {
             
             <div className="space-y-4">
               <div className="flex flex-col">
-                <span className="text-xl font-black text-text tracking-tighter">{selectedPoint.molecule_id}</span>
+                <span className="text-xl font-black text-text tracking-tighter truncate" title={selectedPoint.molecule_id}>{selectedPoint.molecule_id}</span>
                 <span className="text-[10px] font-bold text-muted-text uppercase tracking-[0.2em]">{selectedPoint.dataset} Manifold</span>
               </div>
 
               <div className="grid grid-cols-1 gap-y-3 pt-4 border-t border-border/20">
                 <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-muted-text">Cluster</span>
-                  <span className="text-[11px] font-black text-text">quinazoline-like</span>
+                  <span className="text-[11px] font-bold text-muted-text">MW</span>
+                  <span className="text-[11px] font-black text-text">{selectedPoint.mw} g/mol</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-muted-text">Nearest FDA</span>
-                  <span className="text-[11px] font-black text-accent italic">Gefitinib (0.78 sim)</span>
+                  <span className="text-[11px] font-bold text-muted-text">LogP</span>
+                  <span className="text-[11px] font-black text-text">{selectedPoint.logp}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-muted-text">Novelty Score</span>
-                  <span className="text-[11px] font-black text-emerald-500">0.86</span>
+                  <span className="text-[11px] font-bold text-muted-text">QED score</span>
+                  <span className="text-[11px] font-black text-accent">{selectedPoint.qed}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-muted-text">App. Domain</span>
+                  <span className="text-[11px] font-bold text-muted-text">Applicability Domain</span>
                   <span className="text-[11px] font-black text-text">Inside (High Conf)</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-muted-text">Quantum Rank</span>
-                  <span className="text-[11px] font-black text-accent">#1</span>
                 </div>
               </div>
 

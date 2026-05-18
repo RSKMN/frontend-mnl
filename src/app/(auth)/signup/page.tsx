@@ -11,7 +11,7 @@ import {
   AuthInput, 
   AuthStatusMessage 
 } from "../_components";
-import { setToken } from "@/services";
+import { setToken, signup, toFriendlyErrorMessage } from "@/services";
 
 type AccountType = "individual" | "academic" | "startup" | "enterprise";
 
@@ -45,8 +45,8 @@ export default function SignupPage() {
       return;
     }
     
-    if (password.length < 6) {
-      setFormError("Password must be at least 6 characters for regulatory compliance.");
+    if (password.length < 8) {
+      setFormError("Password must be at least 8 characters for regulatory compliance.");
       return;
     }
     
@@ -64,16 +64,19 @@ export default function SignupPage() {
     setSuccessMessage(null);
     setIsLoading(true);
 
-    // Simulate keypair setup and active workspace initialization
-    setTimeout(() => {
-      setToken(`mock-signup-token-${Date.now()}`);
-      setSuccessMessage("Onboarding profile loaded. Initializing quantum reranker...");
+    try {
+      const response = await signup(email, password, fullName, orgName);
+      setToken(response.token);
+      setSuccessMessage(response.message || "Onboarding profile loaded. Preparing workspace...");
       
       setTimeout(() => {
         router.push("/workspace-selector");
         setIsLoading(false);
       }, 700);
-    }, 900);
+    } catch (err) {
+      setFormError(toFriendlyErrorMessage(err, "Registration failed. Please check your credentials and try again."));
+      setIsLoading(false);
+    }
   };
 
   return (

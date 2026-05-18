@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useMemo, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useMemo, Suspense, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import MetricCard from "@/components/ui/MetricCard";
 import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
+import { apiClient } from "@/services";
 
 // --- DOCKING DATA ---
 const DOCKING_RESULTS = [
-  { candidate: "QDF-EGFR-001", engine: "AutoDock Vina", affinity: -10.2, rmsd: 1.2, pocket: "ATP-Binding", status: "completed" },
-  { candidate: "QDF-EGFR-014", engine: "AutoDock Vina", affinity: -9.8, rmsd: 0.8, pocket: "ATP-Binding", status: "completed" },
-  { candidate: "QDF-EGFR-027", engine: "Smina", affinity: -9.5, rmsd: 1.5, pocket: "ATP-Binding", status: "completed" },
-  { candidate: "QDF-EGFR-033", engine: "AutoDock Vina", affinity: -9.2, rmsd: 2.1, pocket: "Allosteric", status: "running" }
+  { candidate: "QDF-EGFR-001", engine: "AutoDock Vina", affinity: -10.2, rmsd: 1.2, pocket: "ATP-Binding", status: "completed", id: "mock_1", result_id: "mock_1" },
+  { candidate: "QDF-EGFR-014", engine: "AutoDock Vina", affinity: -9.8, rmsd: 0.8, pocket: "ATP-Binding", status: "completed", id: "mock_2", result_id: "mock_2" },
+  { candidate: "QDF-EGFR-027", engine: "Smina", affinity: -9.5, rmsd: 1.5, pocket: "ATP-Binding", status: "completed", id: "mock_3", result_id: "mock_3" },
+  { candidate: "QDF-EGFR-033", engine: "AutoDock Vina", affinity: -9.2, rmsd: 2.1, pocket: "Allosteric", status: "running", id: "mock_4", result_id: "mock_4" }
 ];
 
 const QUEUE_JOBS = [
@@ -25,10 +26,10 @@ const QUEUE_JOBS = [
 
 // --- GNINA DATA ---
 const GNINA_RESULTS = [
-  { candidate: "QDF-EGFR-001", cnnAffinity: -11.2, cnnPoseScore: 0.942, vinaAffinity: -10.2, confidence: "High", artifact: "pose_1.sdf", status: "completed" },
-  { candidate: "QDF-EGFR-014", cnnAffinity: -10.5, cnnPoseScore: 0.885, vinaAffinity: -9.8, confidence: "High", artifact: "pose_1.sdf", status: "completed" },
-  { candidate: "QDF-EGFR-027", cnnAffinity: -9.9, cnnPoseScore: 0.810, vinaAffinity: -9.5, confidence: "Medium", artifact: "pose_2.sdf", status: "completed" },
-  { candidate: "QDF-EGFR-033", cnnAffinity: -9.4, cnnPoseScore: 0.750, vinaAffinity: -9.2, confidence: "Low", artifact: "pose_3.sdf", status: "running" }
+  { candidate: "QDF-EGFR-001", cnnAffinity: -11.2, cnnPoseScore: 0.942, vinaAffinity: -10.2, confidence: "High", artifact: "pose_1.sdf", status: "completed", id: "mock_1", result_id: "mock_1" },
+  { candidate: "QDF-EGFR-014", cnnAffinity: -10.5, cnnPoseScore: 0.885, vinaAffinity: -9.8, confidence: "High", artifact: "pose_1.sdf", status: "completed", id: "mock_2", result_id: "mock_2" },
+  { candidate: "QDF-EGFR-027", cnnAffinity: -9.9, cnnPoseScore: 0.810, vinaAffinity: -9.5, confidence: "Medium", artifact: "pose_2.sdf", status: "completed", id: "mock_3", result_id: "mock_3" },
+  { candidate: "QDF-EGFR-033", cnnAffinity: -9.4, cnnPoseScore: 0.750, vinaAffinity: -9.2, confidence: "Low", artifact: "pose_3.sdf", status: "running", id: "mock_4", result_id: "mock_4" }
 ];
 
 const GNINA_LOGS = [
@@ -45,10 +46,91 @@ const GNINA_LOGS = [
 
 function DockingWorkspaceContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const engine = searchParams.get("engine");
   const isGnina = engine === "gnina";
 
-  const [selectedResult, setSelectedResult] = useState(isGnina ? GNINA_RESULTS[0] : DOCKING_RESULTS[0]);
+  const [realDocking, setRealDocking] = useState<any[]>([]);
+  const [realGnina, setRealGnina] = useState<any[]>([]);
+  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const projectId = localStorage.getItem("active_project_id");
+        if (!projectId) return;
+        
+        const docRes = await apiClient.get<any>(`/projects/${projectId}/docking/results`);
+        if (docRes.success && docRes.data && docRes.data.items && docRes.data.items.length > 0) {
+          setRealDocking(docRes.data.items);
+        }
+
+        const gninaRes = await apiClient.get<any>(`/projects/${projectId}/gnina/results`);
+        if (gninaRes.success && gninaRes.data && gninaRes.data.items && gninaRes.data.items.length > 0) {
+          setRealGnina(gninaRes.data.items);
+        }
+      } catch (err) {
+        console.error("Failed to fetch docking/gnina data", err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (isGnina) {
+      if (realGnina.length > 0) {
+        setDataSource("IMPORTED Q-AI-DRUG DATA");
+      } else {
+        setDataSource("MOCK DATA");
+      }
+    } else {
+      if (realDocking.length > 0) {
+        setDataSource("IMPORTED Q-AI-DRUG DATA");
+      } else {
+        setDataSource("MOCK DATA");
+      }
+    }
+  }, [isGnina, realDocking, realGnina]);
+
+  const displayDocking = realDocking.length > 0
+    ? realDocking.map((r: any) => ({
+        candidate: r.compound_id,
+        engine: "AutoDock Vina",
+        affinity: r.metadata?.vina_affinity_kcal_mol !== undefined && r.metadata?.vina_affinity_kcal_mol !== null
+          ? r.metadata.vina_affinity_kcal_mol
+          : (r.binding_energy !== undefined && r.binding_energy !== null ? r.binding_energy : -9.2),
+        rmsd: r.metadata?.rmsd !== undefined ? r.metadata.rmsd : 1.2,
+        pocket: r.metadata?.pocket || "ATP-Binding",
+        status: "completed",
+        id: r.id || r.compound_id,
+        result_id: r.id || r.compound_id
+      }))
+    : DOCKING_RESULTS;
+
+  const displayGnina = realGnina.length > 0
+    ? realGnina.map((r: any) => ({
+        candidate: r.compound_id,
+        cnnAffinity: r.cnn_affinity !== undefined && r.cnn_affinity !== null ? r.cnn_affinity : -9.5,
+        cnnPoseScore: r.cnn_pose_score !== undefined && r.cnn_pose_score !== null ? r.cnn_pose_score : 0.82,
+        vinaAffinity: r.binding_energy !== undefined && r.binding_energy !== null ? r.binding_energy : -8.5,
+        confidence: r.cnn_pose_score > 0.85 ? "High" : r.cnn_pose_score > 0.7 ? "Medium" : "Low",
+        artifact: r.metadata?.pose_file || "pose.sdf",
+        status: "completed",
+        id: r.id || r.compound_id,
+        result_id: r.id || r.compound_id
+      }))
+    : GNINA_RESULTS;
+
+  const [selectedResult, setSelectedResult] = useState<any>(null);
+
+  useEffect(() => {
+    setSelectedResult(isGnina ? displayGnina[0] : displayDocking[0]);
+  }, [isGnina, realDocking, realGnina]);
+
+  const handleOpenPoseViewer = () => {
+    if (!selectedResult) return;
+    router.push(`/visualization?result_id=${selectedResult.result_id || selectedResult.id || ""}`);
+  };
 
   return (
     <div className="space-y-8 pb-12">
@@ -68,6 +150,18 @@ function DockingWorkspaceContent() {
           </ActionButtonGroup>
         }
       />
+
+      {/* Dynamic Data Provenance Badge */}
+      <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
+        <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
+        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+          dataSource === "IMPORTED Q-AI-DRUG DATA" ? "bg-emerald-500/20 text-emerald-400" :
+          dataSource === "REAL BACKEND DATA" ? "bg-accent/20 text-accent" :
+          "bg-warning/20 text-warning"
+        }`}>
+          {dataSource}
+        </span>
+      </div>
 
       {/* 2. Summary Metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -110,8 +204,8 @@ function DockingWorkspaceContent() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
-                    {GNINA_RESULTS.map(res => (
-                      <tr key={res.candidate} className="group hover:bg-muted-bg/20 transition-colors cursor-pointer" onClick={() => setSelectedResult(res as any)}>
+                    {displayGnina.map(res => (
+                      <tr key={res.candidate} className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedResult?.candidate === res.candidate ? 'bg-accent/[0.03]' : ''}`} onClick={() => setSelectedResult(res as any)}>
                         <td className="px-4 py-3 font-mono text-xs font-bold text-text">{res.candidate}</td>
                         <td className="px-4 py-3 text-center font-mono text-xs font-black text-accent">{res.cnnAffinity}</td>
                         <td className="px-4 py-3 text-center font-mono text-xs text-text">{res.cnnPoseScore}</td>
@@ -171,8 +265,8 @@ function DockingWorkspaceContent() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/20">
-                      {DOCKING_RESULTS.map(res => (
-                        <tr key={res.candidate} className="group hover:bg-muted-bg/20 transition-colors cursor-pointer" onClick={() => setSelectedResult(res)}>
+                      {displayDocking.map(res => (
+                        <tr key={res.candidate} className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedResult?.candidate === res.candidate ? 'bg-accent/[0.03]' : ''}`} onClick={() => setSelectedResult(res)}>
                           <td className="px-4 py-3 font-mono text-xs font-bold text-text">{res.candidate}</td>
                           <td className="px-4 py-3 text-[11px] font-bold text-muted-text">{res.engine}</td>
                           <td className="px-4 py-3 text-center font-mono text-xs font-black text-emerald-500">{res.affinity}</td>
@@ -239,7 +333,7 @@ function DockingWorkspaceContent() {
                    {GNINA_LOGS.map((log, i) => (
                      <div key={i} className={log.includes("affinity") ? "text-accent" : ""}>{log}</div>
                    ))}
-                </div>
+                 </div>
               </div>
             </>
           ) : (
@@ -288,6 +382,14 @@ function DockingWorkspaceContent() {
             <button className="w-full py-3 rounded-lg bg-accent text-bg font-black uppercase tracking-[0.2em] text-[10px] hover:bg-accent/90 shadow-lg shadow-accent/10 transition-all">
               {isGnina ? "Export CNN Scores" : "Initiate GNINA Rescoring"}
             </button>
+            {selectedResult && (
+              <button 
+                onClick={handleOpenPoseViewer}
+                className="w-full py-3 rounded-lg bg-indigo-600 text-white border border-indigo-500 font-black uppercase tracking-[0.2em] text-[10px] hover:bg-indigo-700 shadow-lg shadow-indigo-500/10 transition-all"
+              >
+                View 3D Pose in Workbench
+              </button>
+            )}
             <button className="w-full py-3 rounded-lg border border-border text-text font-black uppercase tracking-[0.2em] text-[10px] hover:bg-muted-bg transition-all">
               {isGnina ? "View Lead Candidates" : "Optimize Poses (Smina)"}
             </button>

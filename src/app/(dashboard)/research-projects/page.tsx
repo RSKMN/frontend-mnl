@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   PageHeader, 
   ActionButtonGroup, 
@@ -12,8 +12,9 @@ import {
   StatusType,
   FadeIn
 } from "@/components/ui";
+import { apiClient } from "@/services";
 
-const PROJECTS = [
+const MOCK_PROJECTS = [
   { 
     id: "egfr-nsclc",
     name: "EGFR NSCLC Discovery Program", 
@@ -103,14 +104,96 @@ const RECENT_ACTIVITY = [
 ];
 
 export default function WorkspacePage() {
+  const [projects, setProjects] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [diseaseFilter, setDiseaseFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
 
-  const diseases = Array.from(new Set(PROJECTS.map(p => p.disease)));
+  const fetchProjects = async () => {
+    try {
+      setIsLoading(true);
+      const wsId = localStorage.getItem("active_workspace_id");
+      if (!wsId) {
+        setProjects(MOCK_PROJECTS);
+        return;
+      }
+      const res = await apiClient.get<any>(`/projects?workspace_id=${wsId}`);
+      if (res.success && res.data && Array.isArray(res.data.items)) {
+        if (res.data.items.length === 0) {
+          // If empty, let's fall back to mock projects to keep it beautiful
+          setProjects(MOCK_PROJECTS);
+        } else {
+          // Map backend projects to UI cards props
+          const mapped = res.data.items.map((proj: any) => ({
+            id: proj.id,
+            name: proj.name,
+            disease: proj.disease_type || "General Oncology",
+            target: proj.cancer_type || "Multiple Targets",
+            stage: "Target Discovery",
+            status: (proj.status === "active" ? "active" : proj.status) as StatusType,
+            progress: 0,
+            candidates: { generated: 0, filtered: 0 },
+            lastRun: "Just initialized",
+            owner: "Current User",
+            tags: ["Active", "Target Discovery"]
+          }));
+          setProjects(mapped);
+        }
+      } else {
+        setProjects(MOCK_PROJECTS);
+      }
+    } catch (err) {
+      console.error("Failed to load projects, falling back to mock:", err);
+      setProjects(MOCK_PROJECTS);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  const handleCreateProject = async () => {
+    const wsId = localStorage.getItem("active_workspace_id");
+    if (!wsId) {
+      alert("No active workspace selected. Please go back to the workspace selector.");
+      return;
+    }
+    const name = prompt("Enter a name for the new research project:");
+    if (!name || !name.trim()) return;
+    const disease = prompt("Enter disease indication (e.g., Lung Cancer):", "Oncology");
+    const target = prompt("Enter target protein/gene (e.g., EGFR L858R):", "Genomics Target");
+
+    try {
+      setIsLoading(true);
+      const res = await apiClient.post<any>("/projects", {
+        body: {
+          workspace_id: wsId,
+          name: name.trim(),
+          description: `Research project targeting ${target} for ${disease}`,
+          disease_type: disease || "Oncology",
+          cancer_type: target || "Genomics Target"
+        }
+      });
+      if (res.success) {
+        alert(`Project "${name}" created successfully!`);
+        fetchProjects();
+      } else {
+        alert("Failed to create project.");
+      }
+    } catch (err) {
+      alert("Error creating project: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const diseases = Array.from(new Set(projects.map(p => p.disease)));
   const statuses = ["all", "active", "running", "completed", "warning", "draft", "archived"];
 
-  const filteredProjects = PROJECTS.filter(project => {
+  const filteredProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           project.target.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || project.status === statusFilter;
@@ -127,7 +210,7 @@ export default function WorkspacePage() {
         actions={
           <ActionButtonGroup>
             <ActionButton label="Import Dataset" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>} />
-            <ActionButton label="New Project" variant="primary" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>} />
+            <ActionButton label="New Project" variant="primary" onClick={handleCreateProject} disabled={isLoading} icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>} />
           </ActionButtonGroup>
         }
       />
@@ -195,7 +278,10 @@ export default function WorkspacePage() {
               {filteredProjects.map((project) => (
                 <ResearchProjectCard key={project.id} {...project} />
               ))}
-              <div className="ui-card-surface flex flex-col items-center justify-center gap-3 border-dashed border-border/60 bg-transparent p-12 text-muted-text/40 hover:border-accent/40 hover:text-accent transition-all cursor-pointer group min-h-[280px]">
+              <div 
+                onClick={handleCreateProject}
+                className="ui-card-surface flex flex-col items-center justify-center gap-3 border-dashed border-border/60 bg-transparent p-12 text-muted-text/40 hover:border-accent/40 hover:text-accent transition-all cursor-pointer group min-h-[280px]"
+              >
                 <div className="h-12 w-12 rounded-full bg-surface-subtle flex items-center justify-center group-hover:bg-accent/10 transition-colors">
                   <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />

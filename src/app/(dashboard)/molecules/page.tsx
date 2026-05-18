@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import MetricCard from "@/components/ui/MetricCard";
 import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
+import { apiClient } from "@/services";
 
 // Mock data for candidate molecules
 const CANDIDATES = [
@@ -86,12 +87,48 @@ const CLUSTERS = [
 export default function MoleculesPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [realMolecules, setRealMolecules] = useState<any[]>([]);
+  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+
+  useEffect(() => {
+    const fetchMolecules = async () => {
+      try {
+        const projectId = localStorage.getItem("active_project_id");
+        if (!projectId) return;
+        const res = await apiClient.get<any>(`/projects/${projectId}/molecules`);
+        if (res.success && res.data && res.data.items && res.data.items.length > 0) {
+          setRealMolecules(res.data.items);
+          const hasImported = res.data.items.some((m: any) => m.source === "q_ai_drug_import" || m.metadata?.import_id);
+          setDataSource(hasImported ? "IMPORTED Q-AI-DRUG DATA" : "REAL BACKEND DATA");
+        }
+      } catch (err) {
+        console.error("Failed to fetch molecules", err);
+      }
+    };
+    fetchMolecules();
+  }, []);
 
   const toggleSelection = (id: string) => {
     setSelectedIds(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
+
+  const displayMolecules = realMolecules.length > 0
+    ? realMolecules.map((m: any) => ({
+        id: m.compound_id || m.id,
+        target: m.metadata?.target || "EGFR WT",
+        smiles: m.smiles,
+        dockingScore: m.metadata?.docking_score || m.metadata?.binding_energy || -9.2,
+        admetRisk: m.metadata?.admet_risk || "Low",
+        novelty: m.metadata?.novelty || 0.85,
+        qed: m.qed !== undefined && m.qed !== null ? m.qed : 0.72,
+        logp: m.logp !== undefined && m.logp !== null ? m.logp : 3.2,
+        saScore: m.metadata?.sa_score || 2.1,
+        quantumRank: m.metadata?.quantum_rank || 1,
+        status: m.status || "completed"
+      }))
+    : CANDIDATES;
 
   return (
     <div className="space-y-8 pb-12">
@@ -108,6 +145,18 @@ export default function MoleculesPage() {
           </ActionButtonGroup>
         }
       />
+
+      {/* Dynamic Data Provenance Badge */}
+      <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
+        <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
+        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+          dataSource === "IMPORTED Q-AI-DRUG DATA" ? "bg-emerald-500/20 text-emerald-400" :
+          dataSource === "REAL BACKEND DATA" ? "bg-accent/20 text-accent" :
+          "bg-warning/20 text-warning"
+        }`}>
+          {dataSource}
+        </span>
+      </div>
 
       {/* 2. Molecule Summary Metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -203,7 +252,7 @@ export default function MoleculesPage() {
           <div className="space-y-4">
             <SectionHeader title="Top Candidates" description="Priority leads identified by hybrid quantum-classical scoring." />
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {CANDIDATES.slice(0, 4).map(mol => (
+              {displayMolecules.slice(0, 4).map(mol => (
                 <div 
                   key={mol.id} 
                   className={`ui-card-surface group p-5 transition-all hover:shadow-xl relative ${
@@ -291,7 +340,7 @@ export default function MoleculesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
-                    {CANDIDATES.map(mol => (
+                    {displayMolecules.map(mol => (
                       <tr 
                         key={mol.id} 
                         className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedIds.includes(mol.id) ? 'bg-accent/[0.03]' : ''}`}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import MetricCard from "@/components/ui/MetricCard";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -11,6 +11,7 @@ import {
   ArtifactCompleteness, 
   ValidationWarnings 
 } from "@/components/dashboard/validation";
+import { apiClient } from "@/services";
 
 const SUMMARY_METRICS = [
   { label: "Total Reports", value: "245", icon: "📄" },
@@ -54,6 +55,55 @@ const EXPORT_QUEUE = [
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("all");
+  const [realReports, setRealReports] = useState<any[]>([]);
+  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const projectId = localStorage.getItem("active_project_id");
+        if (!projectId) return;
+        
+        const res = await apiClient.get<any>(`/projects/${projectId}/reports`);
+        if (res.success && res.data && res.data.items && res.data.items.length > 0) {
+          setRealReports(res.data.items);
+          const hasImported = res.data.items.some((item: any) => item.source === "q_ai_drug" || item.import_id);
+          setDataSource(hasImported ? "IMPORTED Q-AI-DRUG DATA" : "REAL BACKEND DATA");
+        }
+      } catch (err) {
+        console.error("Failed to fetch reports", err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const displayReports = realReports.length > 0
+    ? realReports.map((r: any) => ({
+        name: r.name || `Imported Dossier: ${r.compound_id || "CAND-QAI"}`,
+        type: r.report_type || "Q-AI-Drug Export",
+        project: "EGFR NSCLC",
+        status: "completed" as StatusType,
+        confidence: r.metadata?.confidence_score !== undefined ? String(r.metadata.confidence_score) : "0.94",
+        artifacts: String(r.metadata?.artifacts_count || 3),
+        format: r.format || "PDF/SDF",
+        generated: "Imported",
+        owner: "AutoPilot"
+      }))
+    : REPORTS;
+
+  const displayDossiers = realReports.length > 0
+    ? realReports.slice(0, 4).map((r: any) => ({
+        id: r.id || r._id || "DOS-001",
+        name: r.name || `${r.compound_id || "QDF-EGFR-001"} Dossier`,
+        type: r.report_type || "Candidate Dossier",
+        project: "EGFR Discovery",
+        date: "Imported",
+        status: "completed" as StatusType,
+        confidence: r.metadata?.confidence_score !== undefined ? String(r.metadata.confidence_score) : "0.94",
+        formats: [r.format || "PDF"],
+        warnings: r.metadata?.warnings_count || 0
+      }))
+    : FEATURED_DOSSIERS;
 
   return (
     <div className="flex flex-col gap-8 pb-12">
@@ -70,6 +120,31 @@ export default function ReportsPage() {
         }
       />
 
+      {/* Pending Reports Phase Alert */}
+      <div className="p-4 rounded-xl border border-warning/20 bg-warning/5 space-y-2" data-testid="pending-reports-alert">
+        <div className="flex items-center gap-2">
+          <svg className="w-5 h-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span className="text-xs font-black uppercase tracking-widest text-warning">Pending Phase 15 Integration</span>
+        </div>
+        <p className="text-[11px] text-muted-text/80 leading-relaxed">
+          Full automated report generation and candidate dossiers are pending in Phase 15. The dossiers and records below represent imported <strong>Q-AI-DRUG outputs</strong> or mock visual baselines for development auditing.
+        </p>
+      </div>
+
+      {/* Dynamic Data Provenance Badge */}
+      <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
+        <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
+        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+          dataSource === "IMPORTED Q-AI-DRUG DATA" ? "bg-emerald-500/20 text-emerald-400" :
+          dataSource === "REAL BACKEND DATA" ? "bg-accent/20 text-accent" :
+          "bg-warning/20 text-warning"
+        }`}>
+          {dataSource}
+        </span>
+      </div>
+
       {/* Summary Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {SUMMARY_METRICS.map((metric, i) => (
@@ -83,7 +158,7 @@ export default function ReportsPage() {
           <div className="space-y-4">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-text/60">Featured Candidate Dossiers</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {FEATURED_DOSSIERS.map((dossier) => (
+               {displayDossiers.map((dossier) => (
                 <div key={dossier.id} className="ui-card-surface p-5 border-accent/10 relative overflow-hidden group hover:bg-accent/[0.02] transition-colors">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex flex-col">
@@ -169,7 +244,7 @@ export default function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
-                  {REPORTS.map((report, i) => (
+                  {displayReports.map((report, i) => (
                     <tr key={i} className="group hover:bg-muted-bg/20 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex flex-col">

@@ -94,15 +94,26 @@ export async function login(email: string, password: string): Promise<AuthSucces
     throw new Error("Email and password are required.");
   }
 
-  return {
-    token: `mock-auth-token-${Date.now()}`,
-    message: "Signed in successfully. Redirecting...",
-  };
+  const payload = await apiClient.post<unknown>("/auth/login", {
+    body: { email: normalizedEmail, password: normalizedPassword },
+  });
+
+  return normalizeAuthResponse(payload);
 }
 
-export async function signup(email: string, password: string): Promise<AuthSuccessResponse> {
-  const payload = await apiClient.post<unknown>("/auth/signup", {
-    body: { email, password },
+export async function signup(
+  email: string,
+  password: string,
+  fullName: string,
+  workspaceName: string
+): Promise<AuthSuccessResponse> {
+  const payload = await apiClient.post<unknown>("/auth/register", {
+    body: {
+      email: email.trim(),
+      password: password.trim(),
+      full_name: fullName.trim(),
+      workspace_name: workspaceName.trim(),
+    },
   });
 
   return normalizeAuthResponse(payload);
