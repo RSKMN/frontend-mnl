@@ -6,12 +6,14 @@ export type StatusType =
   | "active" 
   | "completed" 
   | "running" 
+  | "generating"
   | "queued" 
   | "warning" 
   | "failed" 
   | "draft"
   | "archived"
-  | "pending";
+  | "pending"
+  | "imported";
 
 interface StatusBadgeProps {
   status: StatusType;
@@ -30,12 +32,14 @@ export default function StatusBadge({
     active: { color: "var(--primary)", bg: "rgba(99, 102, 241, 0.1)", border: "rgba(99, 102, 241, 0.2)" },
     completed: { color: "var(--success)", bg: "rgba(16, 185, 129, 0.1)", border: "rgba(16, 185, 129, 0.2)" },
     running: { color: "var(--accent)", bg: "rgba(34, 211, 238, 0.1)", border: "rgba(34, 211, 238, 0.2)" },
+    generating: { color: "var(--accent)", bg: "rgba(34, 211, 238, 0.1)", border: "rgba(34, 211, 238, 0.2)" },
     queued: { color: "var(--muted-text)", bg: "var(--muted-bg)", border: "var(--border)" },
     warning: { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)", border: "rgba(245, 158, 11, 0.2)" },
     failed: { color: "var(--error)", bg: "rgba(239, 68, 68, 0.1)", border: "rgba(239, 68, 68, 0.2)" },
     draft: { color: "var(--muted-text)", bg: "var(--muted-bg)", border: "var(--border)" },
     archived: { color: "var(--muted-text)", bg: "var(--muted-bg)", border: "var(--border)" },
     pending: { color: "var(--muted-text)", bg: "var(--muted-bg)", border: "var(--border)" },
+    imported: { color: "var(--accent)", bg: "rgba(34, 211, 238, 0.08)", border: "rgba(34, 211, 238, 0.2)" },
   };
 
   const { color, bg, border } = config[status] || config.pending;

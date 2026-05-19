@@ -233,6 +233,166 @@ export interface ResultArtifactsResponse {
   items: ResultArtifact[];
 }
 
+// ─── 8. Reports / Dossiers ─────────────────────────────────────────────────
+
+export type ReportType =
+  | "project_summary"
+  | "candidate_dossier"
+  | "experiment_report"
+  | "imported_q_ai_drug"
+  | "custom";
+
+export type ReportStatus =
+  | "draft"
+  | "queued"
+  | "generating"
+  | "completed"
+  | "failed"
+  | "imported";
+
+export type ReportSource = "qudrugforge" | "q_ai_drug" | "manual_import";
+
+export type ReportSectionStatus = "available" | "missing" | "pending";
+
+export interface ReportSectionDataRefs {
+  molecules: string[];
+  docking_results: string[];
+  gnina_results: string[];
+  quantum_results: string[];
+  admet_results: string[];
+  simulation_results: string[];
+}
+
+export interface ReportSection {
+  section_id: string;
+  title: string;
+  status: ReportSectionStatus;
+  summary: string;
+  data_refs: ReportSectionDataRefs;
+}
+
+export interface ReportMetadata {
+  candidate_count: number;
+  target_count: number;
+  has_docking: boolean;
+  has_gnina: boolean;
+  has_quantum: boolean;
+  has_admet: boolean;
+  has_simulations: boolean;
+  imported_source_dir?: string | null;
+}
+
+export interface ReportItem {
+  report_id: string;
+  workspace_id: string;
+  project_id: string;
+  experiment_id?: string | null;
+  title: string;
+  report_type: ReportType | string;
+  status: ReportStatus | string;
+  source: ReportSource | string;
+  source_module: string;
+  candidate_molecule_ids: string[];
+  target_ids: string[];
+  experiment_ids: string[];
+  sections: ReportSection[];
+  file_ids: string[];
+  primary_file_id?: string | null;
+  metadata: ReportMetadata & Record<string, unknown>;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string | null;
+  error_message?: string | null;
+}
+
+export interface ReportSummaryResponse {
+  project_id: string;
+  total_reports: number;
+  completed_reports: number;
+  draft_reports: number;
+  imported_reports: number;
+  failed_reports: number;
+  available_sections: Record<string, boolean>;
+}
+
+export interface ReportListResponse {
+  project_id: string;
+  reports: ReportItem[];
+  count: number;
+  total: number;
+  limit: number;
+  skip: number;
+}
+
+export interface ReportFileItem {
+  file_id: string;
+  filename: string;
+  file_type: string;
+  mime_type: string;
+  size_bytes: number;
+  download_url: string;
+}
+
+export interface ReportFilesResponse {
+  report_id: string;
+  files: ReportFileItem[];
+}
+
+export interface ReportGenerationResult {
+  report: ReportItem;
+  generated_files: string[];
+  warnings: string[];
+}
+
+export interface ReportGenerationResponse {
+  success: boolean;
+  data: ReportGenerationResult;
+  message: string;
+}
+
+export interface CreateReportRequest {
+  title: string;
+  report_type: ReportType;
+  experiment_id?: string | null;
+  candidate_molecule_ids?: string[];
+  target_ids?: string[];
+  experiment_ids?: string[];
+  sections_requested?: string[];
+}
+
+export interface UpdateReportRequest {
+  title?: string;
+  candidate_molecule_ids?: string[];
+  target_ids?: string[];
+  sections_requested?: string[];
+}
+
+export interface ImportQAiDrugReportRequest {
+  source_output_dir?: string | null;
+  file_ids?: string[];
+  title?: string;
+}
+
+export interface ReportGenerateRequest {
+  formats?: string[];
+  include_sections?: string[];
+  top_n?: number;
+}
+
+export interface ProjectSummaryGenerateRequest {
+  title?: string;
+  formats?: string[];
+  top_n?: number;
+}
+
+export interface CandidateDossierGenerateRequest {
+  title?: string;
+  candidate_molecule_ids?: string[];
+  formats?: string[];
+  top_n?: number;
+}
+
 // ─── 8. Experiment Dashboard ────────────────────────────────────────────────
 
 export interface ExperimentSummaryResponse {

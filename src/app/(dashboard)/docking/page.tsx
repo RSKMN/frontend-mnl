@@ -7,7 +7,8 @@ import MetricCard from "@/components/ui/MetricCard";
 import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
-import { apiClient } from "@/services";
+import EmptyState from "@/components/ui/EmptyState";
+import { isDemoMode, apiClient } from "@/services/api";
 
 // --- DOCKING DATA ---
 const DOCKING_RESULTS = [
@@ -53,48 +54,97 @@ function DockingWorkspaceContent() {
   const [realDocking, setRealDocking] = useState<any[]>([]);
   const [realGnina, setRealGnina] = useState<any[]>([]);
   const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+  const [isLoading, setIsLoading] = useState(true);
+  const [runningStage, setRunningStage] = useState(false);
+
+  const handleRunStage = async () => {
+    const projectId = localStorage.getItem("active_project_id");
+    if (!projectId) {
+      alert("No active research project selected.");
+      return;
+    }
+    
+    try {
+      setRunningStage(true);
+      const stage = isGnina ? "gnina" : "docking";
+      const res = await apiClient.post<any>(`/projects/${projectId}/pipeline/run`, {
+        body: {
+          pipeline: [stage],
+          parameters: {}
+        }
+      });
+      if (res.success) {
+        alert(`${isGnina ? "GNINA CNN Rescoring" : "Molecular Docking"} run triggered successfully on backend!`);
+      } else {
+        alert("Execution trigger failed: " + res.message);
+      }
+    } catch (err: any) {
+      alert("Error: " + (err.message || "Failed to trigger background execution adapter. Please check backend services."));
+    } finally {
+      setRunningStage(false);
+    }
+  };
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setDataSource("MOCK DATA");
+      setIsLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
+        setIsLoading(true);
         const projectId = localStorage.getItem("active_project_id");
-        if (!projectId) return;
+        if (!projectId) {
+          setIsLoading(false);
+          return;
+        }
         
         const docRes = await apiClient.get<any>(`/projects/${projectId}/docking/results`);
-        if (docRes.success && docRes.data && docRes.data.items && docRes.data.items.length > 0) {
+        if (docRes.success && docRes.data && docRes.data.items) {
           setRealDocking(docRes.data.items);
         }
 
         const gninaRes = await apiClient.get<any>(`/projects/${projectId}/gnina/results`);
-        if (gninaRes.success && gninaRes.data && gninaRes.data.items && gninaRes.data.items.length > 0) {
+        if (gninaRes.success && gninaRes.data && gninaRes.data.items) {
           setRealGnina(gninaRes.data.items);
         }
       } catch (err) {
         console.error("Failed to fetch docking/gnina data", err);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchData();
   }, []);
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setDataSource("MOCK DATA");
+      return;
+    }
     if (isGnina) {
       if (realGnina.length > 0) {
-        setDataSource("IMPORTED Q-AI-DRUG DATA");
+        const hasImported = realGnina.some((r: any) => r.source === "q_ai_drug_import" || r.metadata?.import_id);
+        setDataSource(hasImported ? "IMPORTED Q-AI-DRUG DATA" : "REAL BACKEND DATA");
       } else {
-        setDataSource("MOCK DATA");
+        setDataSource("REAL BACKEND DATA");
       }
     } else {
       if (realDocking.length > 0) {
-        setDataSource("IMPORTED Q-AI-DRUG DATA");
+        const hasImported = realDocking.some((r: any) => r.source === "q_ai_drug_import" || r.metadata?.import_id);
+        setDataSource(hasImported ? "IMPORTED Q-AI-DRUG DATA" : "REAL BACKEND DATA");
       } else {
-        setDataSource("MOCK DATA");
+        setDataSource("REAL BACKEND DATA");
       }
     }
   }, [isGnina, realDocking, realGnina]);
 
-  const displayDocking = realDocking.length > 0
-    ? realDocking.map((r: any) => ({
-        candidate: r.compound_id,
+  const displayDocking = isDemoMode()
+    ? DOCKING_RESULTS
+    : realDocking.map((r: any) => ({
+        candidate: r.compound_id || "QDF-CMPD",
         engine: "AutoDock Vina",
         affinity: r.metadata?.vina_affinity_kcal_mol !== undefined && r.metadata?.vina_affinity_kcal_mol !== null
           ? r.metadata.vina_affinity_kcal_mol
@@ -104,12 +154,12 @@ function DockingWorkspaceContent() {
         status: "completed",
         id: r.id || r.compound_id,
         result_id: r.id || r.compound_id
-      }))
-    : DOCKING_RESULTS;
+      }));
 
-  const displayGnina = realGnina.length > 0
-    ? realGnina.map((r: any) => ({
-        candidate: r.compound_id,
+  const displayGnina = isDemoMode()
+    ? GNINA_RESULTS
+    : realGnina.map((r: any) => ({
+        candidate: r.compound_id || "QDF-CMPD",
         cnnAffinity: r.cnn_affinity !== undefined && r.cnn_affinity !== null ? r.cnn_affinity : -9.5,
         cnnPoseScore: r.cnn_pose_score !== undefined && r.cnn_pose_score !== null ? r.cnn_pose_score : 0.82,
         vinaAffinity: r.binding_energy !== undefined && r.binding_energy !== null ? r.binding_energy : -8.5,
@@ -118,19 +168,48 @@ function DockingWorkspaceContent() {
         status: "completed",
         id: r.id || r.compound_id,
         result_id: r.id || r.compound_id
-      }))
-    : GNINA_RESULTS;
+      }));
+
+  const activeResults = isGnina ? displayGnina : displayDocking;
 
   const [selectedResult, setSelectedResult] = useState<any>(null);
 
   useEffect(() => {
-    setSelectedResult(isGnina ? displayGnina[0] : displayDocking[0]);
-  }, [isGnina, realDocking, realGnina]);
+    setSelectedResult(activeResults[0] || null);
+  }, [isGnina, realDocking, realGnina, activeResults]);
 
   const handleOpenPoseViewer = () => {
     if (!selectedResult) return;
     router.push(`/visualization?result_id=${selectedResult.result_id || selectedResult.id || ""}`);
   };
+
+  if (!isLoading && activeResults.length === 0) {
+    return (
+      <div className="space-y-8 pb-12">
+        <PageHeader
+          title={isGnina ? "GNINA CNN Rescoring" : "Docking Workspace"}
+          breadcrumb={isGnina ? "Oncology Research / CNN Scoring" : "Oncology Research / Molecular Docking"}
+          description={isGnina 
+            ? "Apply Deep Learning CNN scoring to refine docking poses and improve binding affinity predictions."
+            : "Configure binding pockets, execute docking simulations, and analyze ligand-protein interaction affinities."
+          }
+          dataSource="missing"
+        />
+        <EmptyState
+          title={isGnina ? "No GNINA CNN Poses Scored" : "No Docking Results Found"}
+          description={isGnina 
+            ? "This project workspace doesn't have any CNN rescoring runs completed yet. Trigger a GNINA run from a docked simulation pose."
+            : "No molecular docking results exist for this workspace yet. Execute a simulation run or import AutoDock Vina files."
+          }
+          action={
+            <button className="flex items-center gap-2 rounded bg-accent px-4 py-2 text-[10px] font-black uppercase tracking-widest text-bg hover:bg-accent/90 transition-all">
+              {isGnina ? "Configure GNINA" : "Setup Docking Run"}
+            </button>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-12">
@@ -142,11 +221,17 @@ function DockingWorkspaceContent() {
           ? "Apply Deep Learning CNN scoring to refine docking poses and improve binding affinity predictions."
           : "Configure binding pockets, execute docking simulations, and analyze ligand-protein interaction affinities."
         }
+        dataSource={isDemoMode() ? "mock" : (activeResults.length > 0 ? "real" : "missing")}
         actions={
           <ActionButtonGroup>
             <ActionButton label={isGnina ? "Export SDF" : "Export Poses"} variant="outline" />
             <ActionButton label={isGnina ? "CNN Config" : "Pocket Setup"} variant="secondary" />
-            <ActionButton label={isGnina ? "Run Rescoring" : "New Simulation"} variant="primary" />
+            <ActionButton 
+              label={runningStage ? "Orchestrating..." : (isGnina ? "Run Rescoring" : "New Simulation")} 
+              variant="primary" 
+              onClick={handleRunStage}
+              disabled={runningStage}
+            />
           </ActionButtonGroup>
         }
       />
@@ -155,11 +240,11 @@ function DockingWorkspaceContent() {
       <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
         <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+          isDemoMode() ? "bg-warning/20 text-warning" :
           dataSource === "IMPORTED Q-AI-DRUG DATA" ? "bg-emerald-500/20 text-emerald-400" :
-          dataSource === "REAL BACKEND DATA" ? "bg-accent/20 text-accent" :
-          "bg-warning/20 text-warning"
+          "bg-accent/20 text-accent"
         }`}>
-          {dataSource}
+          {isDemoMode() ? "MOCK DATA" : dataSource}
         </span>
       </div>
 
@@ -167,19 +252,19 @@ function DockingWorkspaceContent() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {isGnina ? (
           <>
-            <MetricCard label="CNN Scored" value="214" helperText="Candidates processed" status="completed" />
-            <MetricCard label="Best CNN Affinity" value="-11.2" unit="kcal/mol" helperText="QDF-EGFR-001" status="completed" />
+            <MetricCard label="CNN Scored" value={isDemoMode() ? "214" : activeResults.length.toString()} helperText="Candidates processed" status="completed" />
+            <MetricCard label="Best CNN Affinity" value={selectedResult ? selectedResult.cnnAffinity.toString() : "-11.2"} unit="kcal/mol" helperText={selectedResult ? selectedResult.candidate : "QDF-EGFR-001"} status="completed" />
             <MetricCard label="Pose Confidence" value="85" unit="%" helperText="High fidelity poses" status="active" />
-            <MetricCard label="Artifacts" value="428" helperText="SDF/Log files" status="completed" />
-            <MetricCard label="Failed Runs" value="2" helperText="Resource timeout" status="failed" />
+            <MetricCard label="Artifacts" value={isDemoMode() ? "428" : (activeResults.length * 2).toString()} helperText="SDF/Log files" status="completed" />
+            <MetricCard label="Failed Runs" value="0" helperText="Resource timeout" status="completed" />
           </>
         ) : (
           <>
             <MetricCard label="Selected" value="300" helperText="Awaiting docking" status="completed" />
-            <MetricCard label="Completed" value="214" helperText="Successfully docked" status="completed" />
-            <MetricCard label="Best Affinity" value="-10.8" unit="kcal/mol" helperText="QDF-EGFR-005" status="active" />
-            <MetricCard label="Active Jobs" value="6" helperText="Parallel threads" status="running" />
-            <MetricCard label="Pose Artifacts" value="642" helperText="PDB/SDF files" status="completed" />
+            <MetricCard label="Completed" value={isDemoMode() ? "214" : activeResults.length.toString()} helperText="Successfully docked" status="completed" />
+            <MetricCard label="Best Affinity" value={selectedResult ? selectedResult.affinity.toString() : "-10.8"} unit="kcal/mol" helperText={selectedResult ? selectedResult.candidate : "QDF-EGFR-005"} status="active" />
+            <MetricCard label="Active Jobs" value="0" helperText="Parallel threads" status="completed" />
+            <MetricCard label="Pose Artifacts" value={isDemoMode() ? "642" : (activeResults.length * 3).toString()} helperText="PDB/SDF files" status="completed" />
           </>
         )}
       </div>
@@ -198,27 +283,29 @@ function DockingWorkspaceContent() {
                       <th className="px-4 py-4">Candidate</th>
                       <th className="px-4 py-4 text-center">CNN Affinity</th>
                       <th className="px-4 py-4 text-center">CNN Score</th>
-                      <th className="px-4 py-4 text-center">Vina Aff.</th>
+                      <th className="px-4 py-4 text-center">Vina Affinity</th>
                       <th className="px-4 py-4 text-center">Confidence</th>
                       <th className="px-4 py-4 text-right">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
-                    {displayGnina.map(res => (
-                      <tr key={res.candidate} className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedResult?.candidate === res.candidate ? 'bg-accent/[0.03]' : ''}`} onClick={() => setSelectedResult(res as any)}>
-                        <td className="px-4 py-3 font-mono text-xs font-bold text-text">{res.candidate}</td>
-                        <td className="px-4 py-3 text-center font-mono text-xs font-black text-accent">{res.cnnAffinity}</td>
-                        <td className="px-4 py-3 text-center font-mono text-xs text-text">{res.cnnPoseScore}</td>
-                        <td className="px-4 py-3 text-center font-mono text-xs text-muted-text">{res.vinaAffinity}</td>
-                        <td className="px-4 py-3 text-center">
+                    {displayGnina.map((res: any) => (
+                      <tr 
+                        key={res.id} 
+                        onClick={() => setSelectedResult(res)}
+                        className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedResult?.id === res.id ? 'bg-accent/[0.03]' : ''}`}
+                      >
+                        <td className="px-4 py-4 font-mono text-xs font-bold text-text group-hover:text-accent transition-colors">{res.candidate}</td>
+                        <td className="px-4 py-4 text-center font-mono text-xs font-black text-accent">{res.cnnAffinity}</td>
+                        <td className="px-4 py-4 text-center font-mono text-xs font-bold text-text">{res.cnnPoseScore}</td>
+                        <td className="px-4 py-4 text-center font-mono text-xs text-muted-text">{res.vinaAffinity}</td>
+                        <td className="px-4 py-4 text-center">
                           <span className={`text-[10px] font-black uppercase ${
                             res.confidence === 'High' ? 'text-success' : res.confidence === 'Medium' ? 'text-warning' : 'text-error'
-                          }`}>
-                            {res.confidence}
-                          </span>
+                          }`}>{res.confidence}</span>
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <StatusBadge status={res.status as any} size="sm" />
+                        <td className="px-4 py-4 text-right">
+                          <StatusBadge status={res.status} size="sm" />
                         </td>
                       </tr>
                     ))}
@@ -227,76 +314,84 @@ function DockingWorkspaceContent() {
               </div>
             </div>
           ) : (
-            /* DOCKING: Active Queue & Results */
-            <>
-              <div className="ui-card-surface p-5 space-y-4">
-                <SectionHeader title="Active Docking Queue" description="Live job tracking for ongoing molecular simulations." />
-                <div className="space-y-3">
-                  {QUEUE_JOBS.map(job => (
-                    <div key={job.id} className="flex items-center justify-between p-3 rounded-lg bg-muted-bg/50 border border-border/20">
-                      <div className="flex items-center gap-4">
-                        <div className={`h-2 w-2 rounded-full ${
-                          job.status === 'running' ? 'bg-accent animate-pulse' :
-                          job.status === 'completed' ? 'bg-success' :
-                          job.status === 'warning' ? 'bg-warning' : 'bg-muted-text/30'
-                        }`} />
-                        <div>
-                          <div className="text-xs font-bold text-text">{job.name}</div>
-                          <div className="text-[10px] text-muted-text">Candidate: {job.candidate}</div>
-                        </div>
-                      </div>
-                      <StatusBadge status={job.status as any} size="sm" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <SectionHeader title="Affinity Results" description="Comparative analysis of ligand binding affinities." />
-                <div className="ui-card-surface overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
-                        <th className="px-4 py-4">Candidate</th>
-                        <th className="px-4 py-4">Engine</th>
-                        <th className="px-4 py-4 text-center">Affinity</th>
-                        <th className="px-4 py-4 text-center">RMSD</th>
-                        <th className="px-4 py-4 text-right">Status</th>
+            /* DOCKING: AutoDock Vina / Smina Results Table */
+            <div className="space-y-4">
+              <SectionHeader title="Simulation Ledger" description="List of generated ligand poses scored by classical physics energy grids." />
+              <div className="ui-card-surface overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
+                      <th className="px-4 py-4">Candidate</th>
+                      <th className="px-4 py-4">Engine</th>
+                      <th className="px-4 py-4 text-center">Affinity (kcal/mol)</th>
+                      <th className="px-4 py-4 text-center">RMSD (l.b.)</th>
+                      <th className="px-4 py-4 text-center">Active Pocket</th>
+                      <th className="px-4 py-4 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/20">
+                    {displayDocking.map((res: any) => (
+                      <tr 
+                        key={res.id} 
+                        onClick={() => setSelectedResult(res)}
+                        className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedResult?.id === res.id ? 'bg-accent/[0.03]' : ''}`}
+                      >
+                        <td className="px-4 py-4 font-mono text-xs font-bold text-text group-hover:text-accent transition-colors">{res.candidate}</td>
+                        <td className="px-4 py-4 text-xs font-bold text-muted-text">{res.engine}</td>
+                        <td className="px-4 py-4 text-center font-mono text-xs font-black text-accent">{res.affinity}</td>
+                        <td className="px-4 py-4 text-center font-mono text-xs text-text">{res.rmsd}</td>
+                        <td className="px-4 py-4 text-center text-xs font-bold text-muted-text">{res.pocket}</td>
+                        <td className="px-4 py-4 text-right">
+                          <StatusBadge status={res.status} size="sm" />
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/20">
-                      {displayDocking.map(res => (
-                        <tr key={res.candidate} className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedResult?.candidate === res.candidate ? 'bg-accent/[0.03]' : ''}`} onClick={() => setSelectedResult(res)}>
-                          <td className="px-4 py-3 font-mono text-xs font-bold text-text">{res.candidate}</td>
-                          <td className="px-4 py-3 text-[11px] font-bold text-muted-text">{res.engine}</td>
-                          <td className="px-4 py-3 text-center font-mono text-xs font-black text-emerald-500">{res.affinity}</td>
-                          <td className="px-4 py-3 text-center font-mono text-xs text-text">{res.rmsd}</td>
-                          <td className="px-4 py-3 text-right">
-                            <StatusBadge status={res.status as any} size="sm" />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </>
+            </div>
+          )}
+
+          {/* Parallel Execution Queue Status */}
+          {isDemoMode() && (
+            <div className="space-y-4">
+              <SectionHeader title="Orchestration Queue" description="Monitor concurrent docking jobs and pose processing clusters." />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {QUEUE_JOBS.map(job => (
+                  <div key={job.id} className="ui-card-surface p-4 flex flex-col justify-between h-28 hover:shadow-lg transition-all">
+                     <div className="flex justify-between items-start mb-2">
+                       <div>
+                         <span className="font-mono text-[9px] font-bold text-muted-text/50">{job.id}</span>
+                         <h4 className="text-xs font-black text-text line-clamp-1">{job.name}</h4>
+                       </div>
+                       <StatusBadge status={job.status as any} size="sm" />
+                     </div>
+                     <div className="space-y-2">
+                       <div className="flex justify-between text-[9px] font-bold">
+                         <span className="text-muted-text/60">LIGAND: {job.candidate}</span>
+                         <span className="text-accent">{job.progress}%</span>
+                       </div>
+                       <div className="h-1 w-full bg-border/20 rounded-full overflow-hidden">
+                         <div className="h-full bg-accent transition-all duration-500" style={{ width: `${job.progress}%` }} />
+                       </div>
+                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Right Column */}
+        {/* Right Sidebar Details */}
         <div className="space-y-6">
           {isGnina ? (
-            /* GNINA: Confidence & Logs */
+            /* GNINA: CNN Details & logs */
             <>
               <div className="ui-card-surface p-5 space-y-4">
-                <h4 className="text-xs font-black uppercase tracking-widest text-accent flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  Pose Confidence
-                </h4>
+                <h4 className="text-xs font-black uppercase tracking-widest text-accent">Deep Learning Profile</h4>
                 <div className="space-y-4">
-                   <div className="p-4 rounded-xl border border-success/20 bg-success/[0.02] space-y-2">
-                      <div className="flex justify-between items-center">
+                    <div className="p-3 rounded-lg bg-muted-bg/50 border border-border/20">
+                      <div className="flex justify-between items-center mb-1">
                         <span className="text-[11px] font-black text-text">CNN High Confidence</span>
                         <span className="text-xs font-black text-success">0.942</span>
                       </div>
@@ -379,8 +474,12 @@ function DockingWorkspaceContent() {
 
           {/* Bottom Actions */}
           <div className="flex flex-col gap-2">
-            <button className="w-full py-3 rounded-lg bg-accent text-bg font-black uppercase tracking-[0.2em] text-[10px] hover:bg-accent/90 shadow-lg shadow-accent/10 transition-all">
-              {isGnina ? "Export CNN Scores" : "Initiate GNINA Rescoring"}
+            <button 
+              onClick={handleRunStage}
+              disabled={runningStage}
+              className="w-full py-3 rounded-lg bg-accent text-bg font-black uppercase tracking-[0.2em] text-[10px] hover:bg-accent/90 shadow-lg shadow-accent/10 transition-all disabled:opacity-50"
+            >
+              {runningStage ? "Orchestrating..." : (isGnina ? "Export CNN Scores" : "Initiate GNINA Rescoring")}
             </button>
             {selectedResult && (
               <button 

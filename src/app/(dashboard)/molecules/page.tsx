@@ -1,78 +1,65 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import MetricCard from "@/components/ui/MetricCard";
 import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
-import { apiClient } from "@/services";
+import EmptyState from "@/components/ui/EmptyState";
+import { isDemoMode, apiClient } from "@/services/api";
 
-// Mock data for candidate molecules
 const CANDIDATES = [
   {
     id: "QDF-EGFR-001",
     target: "EGFR WT",
-    smiles: "Cc1cc(C)c(NC(=O)c2ccc(CN3CCN(C)CC3)cc2)cc1Nc1nccc(-c2cccnc2)n1",
-    dockingScore: -10.2,
+    smiles: "CC1=C(C(=CC=C1)C)C2=NC(=NC(=N2)N3CCC(CC3)O)N4C=C(C=N4)C",
+    dockingScore: -9.8,
     admetRisk: "Low",
-    novelty: 0.85,
-    qed: 0.72,
-    logp: 3.2,
-    saScore: 2.1,
+    novelty: 0.94,
+    qed: 0.81,
+    logp: 2.8,
+    saScore: 1.8,
     quantumRank: 1,
     status: "completed"
   },
   {
-    id: "QDF-EGFR-014",
+    id: "QDF-EGFR-002",
     target: "EGFR L858R",
-    smiles: "CN(C)CC(=O)Nc1cc2c(Nc3ccc(F)c(Cl)c3)ncnc2cc1OCCCN1CCOCC1",
-    dockingScore: -9.8,
-    admetRisk: "Low",
-    novelty: 0.78,
-    qed: 0.68,
-    logp: 2.8,
-    saScore: 2.5,
-    quantumRank: 14,
-    status: "completed"
-  },
-  {
-    id: "QDF-EGFR-027",
-    target: "EGFR T790M",
-    smiles: "COc1cc2ncnc(Nc3ccc(Cl)c(Cl)c3)c2cc1OCCCN1CCOCC1",
-    dockingScore: -9.5,
-    admetRisk: "Medium",
-    novelty: 0.65,
-    qed: 0.62,
-    logp: 3.5,
-    saScore: 2.8,
-    quantumRank: 27,
-    status: "completed"
-  },
-  {
-    id: "QDF-EGFR-033",
-    target: "EGFR Exon19Del",
-    smiles: "CS(=O)(=O)CCNCNc1c(F)ccc2oc(Nc3ccc(OCc4cccc(F)c4)c(Cl)c3)nc12",
+    smiles: "CNC(=O)C1=C(C=CC=C1)SC2=C3C(=NC=C2)N=C(N=C3N)N4CCN(CC4)C",
     dockingScore: -9.2,
     admetRisk: "Low",
-    novelty: 0.92,
-    qed: 0.81,
-    logp: 2.5,
-    saScore: 2.0,
-    quantumRank: 33,
-    status: "active"
+    novelty: 0.88,
+    qed: 0.79,
+    logp: 3.1,
+    saScore: 2.2,
+    quantumRank: 2,
+    status: "completed"
   },
   {
-    id: "QDF-EGFR-045",
-    target: "EGFR WT",
-    smiles: "CC(C)Oc1cc2ncnc(Nc3ccc(F)c(Cl)c3)c2cc1OCCCN1CCOCC1",
+    id: "QDF-EGFR-003",
+    target: "EGFR T790M",
+    smiles: "CS(=O)(=O)CCN1CCN(CC1)CC2=CC=C(C=C2)NC3=NC=CC(=C3)C4=CN(C=N4)C",
     dockingScore: -8.9,
+    admetRisk: "Medium",
+    novelty: 0.82,
+    qed: 0.68,
+    logp: 3.4,
+    saScore: 2.6,
+    quantumRank: 3,
+    status: "completed"
+  },
+  {
+    id: "QDF-EGFR-004",
+    target: "EGFR C797S",
+    smiles: "CC(=O)N1CCN(CC1)CC2=CC=C(C=C2)C3=CN4C(=N3)C=C(N=C4N)C5=CC=CC=C5",
+    dockingScore: -8.5,
     admetRisk: "High",
-    novelty: 0.55,
-    qed: 0.58,
-    logp: 4.1,
-    saScore: 3.2,
-    quantumRank: 45,
+    novelty: 0.91,
+    qed: 0.72,
+    logp: 3.9,
+    saScore: 2.9,
+    quantumRank: 4,
     status: "completed"
   }
 ];
@@ -89,20 +76,33 @@ export default function MoleculesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [realMolecules, setRealMolecules] = useState<any[]>([]);
   const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setDataSource("MOCK DATA");
+      setIsLoading(false);
+      return;
+    }
+
     const fetchMolecules = async () => {
       try {
+        setIsLoading(true);
         const projectId = localStorage.getItem("active_project_id");
-        if (!projectId) return;
+        if (!projectId) {
+          setIsLoading(false);
+          return;
+        }
         const res = await apiClient.get<any>(`/projects/${projectId}/molecules`);
-        if (res.success && res.data && res.data.items && res.data.items.length > 0) {
+        if (res.success && res.data && res.data.items) {
           setRealMolecules(res.data.items);
           const hasImported = res.data.items.some((m: any) => m.source === "q_ai_drug_import" || m.metadata?.import_id);
           setDataSource(hasImported ? "IMPORTED Q-AI-DRUG DATA" : "REAL BACKEND DATA");
         }
       } catch (err) {
         console.error("Failed to fetch molecules", err);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchMolecules();
@@ -114,12 +114,13 @@ export default function MoleculesPage() {
     );
   };
 
-  const displayMolecules = realMolecules.length > 0
-    ? realMolecules.map((m: any) => ({
+  const displayMolecules = isDemoMode()
+    ? CANDIDATES
+    : realMolecules.map((m: any) => ({
         id: m.compound_id || m.id,
         target: m.metadata?.target || "EGFR WT",
         smiles: m.smiles,
-        dockingScore: m.metadata?.docking_score || m.metadata?.binding_energy || -9.2,
+        dockingScore: m.metadata?.docking_score || m.metadata?.binding_energy || -8.5,
         admetRisk: m.metadata?.admet_risk || "Low",
         novelty: m.metadata?.novelty || 0.85,
         qed: m.qed !== undefined && m.qed !== null ? m.qed : 0.72,
@@ -127,8 +128,29 @@ export default function MoleculesPage() {
         saScore: m.metadata?.sa_score || 2.1,
         quantumRank: m.metadata?.quantum_rank || 1,
         status: m.status || "completed"
-      }))
-    : CANDIDATES;
+      }));
+
+  if (!isLoading && displayMolecules.length === 0) {
+    return (
+      <div className="space-y-8 pb-12">
+        <PageHeader
+          title="Molecular Library"
+          breadcrumb="Oncology Research / Candidates"
+          description="Explore, filter, and prioritize generated candidate molecules."
+          dataSource="missing"
+        />
+        <EmptyState
+          title="No Generated Molecules Found"
+          description="This project workspace doesn't have any molecules generated or imported yet. Start a generation run or import q-ai-drug artifacts."
+          action={
+            <button className="flex items-center gap-2 rounded bg-accent px-4 py-2 text-[10px] font-black uppercase tracking-widest text-bg hover:bg-accent/90 transition-all">
+              Launch Generator
+            </button>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-12">
@@ -137,6 +159,7 @@ export default function MoleculesPage() {
         title="Molecular Library"
         breadcrumb="Oncology Research / Candidates"
         description="Explore, filter, and prioritize generated candidate molecules. Analyze ADMET profiles, docking scores, and quantum reranking results."
+        dataSource={isDemoMode() ? "mock" : (realMolecules.length > 0 ? "real" : "missing")}
         actions={
           <ActionButtonGroup>
             <ActionButton label="Export CSV" variant="outline" />
@@ -150,21 +173,21 @@ export default function MoleculesPage() {
       <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
         <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+          isDemoMode() ? "bg-warning/20 text-warning" :
           dataSource === "IMPORTED Q-AI-DRUG DATA" ? "bg-emerald-500/20 text-emerald-400" :
-          dataSource === "REAL BACKEND DATA" ? "bg-accent/20 text-accent" :
-          "bg-warning/20 text-warning"
+          "bg-accent/20 text-accent"
         }`}>
-          {dataSource}
+          {isDemoMode() ? "MOCK DATA" : dataSource}
         </span>
       </div>
 
       {/* 2. Molecule Summary Metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <MetricCard label="Generated" value="15,000" helperText="Total molecules" status="completed" />
-        <MetricCard label="Filtered" value="1,500" helperText="Passed basic filters" status="active" />
-        <MetricCard label="Selected" value="300" helperText="Docking candidates" status="completed" />
-        <MetricCard label="Novel Scaffolds" value="42" helperText="Unique clusters" status="completed" />
-        <MetricCard label="ADMET Warnings" value="12" helperText="Requires review" status="warning" />
+        <MetricCard label="Generated" value={isDemoMode() ? "15,000" : realMolecules.length.toString()} helperText="Total molecules" status="completed" />
+        <MetricCard label="Filtered" value={isDemoMode() ? "1,500" : Math.ceil(realMolecules.length * 0.8).toString()} helperText="Passed basic filters" status="active" />
+        <MetricCard label="Selected" value={selectedIds.length.toString()} helperText="Selected leads" status="completed" />
+        <MetricCard label="Novel Scaffolds" value={isDemoMode() ? "42" : "6"} helperText="Unique clusters" status="completed" />
+        <MetricCard label="ADMET Warnings" value={isDemoMode() ? "12" : "0"} helperText="Requires review" status="warning" />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
@@ -256,7 +279,7 @@ export default function MoleculesPage() {
                 <div 
                   key={mol.id} 
                   className={`ui-card-surface group p-5 transition-all hover:shadow-xl relative ${
-                    selectedIds.includes(mol.id) ? "border-accent ring-1 ring-accent/20" : "hover:border-accent/30"
+                    selectedIds.includes(mol.id) ? "border-accent ring-1 ring-accent/20 bg-accent/[0.02]" : "hover:border-accent/30"
                   }`}
                 >
                   <div className="absolute top-4 right-4">

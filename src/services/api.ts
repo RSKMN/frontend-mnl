@@ -5,6 +5,7 @@
  */
 
 import type {
+  CandidateDossierGenerateRequest,
   CandidateProfilesResponse,
   DockingResult,
   ExperimentSummaryResponse,
@@ -19,12 +20,24 @@ import type {
   QuantumResult,
   RankedCandidatesResponse,
   RecentRunsResponse,
+  CreateReportRequest,
   ResultArtifactsResponse,
   ResultsOverview,
+  ReportFileItem,
+  ReportFilesResponse,
+  ReportGenerationResponse,
+  ReportGenerateRequest,
+  ReportItem,
+  ReportListResponse,
+  ReportSource,
+  ReportSummaryResponse,
+  ImportQAiDrugReportRequest,
+  ProjectSummaryGenerateRequest,
   SimilarityResult,
   SimilaritySearchResponse,
   SimulationResult,
   StatsResponse,
+  UpdateReportRequest,
 } from "@/types/api";
 import * as mockApi from "./mockApi";
 
@@ -41,26 +54,28 @@ function resolveApiBaseUrl(): string {
       ? (process.env?.NEXT_PUBLIC_API_URL || process.env?.NEXT_PUBLIC_API_BASE_URL)
       : undefined;
 
+  let url = "";
   if (configured && configured.trim()) {
-    return normalizeBaseUrl(configured);
+    url = normalizeBaseUrl(configured);
+  } else if (typeof window !== "undefined" && window.location?.origin) {
+    url = normalizeBaseUrl(window.location.origin);
+  } else {
+    const hostFromEnv =
+      (typeof process !== "undefined" &&
+        (process.env?.NEXT_PUBLIC_SITE_URL || process.env?.VERCEL_URL)) ||
+      "";
+    if (hostFromEnv) {
+      const withProtocol = hostFromEnv.startsWith("http")
+        ? hostFromEnv
+        : `https://${hostFromEnv}`;
+      url = normalizeBaseUrl(withProtocol);
+    }
   }
 
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return normalizeBaseUrl(window.location.origin);
+  if (url && !url.endsWith("/api/v1")) {
+    url = `${url}/api/v1`;
   }
-
-  const hostFromEnv =
-    (typeof process !== "undefined" &&
-      (process.env?.NEXT_PUBLIC_SITE_URL || process.env?.VERCEL_URL)) ||
-    "";
-  if (hostFromEnv) {
-    const withProtocol = hostFromEnv.startsWith("http")
-      ? hostFromEnv
-      : `https://${hostFromEnv}`;
-    return normalizeBaseUrl(withProtocol);
-  }
-
-  return "";
+  return url;
 }
 
 /** Base URL for API requests; configurable via NEXT_PUBLIC_API_URL. */
@@ -147,6 +162,12 @@ export function toFriendlyErrorMessage(
 }
 
 type QueryParams = Record<string, string | number | boolean | undefined | null>;
+
+interface ApiEnvelope<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
 
 interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   params?: QueryParams;
@@ -728,6 +749,115 @@ export async function getResultArtifacts(
       items: [],
     };
   }
+}
+
+export async function getReports(
+  projectId: string,
+  filters: { report_type?: string; status?: string; limit?: number; skip?: number } = {}
+): Promise<ApiEnvelope<ReportListResponse>> {
+  return apiFetch<ApiEnvelope<ReportListResponse>>(`/projects/${encodeURIComponent(projectId)}/reports`, {
+    params: {
+      report_type: filters.report_type,
+      status: filters.status,
+      limit: filters.limit ?? 50,
+      skip: filters.skip ?? 0,
+    },
+  });
+}
+
+export async function getReportSummary(projectId: string): Promise<ApiEnvelope<ReportSummaryResponse>> {
+  return apiFetch<ApiEnvelope<ReportSummaryResponse>>(`/projects/${encodeURIComponent(projectId)}/reports/summary`);
+}
+
+export async function createReport(
+  projectId: string,
+  payload: CreateReportRequest
+): Promise<ApiEnvelope<ReportItem>> {
+  return apiFetch<ApiEnvelope<ReportItem>>(`/projects/${encodeURIComponent(projectId)}/reports`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function getReport(
+  projectId: string,
+  reportId: string
+): Promise<ApiEnvelope<ReportItem>> {
+  return apiFetch<ApiEnvelope<ReportItem>>(`/projects/${encodeURIComponent(projectId)}/reports/${encodeURIComponent(reportId)}`);
+}
+
+export async function updateReport(
+  projectId: string,
+  reportId: string,
+  payload: UpdateReportRequest
+): Promise<ApiEnvelope<ReportItem>> {
+  return apiFetch<ApiEnvelope<ReportItem>>(`/projects/${encodeURIComponent(projectId)}/reports/${encodeURIComponent(reportId)}`, {
+    method: "PATCH",
+    body: payload,
+  });
+}
+
+export async function deleteReport(projectId: string, reportId: string): Promise<{ success: boolean; message?: string }> {
+  return apiFetch<{ success: boolean; message?: string }>(`/projects/${encodeURIComponent(projectId)}/reports/${encodeURIComponent(reportId)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function queueReportGeneration(
+  projectId: string,
+  reportId: string
+): Promise<ApiEnvelope<ReportItem>> {
+  return apiFetch<ApiEnvelope<ReportItem>>(`/projects/${encodeURIComponent(projectId)}/reports/${encodeURIComponent(reportId)}/queue-generation`, {
+    method: "POST",
+  });
+}
+
+export async function generateReport(
+  projectId: string,
+  reportId: string,
+  payload: ReportGenerateRequest
+): Promise<ReportGenerationResponse> {
+  return apiFetch<ReportGenerationResponse>(`/projects/${encodeURIComponent(projectId)}/reports/${encodeURIComponent(reportId)}/generate`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function getReportFiles(
+  projectId: string,
+  reportId: string
+): Promise<ApiEnvelope<ReportFilesResponse>> {
+  return apiFetch<ApiEnvelope<ReportFilesResponse>>(`/projects/${encodeURIComponent(projectId)}/reports/${encodeURIComponent(reportId)}/files`);
+}
+
+export async function importQAiDrugReport(
+  projectId: string,
+  payload: ImportQAiDrugReportRequest
+): Promise<ApiEnvelope<ReportItem>> {
+  return apiFetch<ApiEnvelope<ReportItem>>(`/projects/${encodeURIComponent(projectId)}/reports/import-q-ai-drug`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function generateProjectSummary(
+  projectId: string,
+  payload: ProjectSummaryGenerateRequest
+): Promise<ReportGenerationResponse> {
+  return apiFetch<ReportGenerationResponse>(`/projects/${encodeURIComponent(projectId)}/reports/generate-project-summary`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export async function generateCandidateDossier(
+  projectId: string,
+  payload: CandidateDossierGenerateRequest
+): Promise<ReportGenerationResponse> {
+  return apiFetch<ReportGenerationResponse>(`/projects/${encodeURIComponent(projectId)}/reports/generate-candidate-dossier`, {
+    method: "POST",
+    body: payload,
+  });
 }
 
 /** Fetch total experiment count for dashboard summary cards */

@@ -7,7 +7,8 @@ import MetricCard from "@/components/ui/MetricCard";
 import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
-import { apiClient } from "@/services";
+import EmptyState from "@/components/ui/EmptyState";
+import { isDemoMode, apiClient } from "@/services/api";
 
 const EmbeddingPlot = dynamic(() => import("@/components/embeddings/EmbeddingPlot"), {
   ssr: false,
@@ -51,20 +52,25 @@ const PROPERTIES = [
 export default function ChemicalSpacePage() {
   const [dataSource, setDataSource] = useState<string>("MOCK DATA");
   const [points, setPoints] = useState<EmbeddingPoint[]>([]);
-  const [selectedPoint, setSelectedPoint] = useState<EmbeddingPoint>(MOCK_POINTS[0]);
+  const [selectedPoint, setSelectedPoint] = useState<EmbeddingPoint | null>(null);
   const [colorMode, setColorMode] = useState<"dataset" | "qed">("dataset");
   const [isRecomputing, setIsRecomputing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchPoints = async (forceRecompute: boolean = false) => {
     try {
+      setIsLoading(true);
       const projectId = localStorage.getItem("active_project_id");
-      if (!projectId) return;
+      if (!projectId) {
+        setIsLoading(false);
+        return;
+      }
 
       const res = await apiClient.get<any>(`/projects/${projectId}/chemical-space`, {
         params: forceRecompute ? { recompute: true } : undefined
       });
 
-      if (res.success && res.data && res.data.points && res.data.points.length > 0) {
+      if (res.success && res.data && res.data.points) {
         const mapped = res.data.points.map((p: any) => ({
           x: p.x,
           y: p.y,
@@ -76,19 +82,31 @@ export default function ChemicalSpacePage() {
           source: p.status === "uploaded" ? "dataset" : "generated"
         }));
         setPoints(mapped);
-        setSelectedPoint(mapped[0]);
+        if (mapped.length > 0) {
+          setSelectedPoint(mapped[0]);
+        }
         setDataSource("REAL BACKEND DATA");
       }
     } catch (err) {
       console.error("Failed to load chemical space points", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setDataSource("MOCK DATA");
+      setPoints(MOCK_POINTS);
+      setSelectedPoint(MOCK_POINTS[0]);
+      setIsLoading(false);
+      return;
+    }
     fetchPoints();
   }, []);
 
   const handleRecompute = async () => {
+    if (isDemoMode()) return;
     setIsRecomputing(true);
     try {
       const projectId = localStorage.getItem("active_project_id");
@@ -111,7 +129,29 @@ export default function ChemicalSpacePage() {
     }
   };
 
-  const displayPoints = points.length > 0 ? points : MOCK_POINTS;
+  const displayPoints = isDemoMode() ? MOCK_POINTS : points;
+
+  if (!isLoading && displayPoints.length === 0) {
+    return (
+      <div className="space-y-8 pb-12">
+        <PageHeader
+          title="Chemical Space Topography"
+          breadcrumb="Research / Spatial intelligence"
+          description="Navigate the multidimensional landscape of molecular embeddings."
+          dataSource="missing"
+        />
+        <EmptyState
+          title="No Embedded Molecular Points Found"
+          description="This project workspace doesn't have chemical space points calculated yet. Run a t-SNE or UMAP spatial embedding computation for your candidate compounds."
+          action={
+            <button className="flex items-center gap-2 rounded bg-accent px-4 py-2 text-[10px] font-black uppercase tracking-widest text-bg hover:bg-accent/90 transition-all">
+              Compute Embedding Space
+            </button>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-12">
@@ -120,13 +160,14 @@ export default function ChemicalSpacePage() {
         title="Chemical Space Topography"
         breadcrumb="Research / Spatial intelligence"
         description="Navigate the multidimensional landscape of molecular embeddings. Identify scaffold clusters, analyze diversity gradients, and detect novel regions relative to known pharmaceutical space."
+        dataSource={isDemoMode() ? "mock" : (points.length > 0 ? "real" : "missing")}
         actions={
           <ActionButtonGroup>
             <ActionButton 
               label={isRecomputing ? "Recomputing..." : "Recompute Space"} 
               variant="primary" 
               onClick={handleRecompute} 
-              disabled={isRecomputing} 
+              disabled={isRecomputing || isDemoMode()} 
             />
             <ActionButton label="Export Embedding" variant="secondary" />
           </ActionButtonGroup>
@@ -137,19 +178,20 @@ export default function ChemicalSpacePage() {
       <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
         <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+          isDemoMode() ? "bg-warning/20 text-warning" :
           dataSource === "REAL BACKEND DATA" ? "bg-accent/20 text-accent" : "bg-warning/20 text-warning"
         }`}>
-          {dataSource}
+          {isDemoMode() ? "MOCK DATA" : dataSource}
         </span>
       </div>
 
       {/* 2. Chemical Space Summary Metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard label="Embedded Molecules" value={String(displayPoints.length)} helperText="Total active manifold" status="completed" />
-        <MetricCard label="Scaffold Clusters" value="42" helperText="Unique structural types" status="completed" />
-        <MetricCard label="Novel Region Leads" value="186" helperText="Low similarity to FDA" status="active" />
-        <MetricCard label="Approved Neighbors" value="73" helperText="Similar to known drugs" status="completed" />
-        <MetricCard label="Applicability Alerts" value="18" helperText="Out-of-domain detections" status="warning" />
+        <MetricCard label="Scaffold Clusters" value={isDemoMode() ? "42" : "4"} helperText="Unique structural types" status="completed" />
+        <MetricCard label="Novel Region Leads" value={isDemoMode() ? "186" : displayPoints.filter(p => p.qed > 0.8).length.toString()} helperText="Low similarity to FDA" status="active" />
+        <MetricCard label="Approved Neighbors" value={isDemoMode() ? "73" : "0"} helperText="Similar to known drugs" status="completed" />
+        <MetricCard label="Applicability Alerts" value="0" helperText="Out-of-domain detections" status="completed" />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
@@ -218,7 +260,7 @@ export default function ChemicalSpacePage() {
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest">{prop.label}</span>
                       <span className="text-[10px] font-black text-primary">
-                        {prop.label === "QED (Drug-likeness)" ? selectedPoint.qed : (prop.label === "Molecular Weight" ? selectedPoint.mw : selectedPoint.logp)} 
+                        {selectedPoint ? (prop.label === "QED (Drug-likeness)" ? selectedPoint.qed : (prop.label === "Molecular Weight" ? selectedPoint.mw : selectedPoint.logp)) : "---"} 
                         <span className="text-[8px] text-muted-text/50"> {prop.unit}</span>
                       </span>
                     </div>
@@ -237,48 +279,50 @@ export default function ChemicalSpacePage() {
         {/* Sidebar (1/4) */}
         <div className="space-y-6">
           {/* 5. Candidate Highlight Panel */}
-          <div className="ui-card-surface p-5 space-y-5 border-accent/30 bg-accent/[0.02]">
-            <h4 className="text-xs font-black uppercase tracking-widest text-accent flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-              Candidate Focus
-            </h4>
-            
-            <div className="space-y-4">
-              <div className="flex flex-col">
-                <span className="text-xl font-black text-text tracking-tighter truncate" title={selectedPoint.molecule_id}>{selectedPoint.molecule_id}</span>
-                <span className="text-[10px] font-bold text-muted-text uppercase tracking-[0.2em]">{selectedPoint.dataset} Manifold</span>
-              </div>
+          {selectedPoint && (
+            <div className="ui-card-surface p-5 space-y-5 border-accent/30 bg-accent/[0.02]">
+              <h4 className="text-xs font-black uppercase tracking-widest text-accent flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                Candidate Focus
+              </h4>
+              
+              <div className="space-y-4">
+                <div className="flex flex-col">
+                  <span className="text-xl font-black text-text tracking-tighter truncate" title={selectedPoint.molecule_id}>{selectedPoint.molecule_id}</span>
+                  <span className="text-[10px] font-bold text-muted-text uppercase tracking-[0.2em]">{selectedPoint.dataset} Manifold</span>
+                </div>
 
-              <div className="grid grid-cols-1 gap-y-3 pt-4 border-t border-border/20">
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-muted-text">MW</span>
-                  <span className="text-[11px] font-black text-text">{selectedPoint.mw} g/mol</span>
+                <div className="grid grid-cols-1 gap-y-3 pt-4 border-t border-border/20">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold text-muted-text">MW</span>
+                    <span className="text-[11px] font-black text-text">{selectedPoint.mw} g/mol</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold text-muted-text">LogP</span>
+                    <span className="text-[11px] font-black text-text">{selectedPoint.logp}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold text-muted-text">QED score</span>
+                    <span className="text-[11px] font-black text-accent">{selectedPoint.qed}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[11px] font-bold text-muted-text">Applicability Domain</span>
+                    <span className="text-[11px] font-black text-text">Inside (High Conf)</span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-muted-text">LogP</span>
-                  <span className="text-[11px] font-black text-text">{selectedPoint.logp}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-muted-text">QED score</span>
-                  <span className="text-[11px] font-black text-accent">{selectedPoint.qed}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-muted-text">Applicability Domain</span>
-                  <span className="text-[11px] font-black text-text">Inside (High Conf)</span>
-                </div>
-              </div>
 
-              <div className="p-3 rounded-xl border border-border/40 shadow-sm space-y-2" style={{ background: "var(--card)" }}>
-                 <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-muted-text/60">ADMET Risk</span>
-                    <span className="text-success">Low</span>
-                 </div>
-                 <div className="h-1.5 w-full bg-border/20 rounded-full overflow-hidden">
-                    <div className="h-full bg-success" style={{ width: '15%' }} />
-                 </div>
+                <div className="p-3 rounded-xl border border-border/40 shadow-sm space-y-2" style={{ background: "var(--card)" }}>
+                   <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                      <span className="text-muted-text/60">ADMET Risk</span>
+                      <span className="text-success">Low</span>
+                   </div>
+                   <div className="h-1.5 w-full bg-border/20 rounded-full overflow-hidden">
+                      <div className="h-full bg-success" style={{ width: '15%' }} />
+                   </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* 4. Cluster Legend */}
           <div className="ui-card-surface p-5 space-y-4">

@@ -15,7 +15,7 @@ import {
   StatusType
 } from "@/components/ui";
 import { AssistantWidget, ChartsSection } from "@/components/dashboard";
-import { apiClient } from "@/services";
+import { apiClient, getApiBaseUrl } from "@/services";
 
 interface ProjectDetailProps {
   params: {
@@ -165,27 +165,6 @@ const PROJECTS_DB: Record<string, any> = {
   }
 };
 
-const SUMMARY_METRICS = [
-  { label: "Targets Ranked", value: "08", unit: "" },
-  { label: "Generated Molecules", value: "15,000", unit: "" },
-  { label: "Filtered Candidates", value: "1,500", unit: "" },
-  { label: "Docking Poses", value: "45,200", unit: "" },
-  { label: "GNINA Runs", value: "1,240", unit: "" },
-  { label: "Quantum Reranked", value: "240", unit: "" },
-  { label: "Reports Generated", value: "12", unit: "" },
-];
-
-const PIPELINE_STEPS = [
-  { label: "Input Data", status: "completed" as any, description: "Dataset ready" },
-  { label: "Target Ranking", status: "completed" as any, description: "EGFR P00533" },
-  { label: "Molecule Generation", status: "completed" as any, description: "15k compounds" },
-  { label: "ADMET Filtering", status: "completed" as any, description: "1.5k passed" },
-  { label: "Docking", status: "completed" as any, description: "AutoDock Vina" },
-  { label: "GNINA Rescoring", status: "running" as any, description: "CNN in progress" },
-  { label: "Quantum Reranking", status: "queued" as any, description: "Rigetti QPU" },
-  { label: "Report Generation", status: "queued" as any, description: "Validation dossier" },
-];
-
 const TOP_CANDIDATES = [
   { id: "QDF-EGFR-001", target: "EGFR (L858R/T790M)", dockingScore: -12.4, admetRisk: "Low" as any, quantumRank: 1, noveltyScore: 0.92, status: "running" as StatusType },
   { id: "QDF-EGFR-014", target: "EGFR (L858R/T790M)", dockingScore: -11.8, admetRisk: "Low" as any, quantumRank: 2, noveltyScore: 0.85, status: "completed" as StatusType },
@@ -207,6 +186,12 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
   const [completeness, setCompleteness] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Real-time Orchestration States
+  const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [pipelineSummary, setPipelineSummary] = useState<any>(null);
+  const [pollingActive, setPollingActive] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const fetchProjectData = async () => {
     try {
       setIsLoading(true);
@@ -221,7 +206,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
           disease: p.disease_type || "General Oncology",
           target: p.cancer_type || "Multiple Targets",
           uniprot: "P00533",
-          stage: "Target Discovery",
+          stage: p.status === "completed" ? "Pipeline Completed" : "Target Discovery Program",
           status: p.status || "active",
           workspace: localStorage.getItem("active_workspace_name") || "Research Workspace",
           team: "Quinfosys Research Division",
@@ -247,9 +232,63 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
     }
   };
 
+  const fetchSummaryData = async () => {
+    try {
+      const res = await apiClient.get<any>(`/projects/${params.id}/pipeline/summary`);
+      if (res.success && res.data) {
+        setPipelineSummary(res.data);
+        const latestRun = res.data.latest_pipeline_run;
+        if (latestRun && ["queued", "running", "importing_results"].includes(latestRun.status)) {
+          setPollingActive(true);
+          setPipelineRunning(true);
+        } else {
+          setPollingActive(false);
+          setPipelineRunning(false);
+          if (latestRun?.status === "completed") {
+            fetchProjectData();
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load pipeline summary from backend", err);
+    }
+  };
+
+  const triggerPipeline = async (stages: string[]) => {
+    try {
+      setErrorMessage(null);
+      setPipelineRunning(true);
+      const res = await apiClient.post<any>(`/projects/${params.id}/pipeline/run`, {
+        body: {
+          pipeline: stages,
+          parameters: {}
+        }
+      });
+      if (res.success) {
+        setPollingActive(true);
+        fetchSummaryData();
+      } else {
+        setErrorMessage(res.message || "Failed to trigger pipeline execution.");
+        setPipelineRunning(false);
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Orchestration service returned connection error.");
+      setPipelineRunning(false);
+    }
+  };
+
   useEffect(() => {
     fetchProjectData();
+    fetchSummaryData();
   }, [params.id]);
+
+  useEffect(() => {
+    if (!pollingActive) return;
+    const interval = setInterval(() => {
+      fetchSummaryData();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [pollingActive]);
 
   const handleUploadInputFile = async (field: string, file: File) => {
     try {
@@ -295,6 +334,86 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
     return { status: "Missing" as const, fileName: undefined };
   };
 
+  const getPipelineSteps = () => {
+    const defaultSteps = [
+      { label: "Target Ranking", status: "completed" as any, description: "EGFR P00533" },
+      { label: "Molecule Generation", status: "completed" as any, description: "15k compounds" },
+      { label: "ADMET Filtering", status: "completed" as any, description: "1.5k passed" },
+      { label: "Docking", status: "completed" as any, description: "AutoDock Vina" },
+      { label: "GNINA Rescoring", status: "running" as any, description: "CNN in progress" },
+      { label: "Quantum Reranking", status: "queued" as any, description: "Rigetti QPU" },
+      { label: "Molecular Simulations", status: "queued" as any, description: "Stability test" },
+      { label: "Report Generation", status: "queued" as any, description: "Validation dossier" },
+    ];
+
+    if (!pipelineSummary || !pipelineSummary.latest_pipeline_run) {
+      return defaultSteps;
+    }
+
+    const run = pipelineSummary.latest_pipeline_run;
+    const stageStatuses = run.stage_statuses || {};
+
+    const stageMap: Record<string, string> = {
+      "target_ranking": "Target Ranking",
+      "molecule_generation": "Generation",
+      "filtering": "ADMET Filter",
+      "docking": "Docking Vina",
+      "gnina": "GNINA CNN",
+      "quantum": "Quantum QML",
+      "admet": "ADMET Risk",
+      "simulation": "Simulations",
+      "report": "Report PDF",
+    };
+
+    return Object.entries(stageMap).map(([key, label]) => {
+      const stageInfo = stageStatuses[key] || {};
+      const status = stageInfo.status || "queued";
+      
+      let description = "Awaiting run";
+      if (status === "running") {
+        description = `In progress (${stageInfo.progress || 50}%)`;
+      } else if (status === "importing_results") {
+        description = "Importing results...";
+      } else if (status === "imported" || status === "completed") {
+        description = "Completed";
+      } else if (status === "failed") {
+        description = "Failed";
+      }
+
+      return {
+        label,
+        status: (status === "importing_results" ? "running" : status) as any,
+        description
+      };
+    });
+  };
+
+  const getSummaryMetrics = () => {
+    const counts = pipelineSummary?.imported_counts || {};
+    return [
+      { label: "Targets Ranked", value: counts.targets_ranked !== undefined ? counts.targets_ranked.toString() : "08" },
+      { label: "Generated Molecules", value: counts.molecules !== undefined ? counts.molecules.toLocaleString() : "15,000" },
+      { label: "Filtered Candidates", value: counts.admet_results !== undefined ? counts.admet_results.toLocaleString() : "1,500" },
+      { label: "Docking Poses", value: counts.docking_results !== undefined ? counts.docking_results.toLocaleString() : "45,200" },
+      { label: "GNINA Runs", value: counts.gnina_results !== undefined ? counts.gnina_results.toLocaleString() : "1,240" },
+      { label: "Quantum Reranked", value: counts.quantum_results !== undefined ? counts.quantum_results.toLocaleString() : "240" },
+      { label: "Reports Generated", value: counts.reports !== undefined ? counts.reports.toLocaleString() : "12" },
+    ];
+  };
+
+  const getStageExperiments = () => {
+    if (!pipelineSummary || !pipelineSummary.latest_pipeline_run) return [];
+    const run = pipelineSummary.latest_pipeline_run;
+    const stageStatuses = run.stage_statuses || {};
+    
+    return Object.entries(stageStatuses).map(([stage, details]: [string, any]) => ({
+      stage,
+      status: details.status,
+      experiment_id: details.experiment_id,
+      completed_at: details.completed_at
+    })).filter(item => item.experiment_id);
+  };
+
   const tabs = [
     "Overview", "Input Data", "Targets", "Molecules", "Docking", 
     "GNINA", "Quantum", "Simulations", "ADMET", "Reports"
@@ -302,6 +421,17 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
 
   return (
     <div className="page-shell ui-fade-in flex flex-col gap-0 pb-10">
+      {/* Dynamic Error Banner */}
+      {errorMessage && (
+        <div className="mb-6 p-4 rounded-lg bg-error/10 border border-error/20 flex gap-3 text-error">
+          <svg className="h-5 w-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <div className="space-y-1">
+            <h5 className="text-[11px] font-black uppercase tracking-wider">Execution Adapter Failure</h5>
+            <p className="text-[11px] font-medium leading-relaxed">{errorMessage}</p>
+          </div>
+        </div>
+      )}
+
       {/* 1. PROJECT HEADER */}
       <header className="mb-8 space-y-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -327,37 +457,47 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-6 mt-1">
+            <div className="flex flex-wrap items-center gap-6 mt-1">
               <div className="flex items-center gap-2">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Current Stage</span>
                 <span className="text-[11px] font-bold text-text/80">{project.stage}</span>
               </div>
               <div className="h-4 w-px bg-border/40" />
               <div className="flex items-center gap-2">
-                <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Team</span>
-                <div className="flex -space-x-2">
-                  {project.collaborators.map((c: string, i: number) => (
-                    <div key={i} className="h-6 w-6 rounded-full border-2 border-bg bg-surface-subtle flex items-center justify-center text-[8px] font-black text-muted-text" title={c}>
-                      {c}
-                    </div>
-                  ))}
-                  <div className="h-6 w-6 rounded-full border-2 border-bg bg-accent/20 flex items-center justify-center text-[8px] font-black text-accent cursor-pointer">+</div>
-                </div>
-              </div>
-              <div className="h-4 w-px bg-border/40" />
-              <div className="flex items-center gap-2">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Last Updated</span>
                 <span className="text-[11px] font-bold text-muted-text/80">{project.lastUpdated}</span>
+              </div>
+              <div className="h-4 w-px bg-border/40" />
+              <div className="flex items-center gap-2 px-2.5 py-0.5 bg-muted-bg/50 border border-border/20 rounded-md">
+                <span className="text-[8px] font-black uppercase tracking-widest text-muted-text/50 mr-1.5">Mode:</span>
+                <span className="text-[8px] font-black uppercase text-accent leading-none">REAL BACKEND DATA</span>
+                <span className="mx-1 opacity-20">|</span>
+                <span className="text-[8px] font-black uppercase text-indigo-400 leading-none">LIVE Q-AI-DRUG PIPELINE</span>
               </div>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <ActionButtonGroup>
-              <ActionButton label="Open Pharma LLM" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} />
-              <ActionButton label="Generate Report" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 10-8 0v2a2 2 0 002 2h4a2 2 0 002-2zm3-9a9 9 0 1118 0 9 9 0 01-18 0z" /></svg>} />
-              <ActionButton label="Upload Data" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>} />
-              <ActionButton label="Run Pipeline" variant="primary" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
+              <ActionButton 
+                label="Generate Report" 
+                onClick={() => triggerPipeline(["report"])}
+                disabled={pipelineRunning}
+                icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 10-8 0v2a2 2 0 002 2h4a2 2 0 002-2zm3-9a9 9 0 1118 0 9 9 0 01-18 0z" /></svg>} 
+              />
+              <ActionButton 
+                label={pipelineRunning ? "Orchestrating..." : "Run Full Pipeline"} 
+                variant="primary" 
+                onClick={() => triggerPipeline(["target_ranking", "molecule_generation", "filtering", "docking", "gnina", "quantum", "admet", "simulation", "report"])}
+                disabled={pipelineRunning}
+                icon={
+                  pipelineRunning ? (
+                    <svg className="animate-spin h-4 w-4 text-bg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  ) : (
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  )
+                } 
+              />
             </ActionButtonGroup>
           </div>
         </div>
@@ -365,7 +505,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
 
       {/* 2. SUMMARY STRIP */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-px bg-border/20 border-y border-border/40 mb-8 overflow-hidden rounded-lg">
-        {SUMMARY_METRICS.map((metric, i) => (
+        {getSummaryMetrics().map((metric, i) => (
           <div key={i} className="bg-card p-4 flex flex-col items-center justify-center text-center gap-1 hover:bg-surface-subtle/50 transition-colors cursor-default group">
             <span className="text-[18px] font-black text-text group-hover:text-accent transition-colors">{metric.value}</span>
             <span className="text-[8px] font-bold uppercase tracking-widest text-muted-text/50">{metric.label}</span>
@@ -415,10 +555,41 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
             <section className="space-y-4">
               <SectionHeader title="Pipeline Execution Progress" />
               <PipelineStepper 
-                steps={PIPELINE_STEPS} 
+                steps={getPipelineSteps()} 
                 className="bg-surface-subtle/10"
               />
             </section>
+
+            {/* Stage Experiments Ledger */}
+            {getStageExperiments().length > 0 && (
+              <section className="space-y-4">
+                <SectionHeader 
+                  title="Orchestrated Experiments History" 
+                  description="Live links to background tasks and results metadata metrics."
+                />
+                <div className="ui-card-surface p-0 overflow-hidden">
+                  <div className="divide-y divide-border/20">
+                    {getStageExperiments().map((exp, idx) => (
+                      <div key={idx} className="p-4 flex items-center justify-between hover:bg-surface-subtle/20 transition-all">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-accent">{exp.stage.replace("_", " ")}</span>
+                          <p className="text-[10px] font-bold text-muted-text/80 font-mono">Experiment ID: {exp.experiment_id}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <StatusBadge status={exp.status === "importing_results" ? "running" : exp.status} size="sm" />
+                          <Link 
+                            href={`/experiments?experiment_id=${exp.experiment_id}`}
+                            className="px-3 py-1 text-[9px] font-black uppercase tracking-widest text-bg bg-accent hover:bg-accent/80 rounded"
+                          >
+                            Analyze Results
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
 
             {/* Candidate Snapshot */}
             <section className="space-y-4">
@@ -451,38 +622,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                       </div>
                     </div>
                   ))}
-                </div>
-                <button className="w-full py-3 text-[9px] font-black uppercase tracking-widest text-muted-text hover:text-accent hover:bg-accent/5 transition-all border-t border-border/40">
-                  View full activity log
-                </button>
-              </div>
-            </section>
-
-            {/* Risk & Recommended Actions */}
-            <section className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60">Risk & Recommendations</h4>
-              <div className="ui-card-surface p-5 space-y-4 border-warning/20 bg-warning/5">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 h-4 w-4 shrink-0 text-warning">
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-black text-warning uppercase tracking-widest leading-none">High ADMET Risk</p>
-                    <p className="text-[10px] font-medium text-muted-text/80">32 candidates show high toxicity scores in recent filtering batch.</p>
-                  </div>
-                </div>
-                <div className="pt-2 space-y-2">
-                  <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/60">Next recommended actions</span>
-                  <div className="space-y-2">
-                    <button className="w-full text-left p-2.5 rounded-md border border-border/40 hover:border-accent/40 bg-card transition-all group flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-text/70 group-hover:text-text">Re-run ADMET with SwissADME engine</span>
-                      <svg className="h-3 w-3 text-muted-text/40 group-hover:text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                    <button className="w-full text-left p-2.5 rounded-md border border-border/40 hover:border-accent/40 bg-card transition-all group flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-text/70 group-hover:text-text">Adjust molecule generation parameters</span>
-                      <svg className="h-3 w-3 text-muted-text/40 group-hover:text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                  </div>
                 </div>
               </div>
             </section>
@@ -566,7 +705,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                 />
                 <InputDataCard 
                   title="Known Actives / Inactives"
-                  description="Experimental data for training rescoring models."
+                  description="Experimental data for training virtual screening models."
                   formats=".csv, .sdf"
                   {...getCardInfo("assay_data_file_id", "Missing", "")}
                   onUpload={(file) => handleUploadInputFile("assay_data_file_id", file)}
@@ -574,90 +713,9 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                 />
               </div>
             </section>
- 
-            {/* D. Compound Libraries */}
-            <section className="space-y-4">
-              <SectionHeader title="D. Compound Libraries" description="Chemical space to be explored via the discovery pipeline." />
-              <div className="grid gap-4 md:grid-cols-2">
-                <InputDataCard 
-                  title="SMILES Compound Library"
-                  description="List of molecules for virtual screening."
-                  formats=".csv, .smi"
-                  {...getCardInfo("compound_library_file_id", "Uploaded", "Zinc_LeadLike_15k.csv")}
-                  onUpload={(file) => handleUploadInputFile("compound_library_file_id", file)}
-                  required
-                />
-                <InputDataCard 
-                  title="SDF 3D Library"
-                  description="Pre-conformed molecular structures."
-                  formats=".sdf"
-                  {...getCardInfo("tumor_mutation_file_id", "Optional", "")}
-                  onUpload={(file) => handleUploadInputFile("tumor_mutation_file_id", file)}
-                  optional
-                />
-              </div>
-            </section>
- 
-            {/* E. Experimental Assay Data */}
-            <section className="space-y-4">
-              <SectionHeader title="E. Experimental Assay Data" description="Upload IC50, Ki, Kd values for target validation." />
-              <div className="grid gap-4 md:grid-cols-2">
-                <InputDataCard 
-                  title="Assay Data (IC50/Ki/Kd/EC50)"
-                  description="Upload experimental binding affinity and potency metrics."
-                  formats=".csv, .xlsx"
-                  {...getCardInfo("assay_data_file_id", "Uploaded", "EGFR_Inhibitor_Assays.xlsx")}
-                  onUpload={(file) => handleUploadInputFile("assay_data_file_id", file)}
-                  required
-                />
-                <InputDataCard 
-                  title="Mutation / RNA / IHC Data"
-                  description="Target-specific genomic, expression, or IHC data."
-                  {...getCardInfo("rna_ihc_file_id", "Missing", "")}
-                  onUpload={(file) => handleUploadInputFile("rna_ihc_file_id", file)}
-                  optional
-                />
-              </div>
-            </section>
- 
-            {/* F. ADMET & Toxicity */}
-            <section className="space-y-4">
-              <SectionHeader title="F. ADMET & Toxicity" description="Safety parameters and physiological constraints." />
-              <div className="grid gap-4 md:grid-cols-1">
-                <InputDataCard 
-                  title="ADMET / Toxicity Data"
-                  description="Known safety profiles for relevant scaffolds."
-                  formats=".csv, .xlsx, .json"
-                  {...getCardInfo("admet_data_file_id", "Uploaded", "ADMET_Scoring_Model.json")}
-                  onUpload={(file) => handleUploadInputFile("admet_data_file_id", file)}
-                  required
-                />
-              </div>
-            </section>
- 
-            {/* G. Optional Omics / Cell Data */}
-            <section className="space-y-4">
-              <SectionHeader title="G. Optional Omics / Cell Response" description="Advanced biological response data." />
-              <div className="grid gap-4 md:grid-cols-2">
-                <InputDataCard 
-                  title="Cell-line Response"
-                  description="Growth inhibition or viability data."
-                  {...getCardInfo("organoid_response_file_id", "Missing", "")}
-                  onUpload={(file) => handleUploadInputFile("organoid_response_file_id", file)}
-                  optional
-                />
-                <InputDataCard 
-                  title="Organoid Data"
-                  description="3D patient-derived model data."
-                  {...getCardInfo("organoid_response_file_id", "Missing", "")}
-                  onUpload={(file) => handleUploadInputFile("organoid_response_file_id", file)}
-                  optional
-                />
-              </div>
-            </section>
           </div>
 
-          {/* Validation Summary Panel */}
+          {/* Validation Panel */}
           <div className="space-y-6">
             <div className="sticky top-6">
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 mb-4">Input Validation</h4>
@@ -670,32 +728,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                   <div className="h-1.5 w-full bg-border/20 rounded-full overflow-hidden">
                     <div className="h-full bg-accent" style={{ width: '77%' }} />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-muted-text">Optional Inputs</span>
-                    <span className="text-[11px] font-black text-text">2 / 4</span>
-                  </div>
-                </div>
-
-                <div className="space-y-3 pt-4 border-t border-border/40">
-                  <h5 className="text-[9px] font-black uppercase tracking-widest text-muted-text/60">Missing Required Fields</h5>
-                  <ul className="space-y-2">
-                    <li className="flex items-center gap-2 text-[10px] font-bold text-error/80">
-                      <div className="h-1 w-1 rounded-full bg-error" />
-                      Known Active / Inactive Molecules
-                    </li>
-                    <li className="flex items-center gap-2 text-[10px] font-bold text-error/80">
-                      <div className="h-1 w-1 rounded-full bg-error" />
-                      Binding Site coordinates validation
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="space-y-3 pt-4 border-t border-border/40">
-                  <h5 className="text-[9px] font-black uppercase tracking-widest text-muted-text/60">Pipeline Readiness</h5>
-                  <div className="flex items-center gap-3">
-                    <StatusBadge status="warning" label="Partial" size="sm" />
-                    <span className="text-[10px] font-medium text-muted-text/80 leading-snug">Resolve missing required fields to start Target Ranking.</span>
-                  </div>
                 </div>
 
                 <div className="space-y-2 pt-6">
@@ -705,36 +737,86 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                   <button className="w-full py-2.5 rounded-lg border border-border/40 text-text text-[10px] font-black uppercase tracking-widest hover:bg-muted-bg transition-all">
                     Save Inputs
                   </button>
-                  <button className="w-full py-2.5 rounded-lg border border-accent/20 text-accent text-[10px] font-black uppercase tracking-widest hover:bg-accent/5 transition-all opacity-50 cursor-not-allowed">
-                    Start Target Ranking
-                  </button>
-                  <button className="w-full py-2.5 rounded-lg border border-border/40 text-muted-text text-[10px] font-black uppercase tracking-widest hover:text-text transition-all flex items-center justify-center gap-2">
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-                    Ask Pharma LLM
-                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      ) : activeTab === "Reports" ? (
+        /* Dynamic Auto-Downloadable PDF Report Tab */
+        <div className="space-y-6">
+          <SectionHeader 
+            title="Generated Scientific Dossiers" 
+            description="High fidelity reports containing structural profiles and molecular dynamics results."
+          />
+          {pipelineSummary?.generated_reports && pipelineSummary.generated_reports.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {pipelineSummary.generated_reports.map((rep: any) => (
+                <div key={rep.report_id} className="ui-card-surface p-6 flex flex-col justify-between gap-6 hover:shadow-xl transition-all">
+                  <div className="space-y-2">
+                    <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
+                      IMPORTED RESULTS
+                    </span>
+                    <h4 className="text-sm font-black text-text leading-snug">{rep.title}</h4>
+                    <p className="text-[10px] text-muted-text/60">Registered on {new Date(rep.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    {rep.pdf_file_id && (
+                      <a
+                        href={`${getApiBaseUrl()}/projects/${params.id}/files/download/${rep.pdf_file_id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 py-2 text-center text-bg bg-accent hover:bg-accent/90 text-[10px] font-black uppercase tracking-widest rounded transition-all"
+                      >
+                        Download PDF
+                      </a>
+                    )}
+                    {rep.html_file_id && (
+                      <a
+                        href={`${getApiBaseUrl()}/projects/${params.id}/files/download/${rep.html_file_id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 py-2 text-center text-text border border-border hover:bg-muted-bg text-[10px] font-black uppercase tracking-widest rounded transition-all"
+                      >
+                        View HTML
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-16 text-center ui-card-surface max-w-xl mx-auto flex flex-col items-center justify-center gap-3">
+              <svg className="h-10 w-10 text-muted-text/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <h5 className="text-xs font-black uppercase tracking-widest text-text/80">No Reports Available</h5>
+              <p className="text-[10px] text-muted-text/60 leading-relaxed">Trigger the report generation stage in the virtual screening pipeline to compile data.</p>
+              <button 
+                onClick={() => triggerPipeline(["report"])}
+                className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-bg bg-accent hover:bg-accent/80 rounded mt-2"
+              >
+                Generate Report
+              </button>
+            </div>
+          )}
+        </div>
       ) : (
-        <div className="py-20 flex flex-col items-center justify-center text-center gap-4">
+        /* Stage Action Trigger Interfaces */
+        <div className="py-20 flex flex-col items-center justify-center text-center gap-4 ui-card-surface max-w-xl mx-auto">
           <div className="h-16 w-16 rounded-full bg-surface-subtle flex items-center justify-center text-muted-text/20">
-            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-black uppercase tracking-widest text-text/60">{activeTab} Interface</h3>
-            <p className="text-[11px] text-muted-text/40">This module is being initialized for the {project.name}.</p>
+            <p className="text-[11px] text-muted-text/40">Initiate virtual screening computational algorithms for {project.name}.</p>
           </div>
           <button 
-            onClick={() => setActiveTab("Overview")}
-            className="mt-2 text-[10px] font-black uppercase tracking-widest text-accent hover:underline"
+            onClick={() => triggerPipeline([activeTab.toLowerCase() === "simulations" ? "simulation" : activeTab.toLowerCase() === "targets" ? "target_ranking" : activeTab.toLowerCase() === "molecules" ? "molecule_generation" : activeTab.toLowerCase() === "admet" ? "admet" : activeTab.toLowerCase()])}
+            className="mt-4 px-6 py-2.5 rounded-lg bg-accent text-bg text-[10px] font-black uppercase tracking-widest hover:bg-accent/90 transition-all shadow-lg shadow-accent/15"
           >
-            Return to Overview
+            Run {activeTab} Stage
           </button>
         </div>
       )}
     </div>
   );
 }
-

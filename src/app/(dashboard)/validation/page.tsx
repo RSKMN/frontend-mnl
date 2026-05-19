@@ -7,7 +7,8 @@ import MetricCard from "@/components/ui/MetricCard";
 import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
-import { apiClient } from "@/services";
+import EmptyState from "@/components/ui/EmptyState";
+import { isDemoMode, apiClient } from "@/services/api";
 
 // Mock data for ADMET results
 const ADMET_RESULTS = [
@@ -68,31 +69,44 @@ function ValidationPageContent() {
 
   const [realAdmet, setRealAdmet] = useState<any[]>([]);
   const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setDataSource("MOCK DATA");
+      setIsLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
+        setIsLoading(true);
         const projectId = localStorage.getItem("active_project_id");
-        if (!projectId) return;
+        if (!projectId) {
+          setIsLoading(false);
+          return;
+        }
         
         const res = await apiClient.get<any>(`/projects/${projectId}/admet/results`);
-        if (res.success && res.data && res.data.items && res.data.items.length > 0) {
+        if (res.success && res.data && res.data.items) {
           setRealAdmet(res.data.items);
           const hasImported = res.data.items.some((item: any) => item.source === "q_ai_drug" || item.import_id);
           setDataSource(hasImported ? "IMPORTED Q-AI-DRUG DATA" : "REAL BACKEND DATA");
         }
       } catch (err) {
         console.error("Failed to fetch ADMET results", err);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchData();
   }, []);
 
-  const displayAdmet = realAdmet.length > 0
-    ? realAdmet.map((r: any) => {
+  const displayAdmet = isDemoMode()
+    ? ADMET_RESULTS
+    : realAdmet.map((r: any) => {
         const rawTox = r.critical_risks || {};
         const hergVal = rawTox.herg_risk?.level || "low";
-        const amesVal = rawTox.ames_toxicity_risk?.level || "low";
         const hepVal = rawTox.hepatotoxicity_risk?.level || "low";
         const cypVal = r.radar?.metabolism?.label || "low";
         const bbbVal = r.radar?.permeability?.label || "low";
@@ -109,14 +123,39 @@ function ValidationPageContent() {
           lipinski: r.lipinski_violations === 0 ? "Pass" : "Fail",
           status: "completed"
         };
-      })
-    : ADMET_RESULTS;
+      });
 
   const [selectedResult, setSelectedResult] = useState<any>(null);
 
   useEffect(() => {
-    setSelectedResult(displayAdmet[0]);
-  }, [realAdmet]);
+    if (displayAdmet && displayAdmet.length > 0) {
+      setSelectedResult(displayAdmet[0]);
+    } else {
+      setSelectedResult(null);
+    }
+  }, [displayAdmet]);
+
+  if (!isLoading && displayAdmet.length === 0) {
+    return (
+      <div className="space-y-8 pb-12">
+        <PageHeader
+          title={isAdmetView ? "ADMET & Toxicity Risk" : "Scientific Validation"}
+          breadcrumb={isAdmetView ? "Oncology Research / ADMET Profiling" : "Oncology Research / Validation Audit"}
+          description="Evaluate Absorption, Distribution, Metabolism, Excretion, and Toxicity profiles for top candidates."
+          dataSource="missing"
+        />
+        <EmptyState
+          title="No ADMET Profiles Found"
+          description="This project workspace doesn't have any ADMET risk assessments completed yet. Start an ADMET run or import q-ai-drug results."
+          action={
+            <button className="flex items-center gap-2 rounded bg-accent px-4 py-2 text-[10px] font-black uppercase tracking-widest text-bg hover:bg-accent/90 transition-all">
+              Initiate ADMET Run
+            </button>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-12">
@@ -128,6 +167,7 @@ function ValidationPageContent() {
           ? "Evaluate Absorption, Distribution, Metabolism, Excretion, and Toxicity profiles for top candidates. Inspect drug-likeness and toxicity endpoints."
           : "Audit computational workflows, benchmarking results, and reproducibility metrics for prioritized research leads."
         }
+        dataSource={isDemoMode() ? "mock" : (realAdmet.length > 0 ? "real" : "missing")}
         actions={
           <ActionButtonGroup>
             <ActionButton label="Export Risk Report" variant="outline" />
@@ -141,22 +181,22 @@ function ValidationPageContent() {
       <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
         <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+          isDemoMode() ? "bg-warning/20 text-warning" :
           dataSource === "IMPORTED Q-AI-DRUG DATA" ? "bg-emerald-500/20 text-emerald-400" :
-          dataSource === "REAL BACKEND DATA" ? "bg-accent/20 text-accent" :
-          "bg-warning/20 text-warning"
+          "bg-accent/20 text-accent"
         }`}>
-          {dataSource}
+          {isDemoMode() ? "MOCK DATA" : dataSource}
         </span>
       </div>
 
       {/* 2. ADMET Summary Metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
-        <MetricCard label="Screened" value="150" helperText="Total candidates" status="completed" />
-        <MetricCard label="Low Risk" value="45" helperText="Passed all gates" status="completed" />
-        <MetricCard label="hERG Alerts" value="12" helperText="Cardiac risk" status="failed" />
-        <MetricCard label="CYP Alerts" value="8" helperText="Metabolic risk" status="warning" />
-        <MetricCard label="BBB Positive" value="18" helperText="CNS penetration" status="active" />
-        <MetricCard label="Lipinski Pass" value="92%" helperText="Drug-likeness" status="completed" />
+        <MetricCard label="Screened" value={isDemoMode() ? "150" : displayAdmet.length.toString()} helperText="Total candidates" status="completed" />
+        <MetricCard label="Low Risk" value={isDemoMode() ? "45" : displayAdmet.filter(a => a.overallRisk === "Low").length.toString()} helperText="Passed all gates" status="completed" />
+        <MetricCard label="hERG Alerts" value={isDemoMode() ? "12" : displayAdmet.filter(a => a.herg === "High").length.toString()} helperText="Cardiac risk" status="completed" />
+        <MetricCard label="CYP Alerts" value={isDemoMode() ? "8" : displayAdmet.filter(a => a.cyp3a4 === "High").length.toString()} helperText="Metabolic risk" status="completed" />
+        <MetricCard label="BBB Positive" value={isDemoMode() ? "18" : displayAdmet.filter(a => a.bbb === "High").length.toString()} helperText="CNS penetration" status="active" />
+        <MetricCard label="Lipinski Pass" value={isDemoMode() ? "92%" : `${Math.round((displayAdmet.filter(a => a.lipinski === "Pass").length / (displayAdmet.length || 1)) * 100)}%`} helperText="Drug-likeness" status="completed" />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -224,36 +264,38 @@ function ValidationPageContent() {
           </div>
 
           {/* 7. Risk Flags */}
-          <div className="space-y-4">
-             <SectionHeader title="Priority Alerts" description="Heuristic-based warnings requiring immediate pharmacologist review." />
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { type: "error", title: "hERG Risk Elevated", msg: "High probability of cardiotoxicity for QDF-EGFR-014.", cand: "QDF-EGFR-014" },
-                  { type: "warning", title: "CYP3A4 Inhibition", msg: "Strong metabolic interference likely for QDF-EGFR-027.", cand: "QDF-EGFR-027" },
-                  { type: "active", title: "BBB Penetration", msg: "Uncertain CNS partitioning detected for QDF-EGFR-088.", cand: "QDF-EGFR-088" },
-                  { type: "warning", title: "Lipophilic Warning", msg: "High LogP (> 5.0) may lead to poor solubility and aggregation.", cand: "QDF-EGFR-045" }
-                ].map((flag, i) => (
-                  <div key={i} className={`p-4 rounded-xl border flex gap-4 ${
-                    flag.type === 'error' ? 'bg-error/5 border-error/20' : 
-                    flag.type === 'warning' ? 'bg-warning/5 border-warning/20' : 
-                    'bg-accent/5 border-accent/20'
-                  }`}>
-                    <div className="shrink-0 mt-0.5">
-                      <svg className={`w-5 h-5 ${
-                        flag.type === 'error' ? 'text-error' : flag.type === 'warning' ? 'text-warning' : 'text-accent'
-                      }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
+          {isDemoMode() && (
+            <div className="space-y-4">
+               <SectionHeader title="Priority Alerts" description="Heuristic-based warnings requiring immediate pharmacologist review." />
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { type: "error", title: "hERG Risk Elevated", msg: "High probability of cardiotoxicity for QDF-EGFR-014.", cand: "QDF-EGFR-014" },
+                    { type: "warning", title: "CYP3A4 Inhibition", msg: "Strong metabolic interference likely for QDF-EGFR-027.", cand: "QDF-EGFR-027" },
+                    { type: "active", title: "BBB Penetration", msg: "Uncertain CNS partitioning detected for QDF-EGFR-088.", cand: "QDF-EGFR-088" },
+                    { type: "warning", title: "Lipophilic Warning", msg: "High LogP (> 5.0) may lead to poor solubility and aggregation.", cand: "QDF-EGFR-045" }
+                  ].map((flag, i) => (
+                    <div key={i} className={`p-4 rounded-xl border flex gap-4 ${
+                      flag.type === 'error' ? 'bg-error/5 border-error/20' : 
+                      flag.type === 'warning' ? 'bg-warning/5 border-warning/20' : 
+                      'bg-accent/5 border-accent/20'
+                    }`}>
+                      <div className="shrink-0 mt-0.5">
+                        <svg className={`w-5 h-5 ${
+                          flag.type === 'error' ? 'text-error' : flag.type === 'warning' ? 'text-warning' : 'text-accent'
+                        }`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-black uppercase tracking-widest text-text mb-0.5">{flag.title}</div>
+                        <p className="text-[10px] text-muted-text leading-relaxed">{flag.msg}</p>
+                        <span className="text-[9px] font-black text-accent mt-2 block">{flag.cand}</span>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-[11px] font-black uppercase tracking-widest text-text mb-0.5">{flag.title}</div>
-                      <p className="text-[10px] text-muted-text leading-relaxed">{flag.msg}</p>
-                      <span className="text-[9px] font-black text-accent mt-2 block">{flag.cand}</span>
-                    </div>
-                  </div>
-                ))}
-             </div>
-          </div>
+                  ))}
+               </div>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Deep Dive Panels */}
@@ -322,11 +364,11 @@ function ValidationPageContent() {
                </div>
             </div>
 
-            {/* 6. Radar Chart Placeholder */}
+            {/* 6. Radar Chart Panel */}
             <div className="ui-card-surface p-5 space-y-4">
                <h4 className="text-xs font-black uppercase tracking-widest text-accent">ADMET Radar Profile</h4>
                <div className="aspect-square relative flex items-center justify-center">
-                  {/* Mock Radar Chart SVG */}
+                  {/* Radar Chart SVG */}
                   <svg className="w-full h-full text-border/40" viewBox="0 0 100 100">
                      <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 2" />
                      <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="2 2" />

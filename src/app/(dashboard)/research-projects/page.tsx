@@ -12,7 +12,7 @@ import {
   StatusType,
   FadeIn
 } from "@/components/ui";
-import { apiClient } from "@/services";
+import { isDemoMode, apiClient } from "@/services/api";
 
 const MOCK_PROJECTS = [
   { 
@@ -113,39 +113,38 @@ export default function WorkspacePage() {
   const fetchProjects = async () => {
     try {
       setIsLoading(true);
-      const wsId = localStorage.getItem("active_workspace_id");
-      if (!wsId) {
+      if (isDemoMode()) {
         setProjects(MOCK_PROJECTS);
         return;
       }
-      const res = await apiClient.get<any>(`/projects?workspace_id=${wsId}`);
+      const wsId = localStorage.getItem("active_workspace_id");
+      if (!wsId) {
+        setProjects([]);
+        return;
+      }
+      const res = await apiClient.get<any>("/projects", { params: { workspace_id: wsId } });
       if (res.success && res.data && Array.isArray(res.data.items)) {
-        if (res.data.items.length === 0) {
-          // If empty, let's fall back to mock projects to keep it beautiful
-          setProjects(MOCK_PROJECTS);
-        } else {
-          // Map backend projects to UI cards props
-          const mapped = res.data.items.map((proj: any) => ({
-            id: proj.id,
-            name: proj.name,
-            disease: proj.disease_type || "General Oncology",
-            target: proj.cancer_type || "Multiple Targets",
-            stage: "Target Discovery",
-            status: (proj.status === "active" ? "active" : proj.status) as StatusType,
-            progress: 0,
-            candidates: { generated: 0, filtered: 0 },
-            lastRun: "Just initialized",
-            owner: "Current User",
-            tags: ["Active", "Target Discovery"]
-          }));
-          setProjects(mapped);
-        }
+        // Map backend projects to UI cards props
+        const mapped = res.data.items.map((proj: any) => ({
+          id: proj.id,
+          name: proj.name,
+          disease: proj.disease_type || "General Oncology",
+          target: proj.cancer_type || "Multiple Targets",
+          stage: "Target Discovery",
+          status: (proj.status === "active" ? "active" : proj.status) as StatusType,
+          progress: 0,
+          candidates: { generated: 0, filtered: 0 },
+          lastRun: "Just initialized",
+          owner: "Current User",
+          tags: ["Active", "Target Discovery"]
+        }));
+        setProjects(mapped);
       } else {
-        setProjects(MOCK_PROJECTS);
+        setProjects([]);
       }
     } catch (err) {
-      console.error("Failed to load projects, falling back to mock:", err);
-      setProjects(MOCK_PROJECTS);
+      console.error("Failed to load projects:", err);
+      setProjects([]);
     } finally {
       setIsLoading(false);
     }
@@ -214,6 +213,17 @@ export default function WorkspacePage() {
           </ActionButtonGroup>
         }
       />
+
+      {/* Dynamic Data Provenance Badge */}
+      <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max animate-fade-in" data-testid="data-source-badge">
+        <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
+        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+          isDemoMode() ? "bg-warning/20 text-warning" :
+          projects.length > 0 ? "bg-accent/20 text-accent" : "bg-warning/20 text-warning"
+        }`}>
+          {isDemoMode() ? "MOCK DATA" : "REAL BACKEND DATA"}
+        </span>
+      </div>
 
       {/* Search and Filters */}
       <div className="ui-card-surface p-4 bg-surface-subtle/30 border-border/40">

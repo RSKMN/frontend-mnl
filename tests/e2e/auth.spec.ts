@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { E2E_EMAIL, E2E_PASSWORD, E2E_MODE } from './utils/test-data';
 import { SELECTORS } from './utils/selectors';
-import { setupConsoleTracker, bypassDemoMode } from './utils/auth-helper';
+import { bypassDemoMode } from './utils/auth-helper';
 import { setupConsoleTracker as tracker } from './utils/navigation-helper';
 
 test.describe('Authentication Services', () => {

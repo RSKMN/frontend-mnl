@@ -9,7 +9,7 @@ const DEMO_PASSWORD = 'ProofPass123!';
 const DEMO_NAME = 'Proof Researcher';
 const DEMO_WORKSPACE = `Real Workspace ${RUN_ID}`;
 const DEMO_PROJECT = `Real Project ${RUN_ID}`;
-const BACKEND_URL = 'http://127.0.0.1:8001';
+const BACKEND_URL = process.env.BACKEND_BASE_URL || 'http://127.0.0.1:8001';
 
 // Helper to inject a visual proof overlay on the webpage
 async function injectProofOverlay(page: any, data: {

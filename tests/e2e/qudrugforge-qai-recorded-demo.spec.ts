@@ -8,7 +8,7 @@ const DEMO_PASSWORD = 'DemoPass123!';
 const DEMO_NAME = 'Demo QAI Recorder';
 const DEMO_WORKSPACE = 'Oncology Research Demo';
 const DEMO_PROJECT = 'EGFR NSCLC QAI Recorded Demo';
-const BACKEND_URL = 'http://127.0.0.1:8001';
+const BACKEND_URL = process.env.BACKEND_BASE_URL || 'http://127.0.0.1:8001';
 
 test.describe('recorded q-ai-drug end-to-end scientific demo', () => {
 

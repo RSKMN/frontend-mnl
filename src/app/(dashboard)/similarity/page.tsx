@@ -6,7 +6,8 @@ import MetricCard from "@/components/ui/MetricCard";
 import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
-import { apiClient } from "@/services";
+import EmptyState from "@/components/ui/EmptyState";
+import { isDemoMode, apiClient } from "@/services/api";
 
 // Mock fallbacks
 const MOCK_LABELS = [
@@ -41,19 +42,33 @@ export default function SimilarityPage() {
   const [querySmiles, setQuerySmiles] = useState("CN(C)C/C=C/C(=O)NC1=CC2=C(C=C1)N=CN=C2NC3=CC(=C(C=C3)F)Cl");
   const [selectedMoleculeId, setSelectedMoleculeId] = useState("");
   
-  const [neighbors, setNeighbors] = useState<any[]>(MOCK_NEIGHBORS);
-  const [matrixLabels, setMatrixLabels] = useState<string[]>(MOCK_LABELS);
-  const [similarityMatrix, setSimilarityMatrix] = useState<number[][]>(MOCK_MATRIX);
+  const [neighbors, setNeighbors] = useState<any[]>([]);
+  const [matrixLabels, setMatrixLabels] = useState<string[]>([]);
+  const [similarityMatrix, setSimilarityMatrix] = useState<number[][]>([]);
   
   const [isSearching, setIsSearching] = useState(false);
   const [isMatrixLoading, setIsMatrixLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fetch project molecules list to populate search selectors
   useEffect(() => {
+    if (isDemoMode()) {
+      setDataSource("MOCK DATA");
+      setNeighbors(MOCK_NEIGHBORS);
+      setMatrixLabels(MOCK_LABELS);
+      setSimilarityMatrix(MOCK_MATRIX);
+      setIsLoading(false);
+      return;
+    }
+
     const loadMolecules = async () => {
       try {
+        setIsLoading(true);
         const projectId = localStorage.getItem("active_project_id");
-        if (!projectId) return;
+        if (!projectId) {
+          setIsLoading(false);
+          return;
+        }
 
         const res = await apiClient.get<any>(`/projects/${projectId}/molecules`);
         if (res.success && res.data && res.data.items) {
@@ -65,6 +80,8 @@ export default function SimilarityPage() {
         }
       } catch (err) {
         console.error("Failed to load molecules list", err);
+      } finally {
+        setIsLoading(false);
       }
     };
     loadMolecules();
@@ -72,6 +89,7 @@ export default function SimilarityPage() {
 
   // Fetch pairwise similarity matrix
   const fetchSimilarityMatrix = async () => {
+    if (isDemoMode()) return;
     setIsMatrixLoading(true);
     try {
       const projectId = localStorage.getItem("active_project_id");
@@ -91,11 +109,14 @@ export default function SimilarityPage() {
   };
 
   useEffect(() => {
-    fetchSimilarityMatrix();
+    if (!isDemoMode()) {
+      fetchSimilarityMatrix();
+    }
   }, []);
 
   // Trigger structural similarity search
   const handleSimilaritySearch = async () => {
+    if (isDemoMode()) return;
     if (!querySmiles.trim()) return;
     setIsSearching(true);
     try {
@@ -137,6 +158,28 @@ export default function SimilarityPage() {
     return "bg-muted-bg/30 text-muted-text/60";
   };
 
+  if (!isLoading && matrixLabels.length === 0) {
+    return (
+      <div className="space-y-8 pb-12">
+        <PageHeader
+          title="Structural Similarity Matrix"
+          breadcrumb="Research / Structural similarity"
+          description="Quantify structural relationships and scaffold novelties across the candidate library."
+          dataSource="missing"
+        />
+        <EmptyState
+          title="No Pairwise Similarity Matrices Found"
+          description="This project workspace doesn't have a similarity grid calculated yet. Start by generating or importing compounds."
+          action={
+            <button className="flex items-center gap-2 rounded bg-accent px-4 py-2 text-[10px] font-black uppercase tracking-widest text-bg hover:bg-accent/90 transition-all">
+              Initialize Matrix Calculation
+            </button>
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 pb-12">
       {/* 1. Page Header */}
@@ -144,6 +187,7 @@ export default function SimilarityPage() {
         title="Structural Similarity Matrix"
         breadcrumb="Research / Structural similarity"
         description="Quantify structural relationships and scaffold novelties across the candidate library. Compare lead molecules against known drug space and detect applicability domain risks."
+        dataSource={isDemoMode() ? "mock" : (matrixLabels.length > 0 ? "real" : "missing")}
         actions={
           <ActionButtonGroup>
             <ActionButton label="Export Report" variant="secondary" />
@@ -151,7 +195,7 @@ export default function SimilarityPage() {
               label={isMatrixLoading ? "Computing Matrix..." : "Recalculate Matrix"} 
               variant="primary" 
               onClick={fetchSimilarityMatrix}
-              disabled={isMatrixLoading}
+              disabled={isMatrixLoading || isDemoMode()}
             />
           </ActionButtonGroup>
         }
@@ -161,9 +205,10 @@ export default function SimilarityPage() {
       <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
         <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
-          dataSource === "REAL BACKEND DATA" ? "bg-emerald-500/20 text-emerald-400" : "bg-warning/20 text-warning"
+          isDemoMode() ? "bg-warning/20 text-warning" :
+          dataSource === "REAL BACKEND DATA" ? "bg-accent/20 text-accent" : "bg-warning/20 text-warning"
         }`}>
-          {dataSource}
+          {isDemoMode() ? "MOCK DATA" : dataSource}
         </span>
       </div>
 
@@ -171,9 +216,9 @@ export default function SimilarityPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard label="Compared Candidates" value={String(matrixLabels.length)} helperText="Active comparison set" status="completed" />
         <MetricCard label="Nearest Neighbors" value={String(neighbors.length)} helperText="Similar lead counts" status="completed" />
-        <MetricCard label="Novel Scaffolds" value="4" helperText="Low overlap with FDA" status="active" />
-        <MetricCard label="Similarity Alerts" value="2" helperText="Potential IP conflict" status="warning" />
-        <MetricCard label="Out-of-domain" value="1" helperText="Reliability warning" status="failed" />
+        <MetricCard label="Novel Scaffolds" value={isDemoMode() ? "4" : "0"} helperText="Low overlap with FDA" status="active" />
+        <MetricCard label="Similarity Alerts" value="0" helperText="Potential IP conflict" status="completed" />
+        <MetricCard label="Out-of-domain" value="0" helperText="Reliability warning" status="completed" />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
@@ -229,7 +274,7 @@ export default function SimilarityPage() {
                   />
                   <button 
                     onClick={handleSimilaritySearch} 
-                    disabled={isSearching}
+                    disabled={isSearching || isDemoMode()}
                     className="px-6 py-2.5 rounded-lg bg-accent text-bg text-[10px] font-black uppercase tracking-[0.2em] hover:bg-accent/90 disabled:opacity-50 transition-all shrink-0"
                   >
                     {isSearching ? "Searching..." : "Search"}
@@ -246,140 +291,77 @@ export default function SimilarityPage() {
                   <p className="text-[9px] font-bold text-muted-text uppercase">Fingerprint Format</p>
                   <p className="text-xs font-black text-emerald-500">Morgan / Jaccard Fallback</p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-bold text-muted-text uppercase">Applicability Domain</p>
-                  <p className="text-xs font-black text-accent">94.2% Conf</p>
-                </div>
               </div>
             </div>
           </div>
 
-          {/* 4. Similarity Matrix */}
+          {/* 4. Similarity Matrix Heatmap */}
           <div className="space-y-4">
-            <SectionHeader title="Structural Cross-Similarity Matrix" description="Heatmap of structural overlap (Tanimoto Coefficient) across discovery candidates and reference drugs." />
-            <div className="ui-card-surface overflow-x-auto p-0">
-              <table className="w-full text-[11px] border-collapse">
-                <thead>
-                  <tr className="bg-muted-bg/30 border-b border-border/40">
-                    <th className="p-4 border-r border-border/40"></th>
+            <SectionHeader title="Pairwise Tanimoto Matrix" description="Heatmap of structural Jaccard similarity metrics calculated on Morgan fingerprints." />
+            <div className="ui-card-surface p-6 overflow-x-auto">
+              <div className="min-w-[600px] space-y-4">
+                <div className="grid grid-cols-[120px_1fr] gap-4">
+                  <div />
+                  <div className="grid" style={{ gridTemplateColumns: `repeat(${matrixLabels.length}, 1fr)` }}>
                     {matrixLabels.map(label => (
-                      <th key={label} className="p-4 font-black text-text-secondary text-center min-w-[100px]">{label}</th>
+                      <span key={label} className="text-[10px] font-black text-muted-text/60 truncate uppercase text-center leading-none -rotate-12 transform origin-bottom-left pb-4 h-8">{label}</span>
                     ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/20">
-                  {similarityMatrix.map((row, i) => (
-                    <tr key={i}>
-                      <td className="p-4 font-black text-text-secondary bg-muted-bg/10 border-r border-border/40">{matrixLabels[i]}</td>
-                      {row.map((val, j) => (
-                        <td key={j} className={`p-4 text-center transition-all border-l border-border/10 ${getHeatmapColor(val)}`}>
-                          {val !== undefined ? val.toFixed(2) : "0.00"}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  </div>
+                </div>
 
-          {/* 5. Nearest Neighbor Table */}
-          <div className="space-y-4">
-            <SectionHeader title="Nearest Structural Neighbors" description="Prioritized list of structural relatives identified via fingerprint search." />
-            <div className="ui-card-surface overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
-                    <th className="px-4 py-4">Molecule ID</th>
-                    <th className="px-4 py-4">Type</th>
-                    <th className="px-4 py-4 text-center">Similarity</th>
-                    <th className="px-4 py-4">Scaffold</th>
-                    <th className="px-4 py-4">Activity / QED</th>
-                    <th className="px-4 py-4 text-center">Risk</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/20">
-                  {neighbors.map((n, idx) => (
-                    <tr key={idx} className="group hover:bg-muted-bg/20 transition-colors">
-                      <td className="px-4 py-4">
-                        <div className="text-xs font-black text-text">{n.id}</div>
-                        <div className="text-[9px] text-muted-text font-bold italic truncate max-w-[200px]" title={n.notes}>{n.notes}</div>
-                      </td>
-                      <td className="px-4 py-4 text-xs font-bold text-text-secondary">{n.type}</td>
-                      <td className="px-4 py-4 text-center font-mono text-xs text-accent">
-                        {typeof n.similarity === "number" ? `${(n.similarity * 100).toFixed(0)}%` : n.similarity}
-                      </td>
-                      <td className="px-4 py-4 text-xs font-bold text-text-secondary">{n.scaffold}</td>
-                      <td className="px-4 py-4 text-xs font-medium text-text-secondary">{n.activity}</td>
-                      <td className="px-4 py-4 text-center">
-                        <StatusBadge status={n.risk?.toLowerCase() as any || "low"} label={n.risk || "Low"} size="sm" />
-                      </td>
-                    </tr>
+                <div className="space-y-2">
+                  {matrixLabels.map((rowLabel, rIdx) => (
+                    <div key={rowLabel} className="grid grid-cols-[120px_1fr] gap-4 items-center">
+                      <span className="text-[10px] font-black text-text truncate uppercase text-right pr-2">{rowLabel}</span>
+                      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${matrixLabels.length}, 1fr)` }}>
+                        {similarityMatrix[rIdx]?.map((val, cIdx) => (
+                          <div 
+                            key={cIdx} 
+                            className={`aspect-square rounded-lg flex items-center justify-center text-[10px] hover:scale-105 transition-transform cursor-pointer border border-border/10 ${getHeatmapColor(val)}`}
+                            title={`${rowLabel} vs ${matrixLabels[cIdx]}: ${val.toFixed(2)}`}
+                          >
+                            {val.toFixed(2)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Sidebar (1/4) */}
         <div className="space-y-6">
-          {/* 6. Scaffold Comparison Panel */}
-          <div className="ui-card-surface p-5 space-y-5 border-accent/20">
-            <h4 className="text-xs font-black uppercase tracking-widest text-accent">Scaffold Analysis</h4>
-            <div className="space-y-4">
-              <div className="p-3 rounded-lg bg-surface-subtle border border-border/40">
-                <p className="text-[9px] font-bold text-muted-text uppercase mb-1">Shared Framework</p>
-                <p className="text-xs font-black text-text">Quinazoline core with 4-amino substitution</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary/60">Unique Substituents</p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-2 py-1 rounded bg-accent/10 text-accent text-[9px] font-black font-mono">N-dimethylamino</span>
-                  <span className="px-2 py-1 rounded bg-accent/10 text-accent text-[9px] font-black font-mono">Fluorine-ortho</span>
-                  <span className="px-2 py-1 rounded bg-accent/10 text-accent text-[9px] font-black font-mono">Acrylamide warhead</span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary/60">Optimization Note</p>
-                <p className="text-[11px] font-medium text-text-secondary leading-relaxed">
-                  High pharmacophore overlap with Gefitinib at the hinge-binding region. The acrylamide moiety suggests irreversible covalent potential for mutant targets.
-                </p>
+          {/* 5. Nearest Neighbors Panel */}
+          {neighbors.length > 0 && (
+            <div className="ui-card-surface p-5 space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-widest text-accent">Nearest Neighbors</h4>
+              <div className="space-y-3">
+                {neighbors.slice(0, 5).map(neigh => (
+                  <div key={neigh.id} className="p-3 rounded-lg bg-muted-bg/50 border border-border/20 group hover:border-accent/40 cursor-pointer transition-all">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-[11px] font-black text-text group-hover:text-accent truncate max-w-[120px]">{neigh.id}</span>
+                      <span className="font-mono text-xs font-black text-accent">{neigh.similarity.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider text-muted-text/40">
+                      <span>{neigh.scaffold}</span>
+                      <span className={neigh.risk === 'Low' ? 'text-success' : 'text-warning'}>{neigh.type}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
-
-          {/* 7. Applicability Domain Panel */}
-          <div className="ui-card-surface p-5 space-y-4 border-emerald-500/20 bg-emerald-500/[0.01]">
-            <h4 className="text-xs font-black uppercase tracking-widest text-emerald-500 flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-              Applicability Domain
-            </h4>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-text-secondary">Status</span>
-                <span className="text-[11px] font-black text-emerald-500 uppercase tracking-widest">In-Domain</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-text-secondary">Confidence</span>
-                <span className="text-[11px] font-black text-text">94.2%</span>
-              </div>
-              <div className="pt-3 border-t border-border/20 space-y-2">
-                <p className="text-[9px] font-bold text-muted-text uppercase">Recommendation</p>
-                <p className="text-[11px] font-medium text-text-secondary">Reliable prediction. Structure resides within high-density training manifold.</p>
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* 8. Actions */}
           <div className="flex flex-col gap-2">
             <button className="w-full py-3 rounded-lg bg-accent text-bg font-black uppercase tracking-[0.2em] text-[10px] hover:bg-accent/90 shadow-lg shadow-accent/10 transition-all">
-              Generate Analogues
+              Initiate Benchmarking
             </button>
             <button className="w-full py-3 rounded-lg border border-border text-text font-black uppercase tracking-[0.2em] text-[10px] hover:bg-muted-bg transition-all">
-              Send to Docking
+              Scaffold Clustering
             </button>
           </div>
         </div>

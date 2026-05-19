@@ -1,204 +1,104 @@
-# Quinfosys™ QuDrugForge™
+# Quinfosys™ QuDrugForge™ — Frontend
+> **Quantum AI Drug Discovery Platform — AI-Powered Computational Molecular Intelligence**
 
-Quantum AI Drug Discovery Platform  
-AI-Powered Computational Molecular Intelligence
+QuDrugForge™ is a highly advanced, web-based frontend for a Quantum AI Drug Discovery Platform. It demonstrates a project-centric computational research workspace tailored for oncology and molecular intelligence. It provides high-fidelity, interactive representations of structural biology, molecular properties, molecular dynamics, and quantum-assisted docking results within a premium, enterprise-grade scientific UI.
 
-## Overview
-QuDrugForge™ is a highly advanced, web-based prototype frontend for a Quantum AI Drug Discovery Platform. It demonstrates a project-centric computational research workspace tailored for oncology and molecular intelligence. It provides high-fidelity, interactive representations of structural biology, molecular properties, molecular dynamics, and quantum-assisted docking results within a premium, enterprise-grade scientific UI.
+---
 
-## Product Vision
-The platform envisions an end-to-end computational drug discovery workflow:
-- **Project-Centric Research:** Organize complex data, targets, and molecules into cohesive discovery programs (e.g., EGFR NSCLC).
-- **AI/ML-Assisted Intelligence:** Surface risk predictions (ADMET), generate candidate molecules, and interpret scientific literature using a domain-specific LLM (Pharma LLM).
-- **Multi-Engine Pipeline:** Support complex orchestration from classical docking (AutoDock Vina), deep-learning rescoring (GNINA), to quantum mechanical reranking and molecular dynamics simulations.
-- **Enterprise SaaS Layer:** Deliver a seamless interface encompassing team governance, compute scaling, AWS integrations, and audit logging to satisfy Part 11 compliance in biopharma environments.
+## 1. Core Visual Pillars
 
-## Current Status
-- This repository represents the **Frontend Prototype**.
-- The platform uses **mock/static data** to simulate complex scientific datasets and AI responses without requiring a backend for demonstration purposes.
-- **Backend APIs** (for authentication, pipeline orchestration, model inference, and data persistence) are planned for future integration.
-- Actions like file uploads, API key generation, report downloads, and pipeline triggers currently utilize high-fidelity UI placeholders.
+The platform delivers a complete virtual screening, deep-learning, and quantum-assisted lead refinement experience:
+* **Project-Centric Research Workspace**: Manage complex clinical targets, target proteins, and molecular candidate libraries under organized discovery programs (e.g., EGFR NSCLC).
+* **Unified Pipeline Orchestrator**: Enqueue full sequential multi-stage pipelines (Vina Docking, GNINA CNN rescoring, QML descriptor calculations, ADMET toxicity profiling, and MD Simulations) with a live visual stepper indicator.
+* **WebGL Structural Visualizers**: Interact with real-time 3D molecular structures (proteins and candidate poses) using GPU-accelerated rendering widgets.
+* **Dynamic Reports Panel**: Instantly compile analytical scientific dossiers and download reports as PDFs/HTMLs directly from active backend file storage metadata.
 
-## Features
+---
 
-### Auth & Onboarding
-- Login
-- Register
-- Workspace Selector
+## 2. Integrated Mode & Verification Status
 
-### Core
-- Dashboard: High-level metrics, active pipelines, and system status.
-- Research Projects: Program management and project detail workspace.
-- Experiments: Comprehensive history and pipeline execution logs.
-- Reports: Aggregated candidate evidence packages and dossiers.
+### Phase 20 Integration Status:
+* **Real REST Integration**: **100% Fully Connected**. All Workspace triggers, pipeline enqueuers, docking configurations, GNINA rescorers, and report listings are hooked up directly to the FastAPI server running at `http://127.0.0.1:8001`.
+* **Provenances Badges**: The interface features dynamic badges (`REAL BACKEND DATA`, `LIVE Q-AI-DRUG PIPELINE`, `IMPORTED RESULTS`) explicitly declaring actual data states.
+* **4-Second Polling Loop**: Dynamic polling triggers during active background pipeline states, updating stepper transitions (`queued` ➔ `running` ➔ `importing_results` ➔ `completed`) and automatically refreshing dashboard totals.
 
-### Research Modules
-- Targets: Oncology intelligence and protein structural viewer.
-- Molecules: Ligand library and property filtering.
-- Docking: Classical docking setup and results evaluation.
-- GNINA: Deep-learning structural rescoring.
-- Quantum: QM-assisted affinity reranking metrics.
-- Simulations: Molecular dynamics (MD) trajectory analysis.
-- ADMET: Pharmacokinetics and toxicity risk assessment.
+---
 
-### Visualization
-- 3D Viewer: WebGL-accelerated interactive structural visualization.
-- Chemical Space: 2D UMAP embeddings of molecular libraries.
-- Similarity: Structural distance indices and neighbor search.
+## 3. Tech Stack
 
-### AI
-- Pharma LLM: Literature, protocol, and workflow assistant.
-- Models: AI/ML model registry and inference playground.
+* **Framework**: React 18 / Next.js 14.2 (App Router)
+* **Language**: TypeScript (verified compilation `tsc --noEmit` cleanly)
+* **Styling**: Tailwind CSS (with PostCSS & Autoprefixer)
+* **State Management**: Zustand
+* **Animations**: Framer Motion
+* **Scientific Visualizers**: react-plotly.js, 3Dmol.js, Recharts, @tanstack/react-table
+* **UI Elements**: Sonner (Toast notifications), react-markdown
 
-### Infrastructure
-- Compute: Cloud cluster metrics and orchestration.
-- Storage: Data buckets and storage utilization.
-- API: Developer tokens and webhooks.
-- Integrations: Third-party plugin bindings.
+---
 
-### Organization
-- Team: Multi-tenant role management.
-- Billing: Subscription and compute invoices.
-- Audit Logs: Regulatory action tracking.
-- Settings: General platform controls.
+## 4. Directory Structure
 
-### Polish
-- Robust notifications system.
-- Global command palette (Cmd/Ctrl+K) for rapid navigation.
-- Responsive layouts with protected tabular overflow.
-- Dynamic Light/Dark theme support with biotech-inspired UI assets.
-
-## Tech Stack
-- **Framework:** React 18 / Next.js 14.2 (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS (with PostCSS & Autoprefixer)
-- **State Management:** Zustand
-- **Animations:** Framer Motion
-- **Visualization:** react-plotly.js, 3Dmol.js, Recharts, @tanstack/react-table
-- **UI Utilities:** Sonner (Toast notifications), react-markdown
-
-## Project Structure
-```
-src/
-├── app/                  # Next.js App Router definitions
-│   ├── (auth)/           # Authentication layout and routes
-│   ├── (dashboard)/      # Main application layout and feature routes
-│   └── globals.css       # Core design system and theme variables
-├── components/           # Reusable UI architecture
-│   ├── dashboard/        # Dashboard-specific components
-│   ├── molecules/        # 3D visualization and chemistry components
-│   ├── shared/           # Cross-functional widgets (Skeletons, States)
-│   └── ui/               # Core design system components (Cards, Badges)
-├── services/             # API layer and mock data providers (api.ts, mockApi.ts)
-├── store/                # Zustand global state definitions
-└── types/                # Shared TypeScript interfaces
+```text
+frontend-mnl/
+├── src/
+│   ├── app/                  # Next.js App Router definitions
+│   │   ├── (auth)/           # Authentication layout and login/register routes
+│   │   ├── (dashboard)/      # Main application workspace layout and features
+│   │   │   ├── research-projects/[id]/page.tsx # E2E integrated project dashboard
+│   │   │   └── docking/page.tsx # Docking run configuration & triggers page
+│   │   └── globals.css       # Core design system and theme variables
+│   ├── components/           # Reusable UI widgets
+│   ├── services/             # Core API layer (apiClient mapping real vs mock)
+│   ├── store/                # Zustand global state definitions
+│   └── types/                # Shared TypeScript structures
+├── tests/                    # Playwright end-to-end testing suite
+│   └── e2e/
+│       └── pipeline-orchestration.spec.ts # Master pipeline orchestration E2E spec
+├── package.json              # System configurations
+└── README.md                 # Frontend guide
 ```
 
-## Getting Started
+---
 
-To run the application locally:
+## 5. Development Setup
 
-1. **Install dependencies**
-   ```bash
-   npm install
-   ```
+### Step 1: Install Dependencies
+```bash
+npm install
+```
 
-2. **Start the development server**
-   ```bash
-   npm run dev
-   ```
+### Step 2: Configure Environment
+Create a `.env.local` file mapping the backend endpoints:
+```env
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8001
+NEXT_PUBLIC_DEMO_MODE=false
+```
 
-3. **Build for production**
-   ```bash
-   npm run build
-   ```
+### Step 3: Run Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3001](http://localhost:3001) in your browser.
 
-4. **Start the production server**
-   ```bash
-   npm run start
-   ```
+---
 
-## Environment Variables
-The frontend prototype is designed to run seamlessly without strict environment variables using high-fidelity mock data. 
-Future backend integration may utilize:
-- `NEXT_PUBLIC_API_URL`
-- `NEXT_PUBLIC_DEMO_MODE` (Set to "false" to enforce real API connections)
+## 6. E2E Playwright Automation
 
-## Mock Data
-Mock data is heavily utilized in this prototype to demonstrate capabilities. It is handled gracefully within the `src/services/` layer (`api.ts` and `mockApi.ts`). `isDemoMode()` defaults to true, automatically intercepting network calls to serve static JSON structures representing chemical datasets, molecular properties, and simulation outputs.
+The repository features automated, CI-ready end-to-end testing specs written in **Playwright**.
 
-## Documentation
-- [UI Elements Guide](docs/UI_ELEMENTS_GUIDE.md): In-depth breakdown of components and pages.
-- [User Navigation Flow](docs/USER_NAVIGATION_FLOW.md): Step-by-step beginner workflows.
+### Step 1: Install Browser Engines
+```bash
+npx playwright install
+```
 
-## Backend Integration Roadmap
-To transition this prototype to a fully functional application, the following backend integrations are planned:
-- **Authentication:** Connect login, registration, and workspace selection to identity providers.
-- **Projects/Workspaces:** Real persistence of research states.
-- **Uploads:** Integration with S3/Blob storage for protein (PDB/FASTA) and ligand (SDF/SMILES) files.
-- **Experiment Orchestration:** Async task triggering for multi-stage pipelines.
-- **Docking/GNINA Services:** Dispatch computation to GPU clusters.
-- **Quantum/QML Services:** Cloud-based QM evaluations.
-- **ADMET Prediction:** Live inference endpoints for toxicity scoring.
-- **Reports/Export:** Server-side PDF and data generation.
-- **Notifications & Billing:** Real-time sockets and payment gateways.
+### Step 2: Run End-to-End Tests
+Ensure the backend server is running on port 8001 and run E2E suites:
 
-## Development Notes
-- **Theme Constraints:** Maintain existing CSS variables in `globals.css`. Avoid sweeping theme redesigns. Protect light and dark mode contrasts.
-- **Layout Stability:** The sidebar and topbar should remain stable. Use `isSidebarItemActive` within `layout.tsx` for navigation mapping.
-- **Components:** Prefer leveraging existing components inside `src/components/ui/` before creating new ones.
-- **Data Fetching:** Keep mock logic modularized in `services/api.ts` to allow easy swapping to `fetch` calls in the future.
+```bash
+# Run all tests in headless mode
+npm run test:e2e
 
-## Frontend E2E Testing
-
-The frontend features a fully automated, CI-ready end-to-end testing suite written in **Playwright**.
-
-### 1. Installation & Setup
-To set up and run E2E tests locally:
-
-1. **Install Playwright dependencies**
-   ```bash
-   npm install
-   ```
-2. **Install browser engines**
-   ```bash
-   npx playwright install
-   ```
-
-### 2. Running E2E Tests
-
-Ensure your Next.js development server is running on `http://localhost:3000` (or allow Playwright's automatic web server to start it for you).
-
-- **Run all E2E tests (Headless)**
-   ```bash
-   npm run test:e2e
-   ```
-- **Open Playwright Interactive UI**
-   ```bash
-   npm run test:e2e:ui
-   ```
-- **Run tests in Headed Mode**
-   ```bash
-   npm run test:e2e:headed
-   ```
-- **View HTML Test Reports**
-   ```bash
-   npm run test:e2e:report
-   ```
-
-### 3. Testing Modes
-
-The E2E suite supports two execution modes, controlled via `.env.e2e`:
-
-- **Mock Mode (`E2E_MODE=mock`)**: 
-  - Standard baseline default. Runs entirely offline using the Next.js prototype's built-in high-fidelity mock data. No live backend services or database engines required. Extremely fast and reliable.
-- **Real Mode (`E2E_MODE=real`)**:
-  - Requires the `qudrugforge-backend` to be running at `http://127.0.0.1:8001`.
-  - Exercises full endpoint connectivity for authentication, workspaces, target listings, file persistence, and simulations.
-
-### 4. Troubleshooting
-- **Failing on Console Errors**: Playwright tests are configured to fail on severe, unhandled Javascript exceptions. If you see console errors, check that no third-party assets are throwing syntax errors in the browser. Safe React Hydration warnings are automatically filtered.
-- **Port Conflicts**: Ensure Next.js is not already bound to another port. Playwright targets `http://localhost:3000` by default.
-
-## License
-License not specified.
+# Run tests targeting the real backend integration
+# Set E2E_MODE=real in .env.e2e
+npx playwright test tests/e2e/pipeline-orchestration.spec.ts
+```

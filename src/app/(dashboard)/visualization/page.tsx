@@ -8,7 +8,8 @@ import MetricCard from "@/components/ui/MetricCard";
 import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
-import { apiClient } from "@/services";
+import EmptyState from "@/components/ui/EmptyState";
+import { isDemoMode, apiClient } from "@/services/api";
 
 const ThreeDMoleculeViewer = dynamic(() => import("@/components/molecules/ThreeDMoleculeViewer"), {
   ssr: false,
@@ -50,17 +51,18 @@ function VisualizationPageContent() {
   const [proteins, setProteins] = useState<any[]>([]);
   const [ligands, setLigands] = useState<any[]>([]);
   const [poses, setPoses] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   
   const [selectedProteinId, setSelectedProteinId] = useState<string>("");
   const [selectedLigandId, setSelectedLigandId] = useState<string>("");
-  const [selectedPose, setSelectedPose] = useState<any>(MOCK_POSES[0]);
+  const [selectedPose, setSelectedPose] = useState<any>(null);
 
   const [viewerSource, setViewerSource] = useState<any>(null);
   const [viewerLoading, setViewerLoading] = useState<boolean>(false);
 
   // Interaction network & residue states
-  const [residues, setResidues] = useState<any[]>(MOCK_RESIDUES);
-  const [interactions, setInteractions] = useState<any[]>(MOCK_INTERACTIONS);
+  const [residues, setResidues] = useState<any[]>([]);
+  const [interactions, setInteractions] = useState<any[]>([]);
 
   // Stats cards states
   const [stats, setStats] = useState({
@@ -72,10 +74,24 @@ function VisualizationPageContent() {
 
   // Fetch initial viewer assets
   useEffect(() => {
+    if (isDemoMode()) {
+      setDataSource("MOCK DATA");
+      setPoses(MOCK_POSES);
+      setSelectedPose(MOCK_POSES[0]);
+      setResidues(MOCK_RESIDUES);
+      setInteractions(MOCK_INTERACTIONS);
+      setIsLoading(false);
+      return;
+    }
+
     const fetchAssets = async () => {
       try {
+        setIsLoading(true);
         const projectId = localStorage.getItem("active_project_id");
-        if (!projectId) return;
+        if (!projectId) {
+          setIsLoading(false);
+          return;
+        }
 
         const res = await apiClient.get<any>(`/projects/${projectId}/viewer/assets`);
         if (res.success && res.data && res.data.assets) {
@@ -112,6 +128,10 @@ function VisualizationPageContent() {
             } else {
               setSelectedPose(mappedPoses[0]);
             }
+          } else {
+            setPoses([]);
+            setSelectedPose(null);
+            setDataSource("REAL BACKEND DATA");
           }
 
           if (proteinList.length > 0) {
@@ -123,6 +143,8 @@ function VisualizationPageContent() {
         }
       } catch (err) {
         console.error("Failed to retrieve viewer assets", err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -131,6 +153,7 @@ function VisualizationPageContent() {
 
   // Handle direct file query parameter fallback
   useEffect(() => {
+    if (isDemoMode()) return;
     if (queryPoseFileId) {
       setSelectedPose({
         id: "Deep Linked Conformation",
@@ -146,13 +169,25 @@ function VisualizationPageContent() {
 
   // When selected pose changes, fetch details & download pose file
   useEffect(() => {
+    if (isDemoMode()) {
+      if (selectedPose) {
+        setStats({
+          affinity: String(selectedPose.affinity),
+          cnnScore: String(selectedPose.cnnScore),
+          hBondsCount: "4",
+          rmsd: `${selectedPose.rmsd}Å`
+        });
+        setViewerSource({
+          format: "smiles",
+          value: "CC(=O)OC1=CC=CC=C1C(=O)O",
+          label: selectedPose.id
+        });
+      }
+      return;
+    }
+
     if (!selectedPose || !selectedPose.pose_file_id) {
-      // Fallback smiles or local mock representation
-      setViewerSource({
-        format: "smiles",
-        value: "CC(=O)OC1=CC=CC=C1C(=O)O",
-        label: "Aspirin (Mock Fallback)"
-      });
+      setViewerSource(null);
       return;
     }
 
@@ -198,52 +233,24 @@ function VisualizationPageContent() {
         // Fetch interaction fingerprint
         const fpRes = await apiClient.get<any>(`/projects/${projectId}/viewer/interaction-fingerprint/${selectedPose.result_id}`);
         if (fpRes.success && fpRes.data && fpRes.data.available) {
-          const fp = fpRes.data.interaction_fingerprint;
-          
-          // Map to residues array
-          const resList: any[] = [];
-          let hBonds = 0;
-          let hydrophobics = 0;
-          let piStacks = 0;
-          let saltBridges = 0;
-
-          if (fp.hydrogen_bonds) {
-            hBonds = fp.hydrogen_bonds.length;
-            fp.hydrogen_bonds.forEach((b: any) => {
-              resList.push({ name: b.residue || "Residue", type: "H-Bond", distance: b.distance || "2.9Å", confidence: 95 });
-            });
-          }
-          if (fp.hydrophobic_contacts) {
-            hydrophobics = fp.hydrophobic_contacts.length;
-            fp.hydrophobic_contacts.forEach((b: any) => {
-              resList.push({ name: b.residue || "Residue", type: "Hydrophobic", distance: b.distance || "3.8Å", confidence: 90 });
-            });
-          }
-          if (fp.pi_stacking) {
-            piStacks = fp.pi_stacking.length;
-            fp.pi_stacking.forEach((b: any) => {
-              resList.push({ name: b.residue || "Residue", type: "Pi-Stacking", distance: b.distance || "4.1Å", confidence: 85 });
-            });
-          }
-          if (fp.salt_bridges) {
-            saltBridges = fp.salt_bridges.length;
-            fp.salt_bridges.forEach((b: any) => {
-              resList.push({ name: b.residue || "Residue", type: "Salt Bridge", distance: b.distance || "3.4Å", confidence: 92 });
-            });
-          }
-
-          setResidues(resList.slice(0, 8));
-          setStats(prev => ({ ...prev, hBondsCount: String(hBonds) }));
-
+          const data = fpRes.data;
+          setResidues(data.residue_contacts || MOCK_RESIDUES);
           setInteractions([
-            { label: "Hydrogen Bonds", count: hBonds, color: "bg-cyan-500" },
-            { label: "Hydrophobic Contacts", count: hydrophobics, color: "bg-emerald-500" },
-            { label: "Pi-Stacking", count: piStacks, color: "bg-indigo-500" },
-            { label: "Salt Bridges", count: saltBridges, color: "bg-amber-500" },
+            { label: "Hydrogen Bonds", count: data.counts?.h_bonds || 0, color: "bg-cyan-500" },
+            { label: "Hydrophobic Contacts", count: data.counts?.hydrophobic || 0, color: "bg-emerald-500" },
+            { label: "Pi-Stacking", count: data.counts?.pi_stacking || 0, color: "bg-indigo-500" },
+            { label: "Salt Bridges", count: data.counts?.salt_bridges || 0, color: "bg-amber-500" }
           ]);
+          setStats(prev => ({
+            ...prev,
+            hBondsCount: String(data.counts?.h_bonds || 0)
+          }));
+        } else {
+          setResidues([]);
+          setInteractions([]);
         }
       } catch (err) {
-        console.error("Error loading active pose details", err);
+        console.error("Failed to retrieve pose data", err);
       } finally {
         setViewerLoading(false);
       }
@@ -252,150 +259,128 @@ function VisualizationPageContent() {
     fetchPoseData();
   }, [selectedPose]);
 
-  const activePoseList = poses.length > 0 ? poses : MOCK_POSES;
+  if (!isLoading && poses.length === 0) {
+    return (
+      <div className="space-y-8 pb-12">
+        <PageHeader
+          title="3D Visualization Lab"
+          breadcrumb="Oncology Research / Molecular Workbench"
+          description="High-fidelity 3D structural analysis of ligand-receptor docking poses."
+          dataSource="missing"
+        />
+        <EmptyState
+          title="No Visualizable 3D Poses Found"
+          description="No 3D structural coordinates or docking pose artifacts are available in this project workspace yet. Complete a molecular docking or GNINA CNN scoring run first."
+          action={
+            <button className="flex items-center gap-2 rounded bg-accent px-4 py-2 text-[10px] font-black uppercase tracking-widest text-bg hover:bg-accent/90 transition-all">
+              Go to Docking Workspace
+            </button>
+          }
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-12">
       {/* 1. Page Header */}
       <PageHeader
-        title="Structural Discovery Workbench"
-        breadcrumb="Research / 3D structural discovery"
-        description="Immersive 3D molecular inspection of protein-ligand complexes. Analyze binding pocket residues, docking pose overlays, and residue-level interaction networks."
+        title="3D Visualization Lab"
+        breadcrumb="Oncology Research / Molecular Workbench"
+        description="High-fidelity 3D structural analysis of ligand-receptor docking poses, hydrogen bonding networks, and electronic density surfaces."
+        dataSource={isDemoMode() ? "mock" : (poses.length > 0 ? "real" : "missing")}
         actions={
           <ActionButtonGroup>
-            <ActionButton label="Export View" variant="outline" />
-            <ActionButton label="Compare Poses" variant="secondary" />
-            <ActionButton label="Ask Pharma LLM" variant="primary" />
+            <ActionButton label="Capture PNG" variant="outline" />
+            <ActionButton label="Export Mesh" variant="secondary" />
+            <ActionButton label="Show Fullscreen" variant="primary" />
           </ActionButtonGroup>
         }
       />
 
-      {/* Real Data Provenance Badge */}
+      {/* Dynamic Data Provenance Badge */}
       <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
         <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
-          dataSource === "REAL BACKEND DATA" ? "bg-emerald-500/20 text-emerald-400" : "bg-warning/20 text-warning"
+          isDemoMode() ? "bg-warning/20 text-warning" :
+          dataSource === "IMPORTED Q-AI-DRUG DATA" ? "bg-emerald-500/20 text-emerald-400" :
+          "bg-accent/20 text-accent"
         }`}>
-          {dataSource}
+          {isDemoMode() ? "MOCK DATA" : dataSource}
         </span>
       </div>
 
-      {/* 2. Summary Metrics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <MetricCard label="Complex Stability" value="High" helperText="RMSD < 1.5Å" status="completed" />
-        <MetricCard label="Best Affinity" value={stats.affinity} unit="kcal/mol" helperText={selectedPose?.id || "Pose 01"} status="completed" />
-        <MetricCard label="CNN Confidence" value={stats.cnnScore} helperText="GNINA Rescore" status="active" />
-        <MetricCard label="H-Bonds" value={stats.hBondsCount} helperText="Active network" status="completed" />
-        <MetricCard label="Pocket Fit" value="Optimal" helperText="Surface complementarity" status="completed" />
+      {/* 2. Visualizer Summary Metrics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard label="Binding Affinity" value={stats.affinity} unit="kcal/mol" helperText="Predicted energy" status="active" />
+        <MetricCard label="CNN Pose Score" value={stats.cnnScore} helperText="Deep Learning confidence" status="completed" />
+        <MetricCard label="Active H-Bonds" value={stats.hBondsCount} helperText="Hydrogen bonds in pocket" status="completed" />
+        <MetricCard label="RMSD Deviation" value={stats.rmsd} helperText="Pose displacement vs reference" status="completed" />
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
-        {/* Left Column: Viewer Workspace & Details */}
-        <div className="lg:col-span-3 space-y-8">
-          {/* 2. Viewer Workspace */}
-          <div className="ui-card-surface overflow-hidden relative group h-[700px]">
-            {viewerLoading ? (
-              <div className="h-full min-h-[600px] flex flex-col items-center justify-center rounded-2xl border animate-pulse bg-muted-bg/30 border-border/20">
-                <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                <span className="mt-4 text-xs font-black uppercase tracking-widest text-muted-text/50">Downloading Structure conformation...</span>
-              </div>
-            ) : (
-              <ThreeDMoleculeViewer 
-                title={selectedPose?.id ? `EGFR Protein + ${selectedPose.id}` : "EGFR Program Target"}
-                subtitle="GNINA / Autodock Conformation Asset"
-                className="h-full border-0 shadow-none"
-                source={viewerSource}
-              />
-            )}
-            
-            {/* Overlay Info */}
-            <div className="absolute top-20 left-6 z-20 pointer-events-none">
-              <div className="p-4 rounded-xl border space-y-3 shadow-xl backdrop-blur-md" style={{ background: "color-mix(in srgb, var(--card) 60%, transparent)", borderColor: "var(--border)" }}>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase text-accent/80 tracking-widest">Active Pose</span>
-                  <span className="text-sm font-black text-white">{selectedPose?.id || "Pose 01"}</span>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        {/* Left Side: 3D Viewer & Pose list */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="ui-card-surface p-6 flex flex-col gap-6 min-h-[650px] relative">
+            <div className="flex justify-between items-center">
+              <SectionHeader title="3D Molecular Workbench" description={selectedPose ? `Inspecting conformation: ${selectedPose.id}` : "Select a pose to visualize"} />
+              {viewerLoading && (
+                <div className="flex items-center gap-2 text-xs font-bold text-accent">
+                   <div className="w-3 h-3 animate-spin rounded-full border border-accent border-t-transparent" />
+                   Downloading Coordinates...
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-text/60">Affinity</span>
-                  <span className="text-sm font-black text-emerald-500">{stats.affinity} kcal/mol</span>
+              )}
+            </div>
+
+            {/* Fenced 3D Canvas component */}
+            <div className="flex-1 bg-slate-950 border border-border/20 rounded-2xl min-h-[500px] overflow-hidden relative">
+              {viewerSource ? (
+                <ThreeDMoleculeViewer source={viewerSource} />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-muted-text/30 font-bold uppercase tracking-widest text-xs">
+                   No structure loaded
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            {/* 5. Residue Inspector */}
-            <div className="space-y-4">
-              <SectionHeader title="Residue Inspector" description="Key binding site contacts and interaction energies." />
-              <div className="space-y-3">
-                {residues.map((res, i) => (
-                  <div key={i} className="ui-card-surface p-4 flex items-center justify-between group hover:border-accent/40 transition-all cursor-pointer">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-lg bg-muted-bg flex items-center justify-center font-black text-xs text-accent">
-                        {res.name}
-                      </div>
-                      <div>
-                        <div className="text-xs font-black text-text">{res.type}</div>
-                        <div className="text-[10px] text-muted-text">Distance: {res.distance}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-[10px] font-black text-accent">{res.confidence}%</div>
-                      <div className="text-[9px] font-bold text-muted-text uppercase">Conf.</div>
-                    </div>
+          {/* 3. Available Conformations List */}
+          <div className="ui-card-surface p-5 space-y-4">
+            <SectionHeader title="Conformation Pool" description="Priority docking and rescoring poses ready for active rendering." />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {poses.map(p => (
+                <div 
+                  key={p.id}
+                  onClick={() => setSelectedPose(p)}
+                  className={`p-4 rounded-xl border cursor-pointer hover:border-accent/40 hover:shadow-lg transition-all flex flex-col justify-between h-28 ${
+                    selectedPose?.id === p.id ? 'border-accent bg-accent/[0.02]' : 'border-border/30 bg-muted-bg/10'
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <span className="font-mono text-[10px] font-black text-accent uppercase tracking-widest leading-none">{p.id}</span>
+                    <StatusBadge status={p.status} size="sm" />
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 6. Pose List */}
-            <div className="space-y-4">
-              <SectionHeader title="Available Poses" description="Select structural poses for detailed interaction analysis." />
-              <div className="ui-card-surface overflow-hidden">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
-                      <th className="px-4 py-4">Pose</th>
-                      <th className="px-4 py-4 text-center">Affinity</th>
-                      <th className="px-4 py-4 text-center">CNN</th>
-                      <th className="px-4 py-4 text-center">RMSD</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/20">
-                    {activePoseList.map(pose => (
-                      <tr 
-                        key={pose.id} 
-                        className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedPose?.id === pose.id ? 'bg-accent/[0.03]' : ''}`}
-                        onClick={() => setSelectedPose(pose)}
-                      >
-                        <td className="px-4 py-3 text-xs font-black text-text group-hover:text-accent">{pose.id}</td>
-                        <td className="px-4 py-3 text-center font-mono text-xs text-emerald-500">{pose.affinity}</td>
-                        <td className="px-4 py-3 text-center font-mono text-xs text-text">{pose.cnnScore}</td>
-                        <td className="px-4 py-3 text-center font-mono text-xs text-muted-text">{pose.rmsd}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <button className="w-full py-3 rounded-lg border border-dashed border-border/60 text-[10px] font-black uppercase tracking-widest text-muted-text hover:text-text hover:border-accent/40 transition-all">
-                Load More Poses
-              </button>
+                  <div>
+                    <div className="text-xs font-black text-text">Affinity: {p.affinity}</div>
+                    <div className="text-[10px] text-muted-text uppercase font-bold tracking-widest">CNN: {p.cnnScore}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Right Column: Selectors & Controls */}
+        {/* Right Side: Control Dashboard & Interaction Ledger */}
         <div className="space-y-6">
-          {/* 3. Structure / Ligand Selector */}
-          <div className="ui-card-surface p-5 space-y-5">
+          {/* 6. Active Protein & Ligand selection */}
+          <div className="ui-card-surface p-5 space-y-4">
             <h4 className="text-xs font-black uppercase tracking-widest text-accent flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-              Structure Config
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Receptor / Target Config
             </h4>
-            
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase text-muted-text/60">Protein Structure</label>
+                <label className="text-[10px] font-bold uppercase text-muted-text/60">Target Molecule</label>
                 <select 
                   value={selectedProteinId} 
                   onChange={(e) => setSelectedProteinId(e.target.value)}
@@ -471,22 +456,24 @@ function VisualizationPageContent() {
           </div>
 
           {/* 7. Interaction Summary */}
-          <div className="ui-card-surface p-5 space-y-4">
-            <h4 className="text-xs font-black uppercase tracking-widest text-accent">Interaction Network</h4>
-            <div className="space-y-4">
-              {interactions.map(int => (
-                <div key={int.label} className="space-y-1.5">
-                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-text/60">
-                    <span>{int.label}</span>
-                    <span className="text-text">{int.count}</span>
+          {interactions.length > 0 && (
+            <div className="ui-card-surface p-5 space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-widest text-accent">Interaction Network</h4>
+              <div className="space-y-4">
+                {interactions.map(int => (
+                  <div key={int.label} className="space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-text/60">
+                      <span>{int.label}</span>
+                      <span className="text-text">{int.count}</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-border/20 rounded-full overflow-hidden">
+                      <div className={`h-full ${int.color}`} style={{ width: `${(int.count / 15) * 100}%` }} />
+                    </div>
                   </div>
-                  <div className="h-1.5 w-full bg-border/20 rounded-full overflow-hidden">
-                    <div className={`h-full ${int.color}`} style={{ width: `${(int.count / 15) * 100}%` }} />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* 8. Viewer Actions */}
           <div className="flex flex-col gap-2">
