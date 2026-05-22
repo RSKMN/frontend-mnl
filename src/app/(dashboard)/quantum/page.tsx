@@ -1,164 +1,189 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import PageHeader from "@/components/ui/PageHeader";
-import MetricCard from "@/components/ui/MetricCard";
-import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
-import StatusBadge from "@/components/ui/StatusBadge";
-import SectionHeader from "@/components/ui/SectionHeader";
-import EmptyState from "@/components/ui/EmptyState";
-import { isDemoMode, apiClient } from "@/services/api";
-
-// Mock data for quantum reranking
-const QUANTUM_RERANKING = [
-  {
-    candidate: "QDF-EGFR-001",
-    classicalRank: 12,
-    quantumRank: 1,
-    qmlScore: 0.942,
-    homo: -6.42,
-    lumo: -1.85,
-    gap: 4.57,
-    dipole: 3.42,
-    status: "completed"
-  },
-  {
-    candidate: "QDF-EGFR-014",
-    classicalRank: 5,
-    quantumRank: 9,
-    qmlScore: 0.885,
-    homo: -5.88,
-    lumo: -1.42,
-    gap: 4.46,
-    dipole: 2.85,
-    status: "completed"
-  },
-  {
-    candidate: "QDF-EGFR-027",
-    classicalRank: 27,
-    quantumRank: 25,
-    qmlScore: 0.810,
-    homo: -6.12,
-    lumo: -2.10,
-    gap: 4.02,
-    dipole: 4.15,
-    status: "completed"
-  },
-  {
-    candidate: "QDF-EGFR-033",
-    classicalRank: 1,
-    quantumRank: 12,
-    qmlScore: 0.750,
-    homo: -5.45,
-    lumo: -1.15,
-    gap: 4.30,
-    dipole: 1.95,
-    status: "running"
-  }
-];
-
-const ORBITAL_CARDS = [
-  { id: "QDF-EGFR-001", homo: -6.42, lumo: -1.85, gap: 4.57, qmlScore: 0.94, delta: +11, confidence: 0.98 },
-  { id: "QDF-EGFR-014", homo: -5.88, lumo: -1.42, gap: 4.46, qmlScore: 0.88, delta: +4, confidence: 0.95 },
-  { id: "QDF-EGFR-027", homo: -6.12, lumo: -2.10, gap: 4.02, qmlScore: 0.82, delta: -2, confidence: 0.91 }
-];
-
-const QUANTUM_JOBS = [
-  { name: "xTB GFN2 single-point", candidate: "QDF-EGFR-088", status: "running", progress: 45 },
-  { name: "Qiskit quantum kernel", candidate: "Batch 042", status: "queued", progress: 0 },
-  { name: "Descriptor extraction", candidate: "QDF-EGFR-011", status: "completed", progress: 100 },
-  { name: "Reranking", candidate: "QDF-EGFR-009", status: "completed", progress: 100 }
-];
+import { 
+  PageHeader, 
+  MetricCard, 
+  ActionButtonGroup, 
+  ActionButton, 
+  StatusBadge, 
+  SectionHeader, 
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  ProvenanceBadge,
+  ProvenanceLegend,
+  Button
+} from "@/components/ui";
+import { apiClient } from "@/services/api";
 
 export default function QuantumPage() {
   const [realQuantum, setRealQuantum] = useState<any[]>([]);
-  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+  const [dataSource, setDataSource] = useState<string>("REAL BACKEND DATA");
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Polling lifecycle management
+  const [runningStage, setRunningStage] = useState(false);
+  const [polling, setPolling] = useState(false);
+  const [pipelineSummary, setPipelineSummary] = useState<any>(null);
+
+  // Long-running stage UX
+  const [runStartTime, setRunStartTime] = useState<Date | null>(null);
+  const [duration, setDuration] = useState<string>("0s");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const fetchData = async () => {
+    try {
+      const projectId = localStorage.getItem("active_project_id");
+      if (!projectId) return null;
+      
+      const [qmRes, summaryRes] = await Promise.all([
+        apiClient.get<any>(`/projects/${projectId}/quantum/qml-scores`),
+        apiClient.get<any>(`/projects/${projectId}/pipeline/summary`)
+      ]);
+
+      if (qmRes.success && qmRes.data?.items) {
+        setRealQuantum(qmRes.data.items);
+      }
+      if (summaryRes.success && summaryRes.data?.latest_pipeline_run) {
+        const run = summaryRes.data.latest_pipeline_run;
+        setPipelineSummary(run);
+        setLastUpdated(new Date());
+        
+        if (run.status === "completed" || run.status === "failed" || run.status === "cancelled") {
+          setPolling(false);
+          setRunningStage(false);
+        }
+      }
+      
+      return summaryRes;
+    } catch (err: any) {
+      console.error("Fetch failed", err);
+      setPolling(false);
+      setRunningStage(false);
+      setError(err.message || "Failed to establish secure gateway session.");
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (isDemoMode()) {
-      setDataSource("MOCK DATA");
-      setIsLoading(false);
-      return;
-    }
-
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const projectId = localStorage.getItem("active_project_id");
-        if (!projectId) {
-          setIsLoading(false);
-          return;
-        }
-        
-        const res = await apiClient.get<any>(`/projects/${projectId}/quantum/qml-scores`);
-        if (res.success && res.data && res.data.items) {
-          setRealQuantum(res.data.items);
-          const hasImported = res.data.items.some((item: any) => item.source === "q_ai_drug" || item.import_id);
-          setDataSource(hasImported ? "IMPORTED Q-AI-DRUG DATA" : "REAL BACKEND DATA");
-        }
-      } catch (err) {
-        console.error("Failed to fetch quantum data", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
-  const displayQuantum = isDemoMode()
-    ? QUANTUM_RERANKING
-    : realQuantum.map((r: any) => ({
-        candidate: r.compound_id || "CAND-QML",
-        classicalRank: r.qm_descriptors?.classical_rank || 12,
-        quantumRank: r.quantum_rank || r.rank || 1,
-        qmlScore: r.qml_score !== undefined && r.qml_score !== null ? r.qml_score : 0.942,
-        homo: r.qm_descriptors?.homo_ev !== undefined ? r.qm_descriptors.homo_ev : -6.42,
-        lumo: r.qm_descriptors?.lumo_ev !== undefined ? r.qm_descriptors.lumo_ev : -1.85,
-        gap: r.qm_descriptors?.gap_ev !== undefined ? r.qm_descriptors.gap_ev : 4.57,
-        dipole: r.qm_descriptors?.dipole_debye !== undefined ? r.qm_descriptors.dipole_debye : 3.42,
-        status: "completed"
-      }));
+  // Polling hook (Cleanup on unmount, prevent duplicate intervals)
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    if (polling) {
+      intervalId = setInterval(() => {
+        fetchData();
+      }, 3000);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [polling]);
 
-  const displayOrbitalCards = isDemoMode()
-    ? ORBITAL_CARDS
-    : realQuantum.slice(0, 3).map((r: any) => ({
-        id: r.compound_id || "CAND-QML",
-        homo: r.qm_descriptors?.homo_ev !== undefined ? r.qm_descriptors.homo_ev : -6.42,
-        lumo: r.qm_descriptors?.lumo_ev !== undefined ? r.qm_descriptors.lumo_ev : -1.85,
-        gap: r.qm_descriptors?.gap_ev !== undefined ? r.qm_descriptors.gap_ev : 4.57,
-        qmlScore: r.qml_score !== undefined && r.qml_score !== null ? r.qml_score : 0.94,
-        delta: r.qm_descriptors?.classical_rank ? r.qm_descriptors.classical_rank - (r.quantum_rank || r.rank || 1) : +11,
-        confidence: r.metadata?.confidence || 0.98
-      }));
+  // Duration timer
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    if (runningStage && runStartTime) {
+      intervalId = setInterval(() => {
+        const now = new Date();
+        const diff = Math.floor((now.getTime() - runStartTime.getTime()) / 1000);
+        setDuration(`${diff}s`);
+      }, 1000);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [runningStage, runStartTime]);
+
+  const handleRunStage = async () => {
+    const projectId = localStorage.getItem("active_project_id");
+    if (!projectId) return;
+    
+    try {
+      setRunningStage(true);
+      setPolling(true);
+      setRunStartTime(new Date());
+      const res = await apiClient.post<any>(`/projects/${projectId}/pipeline/run`, {
+        body: {
+          pipeline: ["quantum"],
+          parameters: {}
+        }
+      });
+      if (res.success) {
+        alert("Quantum (QML) workflow triggered successfully!");
+        fetchData();
+      } else {
+        alert("Execution trigger failed: " + res.message);
+        setPolling(false);
+        setRunningStage(false);
+      }
+    } catch (err: any) {
+      alert("Error: " + (err.message || "Failed to trigger background execution adapter."));
+      setPolling(false);
+      setRunningStage(false);
+    }
+  };
+
+  useEffect(() => {
+    if (realQuantum.length > 0) {
+      const hasImported = realQuantum.some((r: any) => r.source === "q_ai_drug_import" || r.metadata?.import_id);
+      setDataSource(hasImported ? "IMPORTED Q-AI-DRUG DATA" : "REAL BACKEND DATA");
+    }
+  }, [realQuantum]);
+
+  const displayQuantum = realQuantum.map((r: any) => ({
+    candidate: r.compound_id || "CAND-QML",
+    classicalRank: r.qm_descriptors?.classical_rank || 12,
+    quantumRank: r.quantum_rank || r.rank || 1,
+    qmlScore: r.qml_score !== undefined && r.qml_score !== null ? r.qml_score : "-",
+    homo: r.qm_descriptors?.homo_ev !== undefined ? r.qm_descriptors.homo_ev : "-",
+    lumo: r.qm_descriptors?.lumo_ev !== undefined ? r.qm_descriptors.lumo_ev : "-",
+    gap: r.qm_descriptors?.gap_ev !== undefined ? r.qm_descriptors.gap_ev : "-",
+    dipole: r.qm_descriptors?.dipole_debye !== undefined ? r.qm_descriptors.dipole_debye : "-",
+    uncertainty: r.metadata?.uncertainty || 0.05,
+    applicability_domain: r.metadata?.applicability_domain_status || "within_domain",
+    status: "completed"
+  }));
 
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
 
   useEffect(() => {
-    if (displayQuantum && displayQuantum.length > 0) {
+    if (displayQuantum && displayQuantum.length > 0 && !selectedCandidate) {
       setSelectedCandidate(displayQuantum[0]);
-    } else {
-      setSelectedCandidate(null);
     }
-  }, [displayQuantum]);
+  }, [displayQuantum, selectedCandidate]);
 
-  if (!isLoading && displayQuantum.length === 0) {
+  if (isLoading && !polling) {
     return (
       <div className="space-y-8 pb-12">
         <PageHeader
           title="Quantum Intelligence"
           breadcrumb="Oncology Research / Quantum Reranking"
-          description="High-fidelity quantum mechanical (QM) descriptors and QML reranking."
-          dataSource="missing"
+          description="Connecting to database and pipeline orchestration registry..."
         />
-        <EmptyState
-          title="No Quantum Mechanical Scores Found"
-          description="This project workspace doesn't have any quantum properties computed yet. Launch the QML solver pipeline or run semi-empirical xTB optimizations."
-          action={
-            <button className="flex items-center gap-2 rounded bg-accent px-4 py-2 text-[10px] font-black uppercase tracking-widest text-bg hover:bg-accent/90 transition-all">
-              Launch QML Pipeline
-            </button>
-          }
+        <LoadingState message="Loading quantum orbital calculation registry..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8 pb-12">
+        <PageHeader
+          title="Quantum Intelligence"
+          breadcrumb="Oncology Research / Quantum Reranking"
+          description="A computation or network exception occurred."
+        />
+        <ErrorState
+          title="Quantum compute session error"
+          explanation={error}
+          action={<Button variant="outline" size="sm" onClick={() => void fetchData()}>Retry Connection</Button>}
         />
       </div>
     );
@@ -170,44 +195,45 @@ export default function QuantumPage() {
       <PageHeader
         title="Quantum Intelligence"
         breadcrumb="Oncology Research / Quantum Reranking"
-        description="High-fidelity quantum mechanical (QM) descriptors and QML reranking. Calculate electronic stability, orbital energies, and non-linear structural similarities."
-        dataSource={isDemoMode() ? "mock" : (realQuantum.length > 0 ? "real" : "missing")}
+        description="High-fidelity quantum mechanical (QM) descriptors and QML reranking."
+        dataSource={displayQuantum.length > 0 ? "real" : "missing"}
         actions={
           <ActionButtonGroup>
             <ActionButton label="Export QM Data" variant="outline" />
-            <ActionButton label="Solver Config" variant="secondary" />
-            <ActionButton label="Run QML Pipeline" variant="primary" />
+            <ActionButton 
+              label={runningStage ? "Executing..." : "Execute Quantum Workflow"} 
+              variant="primary" 
+              onClick={handleRunStage}
+              disabled={runningStage}
+            />
           </ActionButtonGroup>
         }
       />
 
-      {/* Dynamic Data Provenance Badge */}
-      <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
-        <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
-        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
-          isDemoMode() ? "bg-warning/20 text-warning" :
-          dataSource === "IMPORTED Q-AI-DRUG DATA" ? "bg-emerald-500/20 text-emerald-400" :
-          "bg-accent/20 text-accent"
-        }`}>
-          {isDemoMode() ? "MOCK DATA" : dataSource}
-        </span>
-      </div>
-
-      {/* 2. Quantum Summary Metrics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <MetricCard label="QM Evaluated" value={isDemoMode() ? "840" : displayQuantum.length.toString()} helperText="Candidates processed" status="completed" />
-        <MetricCard label="QML Reranked" value={isDemoMode() ? "150" : displayQuantum.length.toString()} helperText="High-confidence pool" status="completed" />
-        <MetricCard label="Best Quantum Score" value="-12.4" unit="kcal/mol" helperText="QDF-EGFR-005" status="active" />
-        <MetricCard label="HOMO-LUMO Range" value="1.6" unit="eV" helperText="Avg gap variance" status="completed" />
-        <MetricCard label="Active Quantum Jobs" value="0" helperText="HPC resources active" status="completed" />
+      <div className="flex items-center gap-4 px-6 py-3 bg-muted-bg/50 border border-border/20 rounded-xl max-w-max">
+        <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Scientific Lineage:</span>
+        <ProvenanceBadge provenance={dataSource === "IMPORTED Q-AI-DRUG DATA" ? "imported" : "live_compute"} />
+        <div className="h-4 w-px bg-border/30" />
+        {pipelineSummary?.status === "failed" && <StatusBadge status="warning" size="sm" label="partial" />}
+        {pipelineSummary?.status === "running" && <StatusBadge status="running" size="sm" label="partial" />}
+        {pipelineSummary?.status === "cancelled" && <StatusBadge status="failed" size="sm" label="invalidated" />}
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Left Column */}
         <div className="lg:col-span-2 space-y-8">
-          {/* 3. Quantum Reranking Table */}
-          <div className="space-y-4">
-            <SectionHeader title="Quantum Reranking Ledger" description="Comparison of classical vs. quantum prioritization for top leads." />
+          <SectionHeader title="Quantum Reranking Ledger" description="Comparison of classical vs. quantum prioritization." />
+          
+          {displayQuantum.length === 0 ? (
+            <EmptyState
+              title="No Quantum Mechanical Scores Found"
+              description="Launch the QML solver pipeline or run semi-empirical optimizations."
+              action={
+                <button onClick={handleRunStage} className="bg-accent px-4 py-2 text-[10px] font-black uppercase text-bg hover:bg-accent/90">
+                  Execute Quantum Workflow
+                </button>
+              }
+            />
+          ) : (
             <div className="ui-card-surface overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
@@ -218,7 +244,7 @@ export default function QuantumPage() {
                     <th className="px-4 py-4 text-center text-accent">QML Score</th>
                     <th className="px-4 py-4 text-center">HOMO (eV)</th>
                     <th className="px-4 py-4 text-center">LUMO (eV)</th>
-                    <th className="px-4 py-4 text-center">Gap (eV)</th>
+                    <th className="px-4 py-4 text-center">Uncertainty</th>
                     <th className="px-4 py-4 text-right">Status</th>
                   </tr>
                 </thead>
@@ -226,7 +252,7 @@ export default function QuantumPage() {
                   {displayQuantum.map(res => (
                     <tr 
                       key={res.candidate} 
-                      className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedCandidate && selectedCandidate.candidate === res.candidate ? 'bg-accent/[0.03]' : ''}`}
+                      className={`group hover:bg-muted-bg/20 transition-colors cursor-pointer ${selectedCandidate?.candidate === res.candidate ? 'bg-accent/[0.03]' : ''}`}
                       onClick={() => setSelectedCandidate(res)}
                     >
                       <td className="px-4 py-3 font-mono text-xs font-bold text-text group-hover:text-accent">{res.candidate}</td>
@@ -235,7 +261,11 @@ export default function QuantumPage() {
                       <td className="px-4 py-3 text-center font-mono text-xs font-black text-accent">{res.qmlScore}</td>
                       <td className="px-4 py-3 text-center font-mono text-[11px] text-text">{res.homo}</td>
                       <td className="px-4 py-3 text-center font-mono text-[11px] text-text">{res.lumo}</td>
-                      <td className="px-4 py-3 text-center font-mono text-[11px] text-emerald-500">{res.gap}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`text-[10px] font-black ${res.uncertainty > 0.1 ? "text-warning" : "text-success"}`}>
+                           {res.uncertainty}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-right">
                         <StatusBadge status={res.status as any} size="sm" />
                       </td>
@@ -244,69 +274,56 @@ export default function QuantumPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          )}
 
-          {/* 5. Orbital Descriptor Cards */}
-          <div className="space-y-4">
-            <SectionHeader title="Top Orbital Profiles" description="Electronic properties of the most promising quantum-ranked candidates." />
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {displayOrbitalCards.map(card => (
-                <div key={card.id} className="ui-card-surface p-5 space-y-4 hover:border-accent/30 transition-all cursor-pointer group">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="font-mono text-[10px] font-bold text-accent uppercase tracking-widest">{card.id}</span>
-                      <div className="text-xs font-black text-text">QML: {card.qmlScore}</div>
-                    </div>
-                    <span className={`text-[10px] font-black ${card.delta > 0 ? 'text-success' : 'text-error'}`}>
-                      {card.delta > 0 ? '↑' : '↓'} {Math.abs(card.delta)}
-                    </span>
-                  </div>
-                  <div className="space-y-2 py-3 border-y border-border/20">
-                    <div className="flex justify-between text-[10px] font-bold">
-                      <span className="text-muted-text/40 uppercase tracking-tighter">HOMO</span>
-                      <span className="text-text font-mono">{card.homo} eV</span>
-                    </div>
-                    <div className="flex justify-between text-[10px] font-bold">
-                      <span className="text-muted-text/40 uppercase tracking-tighter">LUMO</span>
-                      <span className="text-text font-mono">{card.lumo} eV</span>
-                    </div>
-                    <div className="flex justify-between text-[10px] font-bold">
-                      <span className="text-muted-text/40 uppercase tracking-tighter">GAP</span>
-                      <span className="text-emerald-500 font-mono">{card.gap} eV</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-black text-muted-text/40 uppercase">Confidence</span>
-                    <span className="text-[10px] font-black text-accent">{(card.confidence * 100).toFixed(0)}%</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Real Orchestration Queue */}
+          {pipelineSummary && (
+            <div className="space-y-4">
+              <SectionHeader title="Orchestration Queue" description="Live status of pipeline execution." />
+              
+              {/* Long-Running Stage UX */}
+              {runningStage && (
+                 <div className="flex justify-between items-center bg-accent/10 border border-accent/20 p-3 rounded-lg mb-4">
+                   <div className="text-[10px] font-bold uppercase text-accent">Pipeline Active</div>
+                   <div className="flex gap-4 text-[10px] text-muted-text font-mono">
+                     <span>Duration: {duration}</span>
+                     <span>Last heartbeat: {lastUpdated?.toLocaleTimeString()}</span>
+                     {parseInt(duration) > 900 && <span className="text-warning">High latency - waiting for compute...</span>}
+                   </div>
+                 </div>
+              )}
 
-          {/* 7. Quantum Job Queue */}
-          {isDemoMode() && (
-            <div className="ui-card-surface p-5 space-y-4 bg-accent/[0.01]">
-              <SectionHeader title="Quantum Compute Queue" description="Tracking multi-level QM/QML execution tasks on hybrid HPC resources." />
-              <div className="space-y-3">
-                {QUANTUM_JOBS.map(job => (
-                  <div key={job.name} className="flex items-center justify-between p-3 rounded-lg bg-muted-bg/50 border border-border/20">
-                     <div className="flex items-center gap-4">
-                      <div className={`h-2 w-2 rounded-full ${
-                        job.status === 'running' ? 'bg-accent animate-pulse' :
-                        job.status === 'completed' ? 'bg-success' : 'bg-muted-text/30'
-                      }`} />
-                      <div>
-                        <div className="text-xs font-bold text-text">{job.name}</div>
-                        <div className="text-[10px] text-muted-text">{job.candidate}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="w-24 h-1 bg-border/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-accent" style={{ width: `${job.progress}%` }} />
-                      </div>
-                      <StatusBadge status={job.status as any} size="sm" />
-                    </div>
+              {/* Retry UX with Lineage Awareness */}
+              {pipelineSummary.status === "failed" && (
+                 <div className="flex justify-between items-center bg-error/10 border border-error/20 p-4 rounded-lg mb-4">
+                   <div>
+                     <div className="text-[11px] font-bold uppercase text-error">Downstream Invalidation Warning</div>
+                     <div className="text-[10px] text-muted-text mt-1">Stale downstream artifacts detected due to failure. Retry parent linkage required.</div>
+                   </div>
+                   <button onClick={handleRunStage} className="px-4 py-2 bg-error text-white font-black uppercase text-[10px] rounded hover:bg-error/80">Retry Orchestration Run</button>
+                 </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {Object.entries(pipelineSummary.stage_statuses || {}).map(([stage, details]: [string, any]) => (
+                  <div key={stage} className="ui-card-surface p-4 flex flex-col justify-between h-28">
+                     <div className="flex justify-between items-start mb-2">
+                       <div>
+                         <h4 className="text-xs font-black text-text uppercase tracking-widest">{stage}</h4>
+                       </div>
+                       <StatusBadge status={details.status as any} size="sm" />
+                     </div>
+                     <div className="space-y-2">
+                       <div className="flex justify-between text-[9px] font-bold">
+                         <span className="text-muted-text/60">
+                           {details.status === "running" ? "artifact_pending" : (details.status === "completed" ? "artifact_ready" : "artifact_indexing")}
+                         </span>
+                         <span className="text-accent">{details.progress || 0}%</span>
+                       </div>
+                       <div className="h-1 w-full bg-border/20 rounded-full overflow-hidden">
+                         <div className="h-full bg-accent transition-all duration-500" style={{ width: `${details.progress || 0}%` }} />
+                       </div>
+                     </div>
                   </div>
                 ))}
               </div>
@@ -317,21 +334,23 @@ export default function QuantumPage() {
         {/* Right Column */}
         {selectedCandidate && (
           <div className="space-y-6">
-            {/* 4. QM Descriptor Panel */}
             <div className="ui-card-surface p-5 space-y-5">
-              <h4 className="text-xs font-black uppercase tracking-widest text-accent flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
-                Quantum Descriptors
-              </h4>
+              <h4 className="text-xs font-black uppercase tracking-widest text-accent">Quantum Uncertainty</h4>
               <div className="space-y-4">
-                 <div className="p-4 rounded-xl bg-accent/[0.03] border border-accent/20 space-y-3">
+                 <div className={`p-4 rounded-xl border space-y-3 ${
+                   selectedCandidate.applicability_domain === 'outside_domain' ? 'bg-error/10 border-error/20' : 'bg-accent/[0.03] border-accent/20'
+                 }`}>
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black uppercase text-muted-text/50">Electronic Stability</span>
-                      <span className="text-xs font-black text-emerald-500">High (Stable)</span>
+                      <span className="text-[10px] font-black uppercase text-muted-text/50">Applicability Domain</span>
+                      <span className={`text-xs font-black ${selectedCandidate.applicability_domain === 'outside_domain' ? 'text-error' : 'text-emerald-500'}`}>
+                        {selectedCandidate.applicability_domain}
+                      </span>
                     </div>
-                    <p className="text-[11px] text-text leading-relaxed italic">
-                      Candidate {selectedCandidate.candidate} shows high electronic stability with an optimal HOMO-LUMO gap of {selectedCandidate.gap} eV.
-                    </p>
+                    {selectedCandidate.applicability_domain === 'outside_domain' && (
+                      <p className="text-[11px] text-error leading-relaxed italic">
+                        Warning: This molecule is structurally distant from the QML training set. Quantum scores exhibit high uncertainty.
+                      </p>
+                    )}
                  </div>
                  
                  <div className="grid grid-cols-1 gap-y-3 text-[11px]">
@@ -344,55 +363,11 @@ export default function QuantumPage() {
                       <span className="font-mono text-text">{selectedCandidate.lumo} eV</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-border/20">
-                      <span className="font-bold text-muted-text">Dipole Moment</span>
-                      <span className="font-mono text-text">{selectedCandidate.dipole} Debye</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-border/20">
-                      <span className="font-bold text-muted-text">Polarizability</span>
-                      <span className="font-mono text-text">145.2 Å³</span>
-                    </div>
-                    <div className="space-y-2 py-1">
-                      <span className="font-bold text-muted-text block">Partial Charge Summary</span>
-                      <div className="flex gap-1.5 flex-wrap">
-                        {["O: -0.42", "N: -0.38", "S: +0.12", "C: +0.05"].map(c => (
-                          <span key={c} className="px-1.5 py-0.5 rounded bg-muted-bg text-[9px] font-mono text-text border border-border/20">{c}</span>
-                        ))}
-                      </div>
+                      <span className="font-bold text-muted-text">Gap</span>
+                      <span className="font-mono text-emerald-500">{selectedCandidate.gap} eV</span>
                     </div>
                  </div>
               </div>
-            </div>
-
-            {/* 6. QML Score Comparison */}
-            <div className="ui-card-surface p-5 space-y-4">
-               <h4 className="text-xs font-black uppercase tracking-widest text-accent">Cross-Pipeline Ranking</h4>
-               <div className="space-y-3">
-                  {[
-                    { label: "Docking Rank", val: selectedCandidate.classicalRank, max: 100, color: "bg-muted-text/30" },
-                    { label: "Quantum Rank", val: selectedCandidate.quantumRank, max: 100, color: "bg-accent" },
-                    { label: "Final Rank", val: Math.min(selectedCandidate.classicalRank, selectedCandidate.quantumRank), max: 100, color: "bg-emerald-500" }
-                  ].map(r => (
-                    <div key={r.label} className="space-y-1">
-                      <div className="flex justify-between text-[10px] font-bold">
-                        <span className="text-muted-text/60 uppercase">{r.label}</span>
-                        <span className="text-text">#{r.val}</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-border/10 rounded-full overflow-hidden">
-                        <div className={`h-full ${r.color}`} style={{ width: `${Math.max(0, 100 - r.val)}%` }} />
-                      </div>
-                    </div>
-                  ))}
-               </div>
-            </div>
-
-            {/* Next Actions */}
-            <div className="flex flex-col gap-2">
-              <button className="w-full py-3 rounded-lg bg-accent text-bg font-black uppercase tracking-[0.2em] text-[10px] hover:bg-accent/90 shadow-lg shadow-accent/10 transition-all">
-                Initiate Lead Optimization
-              </button>
-              <button className="w-full py-3 rounded-lg border border-border text-text font-black uppercase tracking-[0.2em] text-[10px] hover:bg-muted-bg transition-all">
-                View Solvent Effects
-              </button>
             </div>
           </div>
         )}

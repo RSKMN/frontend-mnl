@@ -2,6 +2,8 @@ import type { ScoreBand, StabilityBand } from "./results-filter-types";
 import { CsvDownloadButton } from "./csv-download-button";
 import type { SimulationResult } from "@/types/api";
 import { ChartSkeleton, ResultsEmptyState } from "./results-state";
+import { ProvenanceBadge } from "@/components/ui";
+import { isDemoMode } from "@/services";
 import {
   CartesianGrid,
   Line,
@@ -111,6 +113,10 @@ export function SimulationResultsSection({
     Time: `${point.time} ns`,
     RMSD: `${point.rmsd.toFixed(2)} Å`,
     "Stability Status": stabilityLabel,
+    "Prediction Uncertainty (SD)": point.uncertainty_score !== undefined ? point.uncertainty_score.toFixed(3) : "0.000",
+    "Applicability Domain Violation": (point.applicability_domain?.is_ood === true || point.applicability_domain?.status === "OOD" || point.confidence_score === 0) ? "OOD" : "In-Domain",
+    "Provenance Source": point.provenance?.source || point.source || "N/A",
+    "Lineage Status": point.stale ? "STALE" : "VALID",
   }));
 
   return (
@@ -124,7 +130,17 @@ export function SimulationResultsSection({
         <div className="flex items-center gap-3">
           <CsvDownloadButton
             filename="simulation-results.csv"
-            columns={["Molecule ID", "SMILES", "Time", "RMSD", "Stability Status"]}
+            columns={[
+              "Molecule ID",
+              "SMILES",
+              "Time",
+              "RMSD",
+              "Stability Status",
+              "Prediction Uncertainty (SD)",
+              "Applicability Domain Violation",
+              "Provenance Source",
+              "Lineage Status",
+            ]}
             rows={csvRows}
             disabled={csvRows.length === 0}
           />
@@ -136,9 +152,7 @@ export function SimulationResultsSection({
           >
             {stabilityLabel}
           </span>
-          <span className="inline-flex w-fit items-center rounded-full border border-cyan-300/40 bg-cyan-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-100">
-            Demo Data (Precomputed)
-          </span>
+          <ProvenanceBadge isDemo={isDemoMode()} items={items} />
         </div>
       </div>
 

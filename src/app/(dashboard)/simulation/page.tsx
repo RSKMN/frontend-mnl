@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import PageHeader from "@/components/ui/PageHeader";
-import MetricCard from "@/components/ui/MetricCard";
-import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGroup";
-import StatusBadge from "@/components/ui/StatusBadge";
-import SectionHeader from "@/components/ui/SectionHeader";
-import EmptyState from "@/components/ui/EmptyState";
+import { 
+  PageHeader, 
+  MetricCard, 
+  ActionButtonGroup, 
+  ActionButton, 
+  StatusBadge, 
+  SectionHeader, 
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  ProvenanceBadge,
+  ProvenanceLegend
+} from "@/components/ui";
 import { isDemoMode, apiClient } from "@/services/api";
 
 // Mock data for simulation stability
@@ -68,35 +75,40 @@ export default function SimulationPage() {
   const [realSim, setRealSim] = useState<any[]>([]);
   const [dataSource, setDataSource] = useState<string>("MOCK DATA");
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (isDemoMode()) {
       setDataSource("MOCK DATA");
       setIsLoading(false);
+      setError(null);
       return;
     }
 
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const projectId = localStorage.getItem("active_project_id");
-        if (!projectId) {
-          setIsLoading(false);
-          return;
-        }
-        
-        const res = await apiClient.get<any>(`/projects/${projectId}/simulations/results`);
-        if (res.success && res.data && res.data.items) {
-          setRealSim(res.data.items);
-          const hasImported = res.data.items.some((item: any) => item.source === "q_ai_drug" || item.import_id);
-          setDataSource(hasImported ? "IMPORTED Q-AI-DRUG DATA" : "REAL BACKEND DATA");
-        }
-      } catch (err) {
-        console.error("Failed to fetch simulation results", err);
-      } finally {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const projectId = localStorage.getItem("active_project_id");
+      if (!projectId) {
         setIsLoading(false);
+        return;
       }
-    };
+      
+      const res = await apiClient.get<any>(`/projects/${projectId}/simulations/results`);
+      if (res.success && res.data && res.data.items) {
+        setRealSim(res.data.items);
+        const hasImported = res.data.items.some((item: any) => item.source === "q_ai_drug" || item.import_id);
+        setDataSource(hasImported ? "IMPORTED Q-AI-DRUG DATA" : "REAL BACKEND DATA");
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch simulation results", err);
+      setError(err.message || "Failed to establish secure gateway session with scientific compute node.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -123,6 +135,45 @@ export default function SimulationPage() {
       setSelectedResult(null);
     }
   }, [displaySim]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8 pb-12">
+        <PageHeader
+          title="Dynamic Simulation"
+          breadcrumb="Oncology Research / MD Stability"
+          description="Connecting to database and pipeline orchestration registry..."
+        />
+        <LoadingState message="Loading molecular dynamics trajectory calculations..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8 pb-12">
+        <PageHeader
+          title="Dynamic Simulation"
+          breadcrumb="Oncology Research / MD Stability"
+          description="A computation or network exception occurred."
+        />
+        <ErrorState
+          title="Simulation compute session error"
+          explanation="Failed to establish secure gateway session with scientific compute node or read MD databases."
+          debugHint={error}
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void fetchData()}
+            >
+              Retry Connection
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   if (!isLoading && displaySim.length === 0) {
     return (
@@ -164,15 +215,13 @@ export default function SimulationPage() {
       />
 
       {/* Dynamic Data Provenance Badge */}
-      <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
-        <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
-        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
-          isDemoMode() ? "bg-warning/20 text-warning" :
-          dataSource === "IMPORTED Q-AI-DRUG DATA" ? "bg-emerald-500/20 text-emerald-400" :
-          "bg-accent/20 text-accent"
-        }`}>
-          {isDemoMode() ? "MOCK DATA" : dataSource}
-        </span>
+      <div className="flex items-center gap-4 px-6 py-3 bg-muted-bg/50 border border-border/20 rounded-xl max-w-max" data-testid="data-source-badge">
+        <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Scientific Lineage:</span>
+        <ProvenanceBadge 
+          provenance={isDemoMode() ? "simulated" : (dataSource === "IMPORTED Q-AI-DRUG DATA" ? "imported" : "live_compute")} 
+        />
+        <div className="h-4 w-px bg-border/30" />
+        <ProvenanceLegend />
       </div>
 
       {/* 2. Simulation Summary Metrics */}

@@ -81,28 +81,18 @@ function resolveApiBaseUrl(): string {
 /** Base URL for API requests; configurable via NEXT_PUBLIC_API_URL. */
 const API_BASE_URL = resolveApiBaseUrl();
 
-/** Check if the application is running in 'Demo Mode' for presentations. */
 export function isDemoMode(): boolean {
-  // 1. Check LocalStorage (highest priority for client-side overrides)
-  if (typeof window !== "undefined") {
-    try {
-      const stored = localStorage.getItem("demo_mode");
-      if (stored === "false") return false;
-      if (stored === "true") return true;
-    } catch (e) {}
-  }
-
-  // 2. Check Environment Variable (standard way)
+  // Check Environment Variable explicitly
   const envValue = 
     (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_DEMO_MODE) || 
     (typeof window !== "undefined" && (window as any)._NEXT_DATA_?.runtimeConfig?.NEXT_PUBLIC_DEMO_MODE);
 
-  if (envValue === "false" || envValue === false || envValue === "0") {
-    return false;
+  if (envValue === "true" || envValue === true || envValue === "1") {
+    return true;
   }
 
-  // Default to true for presentation/mock presentation mode!
-  return true;
+  // Default to false for runtime scientific honesty!
+  return false;
 }
 
 const API_TIMEOUT_MS =
@@ -293,7 +283,13 @@ async function request<T>(
       headers: mergedHeaders,
       signal: controller.signal,
     });
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("backend-connection-status", { detail: { connected: true } }));
+    }
   } catch (error) {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("backend-connection-status", { detail: { connected: false } }));
+    }
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new ApiError(`Request timeout after ${timeoutMs}ms`, 408, undefined, url);
     }
@@ -381,6 +377,38 @@ export const apiClient = {
   upload: apiUpload,
 };
 
+/** Check backend health status explicitly */
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const configured =
+      typeof process !== "undefined"
+        ? (process.env?.NEXT_PUBLIC_API_URL || process.env?.NEXT_PUBLIC_API_BASE_URL)
+        : undefined;
+    let url = "";
+    if (configured && configured.trim()) {
+      url = configured.trim().replace(/\/+$/, "");
+    } else if (typeof window !== "undefined" && window.location?.origin) {
+      url = window.location.origin.trim().replace(/\/+$/, "");
+    } else {
+      return false;
+    }
+    if (!url.endsWith("/api/v1")) {
+      url = `${url}/api/v1`;
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const response = await fetch(`${url}/system/info`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -417,18 +445,11 @@ export async function getDatasets(): Promise<DatasetsResponse> {
   if (isDemoMode()) {
     return { count: 3, datasets: ["ZINC250k", "ChEMBL", "DrugBank"] };
   }
-  try {
-    const data = await apiFetch<DatasetsResponse>("/datasets");
-    return {
-      count: Number(data?.count ?? 0),
-      datasets: Array.isArray(data?.datasets) ? [...data.datasets] : [],
-    };
-  } catch {
-    return {
-      count: 0,
-      datasets: [],
-    };
-  }
+  const data = await apiFetch<DatasetsResponse>("/datasets");
+  return {
+    count: Number(data?.count ?? 0),
+    datasets: Array.isArray(data?.datasets) ? [...data.datasets] : [],
+  };
 }
 
 /** Fetch available dashboard metrics and recent runs with fallback */
@@ -442,8 +463,8 @@ export async function getDashboardData() {
       getRecentRuns()
     ]);
     return { summary, recent };
-  } catch {
-    return mockApi.getDashboardData();
+  } catch (err) {
+    throw err;
   }
 }
 
@@ -465,27 +486,9 @@ export async function getStats(dataset?: string): Promise<StatsResponse> {
        distributions: { mw: EMPTY_DISTRIBUTION, logp: EMPTY_DISTRIBUTION, tpsa: EMPTY_DISTRIBUTION, qed: EMPTY_DISTRIBUTION }
      };
   }
-  try {
-    return await apiFetch<StatsResponse>("/stats", {
-      params: dataset ? { dataset } : undefined,
-    });
-  } catch {
-    return {
-      dataset,
-      summary: {
-        molecule_count: 0,
-        avg_mw: 0,
-        avg_logp: 0,
-        avg_qed: 0,
-      },
-      distributions: {
-        mw: EMPTY_DISTRIBUTION,
-        logp: EMPTY_DISTRIBUTION,
-        tpsa: EMPTY_DISTRIBUTION,
-        qed: EMPTY_DISTRIBUTION,
-      },
-    };
-  }
+  return await apiFetch<StatsResponse>("/stats", {
+    params: dataset ? { dataset } : undefined,
+  });
 }
 
 /** Fetch molecules with optional filters and pagination */
@@ -510,8 +513,8 @@ export async function getMolecules(params: {
     return await apiFetch<MoleculesListResponse>("/molecules", {
       params,
     });
-  } catch {
-    return mockApi.getMolecules(page, limit);
+  } catch (err) {
+    throw err;
   }
 }
 
@@ -555,8 +558,11 @@ export async function searchSimilar(
     }
 
     return data as SimilaritySearchResponse;
-  } catch {
-    return mockApi.getMolecularSimilarity(smiles, topK);
+  } catch (err) {
+    if (isDemoMode()) {
+      return mockApi.getMolecularSimilarity(smiles, topK);
+    }
+    throw err;
   }
 }
 
@@ -579,14 +585,10 @@ export async function getEmbeddingMap(
       source: i % 3 === 0 ? "dataset" : i % 3 === 1 ? "generated" : "fda"
     }));
   }
-  try {
-    const data = await apiFetch<EmbeddingMapResponse>("/embedding/umap", {
-      params: { dataset, limit },
-    });
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
-  }
+  const data = await apiFetch<EmbeddingMapResponse>("/embedding/umap", {
+    params: { dataset, limit },
+  });
+  return Array.isArray(data) ? data : [];
 }
 
 /** Fetch aggregate research summary with fallback */
@@ -594,20 +596,12 @@ export async function getResearchSummary(): Promise<ResultsOverview> {
   if (isDemoMode()) {
     return mockApi.getResearchSummary();
   }
-  try {
-    return await getResultsOverview();
-  } catch {
-    return mockApi.getResearchSummary();
-  }
+  return getResultsOverview();
 }
 
 
 export async function getResultsOverview(): Promise<ResultsOverview> {
-  try {
-    return await apiFetch<ResultsOverview>("/results/overview");
-  } catch {
-    return mockApi.getResearchSummary();
-  }
+  return await apiFetch<ResultsOverview>("/results/overview");
 }
 
 
@@ -624,29 +618,20 @@ export async function getGeneratedMolecules(limit: number = 25): Promise<Generat
       qed: 0.75
     }));
   }
-  try {
-    const data = await apiFetch<GeneratedMoleculeResult[]>("/results/generated", {
-      params: { limit },
-    });
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
-  }
+  const data = await apiFetch<GeneratedMoleculeResult[]>("/results/generated", {
+    params: { limit },
+  });
+  return Array.isArray(data) ? data : [];
 }
 
-/** Fetch docking result rows for the Results page */
 export async function getDockingResults(limit: number = 25): Promise<DockingResult[]> {
   if (isDemoMode()) {
     return mockApi.getDockingResults(limit);
   }
-  try {
-    const data = await apiFetch<DockingResult[]>("/results/docking", {
-      params: { limit },
-    });
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return mockApi.getDockingResults(limit);
-  }
+  const data = await apiFetch<DockingResult[]>("/results/docking", {
+    params: { limit },
+  });
+  return Array.isArray(data) ? data : [];
 }
 
 /** Fetch simulation trajectory rows for the Results page */
@@ -659,30 +644,21 @@ export async function getSimulationResults(limit: number = 60): Promise<Simulati
       rmsd: 1.0 + Math.random() * 0.5
     }));
   }
-  try {
-    const data = await apiFetch<SimulationResult[]>("/results/simulation", {
-      params: { limit },
-    });
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return []; // Optional: could add mock simulation data if needed
-  }
+  const data = await apiFetch<SimulationResult[]>("/results/simulation", {
+    params: { limit },
+  });
+  return Array.isArray(data) ? data : [];
 }
 
 
-/** Fetch quantum screening rows for the Results page */
 export async function getQuantumResults(limit: number = 25): Promise<QuantumResult[]> {
   if (isDemoMode()) {
     return mockApi.getQuantumMetrics(limit);
   }
-  try {
-    const data = await apiFetch<QuantumResult[]>("/results/quantum", {
-      params: { limit },
-    });
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return mockApi.getQuantumMetrics(limit);
-  }
+  const data = await apiFetch<QuantumResult[]>("/results/quantum", {
+    params: { limit },
+  });
+  return Array.isArray(data) ? data : [];
 }
 
 
@@ -691,19 +667,9 @@ export async function getRankedCandidates(
   source: "existing" | "generated" = "existing",
   limit: number = 25
 ): Promise<RankedCandidatesResponse> {
-  try {
-    const data = await apiFetch<RankedCandidatesResponse>("/results/candidates", {
-      params: { source, limit },
-    });
-    return data;
-  } catch {
-    return {
-      source,
-      file: "",
-      count: 0,
-      items: [],
-    };
-  }
+  return await apiFetch<RankedCandidatesResponse>("/results/candidates", {
+    params: { source, limit },
+  });
 }
 
 /** Get ranked candidates with fallback */
@@ -713,8 +679,8 @@ export async function getCandidates(limit = 10): Promise<RankedCandidatesRespons
   }
   try {
     return await getRankedCandidates("existing", limit);
-  } catch {
-    return mockApi.getCandidates(limit);
+  } catch (err) {
+    throw err;
   }
 }
 
@@ -723,16 +689,9 @@ export async function getCandidates(limit = 10): Promise<RankedCandidatesRespons
 export async function getCandidateProfiles(
   limit: number = 100
 ): Promise<CandidateProfilesResponse> {
-  try {
-    return await apiFetch<CandidateProfilesResponse>("/results/profiles", {
-      params: { limit },
-    });
-  } catch {
-    return {
-      count: 0,
-      items: [],
-    };
-  }
+  return await apiFetch<CandidateProfilesResponse>("/results/profiles", {
+    params: { limit },
+  });
 }
 
 /** Fetch available summary and docking artifacts for browsing */
@@ -743,11 +702,14 @@ export async function getResultArtifacts(
     return await apiFetch<ResultArtifactsResponse>("/results/artifacts", {
       params: { limit },
     });
-  } catch {
-    return {
-      count: 0,
-      items: [],
-    };
+  } catch (err) {
+    if (isDemoMode()) {
+      return {
+        count: 0,
+        items: [],
+      };
+    }
+    throw err;
   }
 }
 
@@ -980,10 +942,13 @@ export async function getPipelineStatus(
 
 /** Fetch validation status with fallback */
 export async function getValidationStatus(experimentId: string): Promise<WorkspacePipelineStatusResponse> {
+  if (isDemoMode()) {
+    return mockApi.getValidationStatus(experimentId);
+  }
   try {
     return await getPipelineStatus(experimentId);
-  } catch {
-    return mockApi.getValidationStatus(experimentId);
+  } catch (err) {
+    throw err;
   }
 }
 
@@ -1010,7 +975,7 @@ export async function getPipelineExperiments(projectId?: string): Promise<Pipeli
     return Array.isArray(data.experiments) ? data.experiments : [];
   } catch (err) {
     console.error("DEBUG: getPipelineExperiments error:", err);
-    return mockApi.getExperiments();
+    throw err;
   }
 }
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 
-import { Button, PageHeader, StatusBadge } from "@/components/ui";
+import { Button, PageHeader, StatusBadge, ErrorState, LoadingState } from "@/components/ui";
 import {
   apiClient,
   createReport,
@@ -257,69 +257,7 @@ export default function ReportsPage() {
     setLoading(true);
     setError(null);
 
-    if (isDemoMode()) {
-      setProjectName("Demo Research Project");
-      setSummary({
-        total_reports: 3,
-        completed_reports: 3,
-        draft_reports: 0,
-        imported_reports: 1,
-        failed_reports: 0,
-        available_sections: {
-          molecules: true,
-          docking: true,
-          gnina: true,
-          quantum: true,
-          admet: true,
-          simulations: true
-        }
-      } as any);
-      const mockReports = [
-        {
-          report_id: "rep_001",
-          title: "Oncology Target Blockade Summary",
-          report_type: "project_summary",
-          status: "completed",
-          source: "qudrugforge",
-          sections: [
-            { section_id: "molecules", status: "available" },
-            { section_id: "docking", status: "available" },
-            { section_id: "gnina", status: "available" }
-          ],
-          created_at: "2026-05-18T12:00:00Z",
-          completed_at: "2026-05-18T12:05:00Z"
-        },
-        {
-          report_id: "rep_002",
-          title: "QDF-EGFR-001 Lead Candidate Dossier",
-          report_type: "candidate_dossier",
-          status: "completed",
-          source: "qudrugforge",
-          sections: [
-            { section_id: "molecules", status: "available" },
-            { section_id: "docking", status: "available" },
-            { section_id: "admet", status: "available" },
-            { section_id: "simulations", status: "available" }
-          ],
-          created_at: "2026-05-18T13:00:00Z",
-          completed_at: "2026-05-18T13:10:00Z"
-        },
-        {
-          report_id: "rep_003",
-          title: "Imported Q-AI-DRUG Simulation Run",
-          report_type: "imported_q_ai_drug",
-          status: "completed",
-          source: "q_ai_drug",
-          sections: [
-            { section_id: "simulations", status: "available" }
-          ],
-          created_at: "2026-05-18T10:00:00Z",
-          completed_at: "2026-05-18T10:01:00Z"
-        }
-      ];
-      setReports(mockReports as any[]);
-      setFilesByReport({});
-      setSelectedReportId("rep_001");
+    if (false) {
       setLoading(false);
       return;
     }
@@ -373,23 +311,7 @@ export default function ReportsPage() {
       return;
     }
 
-    if (isDemoMode()) {
-      const mockFiles: Record<string, any[]> = {
-        "rep_001": [
-          { file_id: "f_pdf_01", filename: "oncology_target_blockade_summary.pdf", file_size: 240500, mime_type: "application/pdf", download_url: "/api/v1/files/f_pdf_01/download" },
-          { file_id: "f_csv_01", filename: "compounds_potency_ledger.csv", file_size: 45100, mime_type: "text/csv", download_url: "/api/v1/files/f_csv_01/download" }
-        ],
-        "rep_002": [
-          { file_id: "f_pdf_02", filename: "qdf_egfr_001_dossier.pdf", file_size: 180200, mime_type: "application/pdf", download_url: "/api/v1/files/f_pdf_02/download" }
-        ],
-        "rep_003": [
-          { file_id: "f_sdf_03", filename: "q_ai_drug_poses.sdf", file_size: 1205000, mime_type: "chemical/x-mdl-sdfile", download_url: "/api/v1/files/f_sdf_03/download" }
-        ]
-      };
-      setFilesByReport((current) => ({
-        ...current,
-        [reportId]: mockFiles[reportId] ?? [],
-      }));
+    if (false) {
       return;
     }
 
@@ -578,10 +500,8 @@ export default function ReportsPage() {
         description={projectName ? `${projectName} report registry and generated artifacts.` : "Real backend report registry and generated artifacts."}
         actions={
           <div className="flex flex-wrap items-center gap-3">
-            <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${
-              isDemoMode() ? "border-warning/20 bg-warning/10 text-warning" : "border-success/20 bg-success/10 text-success"
-            }`}>
-              {isDemoMode() ? "Mock Demo Reports" : "Real backend reports"}
+            <span className="rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest border-success/20 bg-success/10 text-success">
+              REAL BACKEND REPORTS
             </span>
             <Button
               variant="outline"
@@ -742,15 +662,21 @@ export default function ReportsPage() {
             </div>
 
             {error && (
-              <div className="mt-4 rounded-xl border border-error/20 bg-error/10 p-4 text-sm text-error">
-                {error}
-              </div>
+              <ErrorState
+                title="Failed to Retrieve Reports"
+                explanation="We were unable to load the scientific reports or dossiers from the backend platform authority."
+                debugHint={error}
+                action={
+                  <Button variant="outline" size="sm" onClick={() => void loadProjectAndReports(projectId)}>
+                    Retry Connection
+                  </Button>
+                }
+                className="mt-4"
+              />
             )}
 
             {loading ? (
-              <div className="mt-5 rounded-xl border border-border/40 bg-muted-bg/20 p-6 text-sm text-muted-text/70">
-                Loading real backend reports...
-              </div>
+              <LoadingState message="Loading scientific report registry..." className="mt-5" />
             ) : visibleReports.length === 0 ? (
               <div className="mt-5 rounded-xl border border-dashed border-border/50 bg-muted-bg/10 p-6">
                 <p className="text-base font-semibold text-text">No reports generated yet.</p>
@@ -791,7 +717,9 @@ export default function ReportsPage() {
                             <td className="px-4 py-4 text-sm text-muted-text/80">{reportTypeLabel(report.report_type)}</td>
                             <td className="px-4 py-4">
                               <StatusBadge status={statusToBadge(report.status)} size="sm" label={report.status} />
-                              <span className="sr-only" data-testid="report-status-badge" />
+                              <div className="mt-2 text-[10px] font-mono opacity-80 uppercase tracking-wider">
+                                {report.source === "q_ai_drug" ? "IMPORTED" : (report.status === "running" ? "PARTIAL" : (report.status === "failed" ? "STALE / INVALID" : "LIVE COMPUTE"))}
+                              </div>
                             </td>
                             <td className="px-4 py-4">
                               <span className={`rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-widest ${sourceTone(report.source)}`} data-testid="report-source-badge">
@@ -1003,13 +931,23 @@ export default function ReportsPage() {
 
           <section className="ui-card-surface border border-border/40 p-5">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/50">Data source</p>
-            <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-success/20 bg-success/10 p-4">
-              <div>
-                <p className="text-sm font-semibold text-success">REAL BACKEND REPORTS</p>
-                <p className="mt-1 text-xs text-success/80">Fetched from the running backend at /api/v1/projects/{"{project_id}"}/reports.</p>
+            {isDemoMode() ? (
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-amber-500">MOCK DEMO REPORTS</p>
+                  <p className="mt-1 text-xs text-amber-500/80">Running in demo presentation mode. Scientific outputs are simulated.</p>
+                </div>
+                <StatusBadge status="pending" size="sm" label="demo" />
               </div>
-              <StatusBadge status="completed" size="sm" label="live" />
-            </div>
+            ) : (
+              <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-success/20 bg-success/10 p-4">
+                <div>
+                  <p className="text-sm font-semibold text-success">REAL BACKEND REPORTS</p>
+                  <p className="mt-1 text-xs text-success/80">Fetched from the running backend at /api/v1/projects/{"{project_id}"}/reports.</p>
+                </div>
+                <StatusBadge status="completed" size="sm" label="live" />
+              </div>
+            )}
           </section>
         </aside>
       </div>

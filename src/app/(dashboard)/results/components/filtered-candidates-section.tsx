@@ -12,6 +12,10 @@ interface CandidateCard {
   drugLikenessScore: number;
   selectionScore: number;
   reasons: string[];
+  uncertaintyScore?: number;
+  isOod?: boolean;
+  provenanceSource?: string;
+  stale?: boolean;
 }
 
 interface FilteredCandidatesSectionProps {
@@ -133,6 +137,7 @@ function buildReasonList(
 function buildCandidateCards(rows: DataRow[]): CandidateCard[] {
   return rows
     .map((row, index) => {
+      const rowAny = row as any;
       const moleculeId = toDisplay(findValue(row, ID_KEYS), `Candidate-${index + 1}`);
       const smiles = toDisplay(findValue(row, SMILES_KEYS), "SMILES not available");
       const qed = normalizeScore(toNumber(findValue(row, QED_KEYS)) ?? 0.62);
@@ -140,6 +145,10 @@ function buildCandidateCards(rows: DataRow[]): CandidateCard[] {
       const toxicityStatus = inferToxicityStatus(findValue(row, TOXICITY_KEYS), qed, drugLikenessScore);
       const safetyBonus = toxicityStatus === "Safe" ? 0.12 : toxicityStatus === "Monitor" ? 0.05 : 0;
       const selectionScore = qed * 0.55 + drugLikenessScore * 0.33 + safetyBonus;
+      const uncertaintyScore = rowAny.uncertainty_score !== undefined ? toNumber(rowAny.uncertainty_score) : undefined;
+      const isOod = rowAny.is_ood === true || rowAny.is_ood === "true" || rowAny.applicability_domain_violation === true || rowAny.applicability_domain_violation === "true" || rowAny.overall_risk === "high" || rowAny.applicability_domain?.is_ood === true || rowAny.applicability_domain?.status === "OOD";
+      const provenanceSource = String(rowAny.provenance_source || rowAny.source || rowAny.provenance?.source || "N/A");
+      const stale = rowAny.stale === true || rowAny.stale === "true";
 
       return {
         moleculeId,
@@ -149,6 +158,10 @@ function buildCandidateCards(rows: DataRow[]): CandidateCard[] {
         drugLikenessScore,
         selectionScore,
         reasons: buildReasonList(qed, toxicityStatus, drugLikenessScore),
+        uncertaintyScore,
+        isOod,
+        provenanceSource,
+        stale,
       };
     })
     .sort((a, b) => b.selectionScore - a.selectionScore)
@@ -210,6 +223,10 @@ export function FilteredCandidatesSection({
     "Toxicity Status": candidate.toxicityStatus,
     "Drug-Likeness Score": candidate.drugLikenessScore.toFixed(3),
     "Selection Score": candidate.selectionScore.toFixed(3),
+    "Prediction Uncertainty (SD)": candidate.uncertaintyScore !== undefined ? candidate.uncertaintyScore.toFixed(3) : "0.000",
+    "Applicability Domain Violation": candidate.isOod ? "OOD" : "In-Domain",
+    "Provenance Source": candidate.provenanceSource || "N/A",
+    "Lineage Status": candidate.stale ? "STALE" : "VALID",
   }));
 
   return (
@@ -232,6 +249,10 @@ export function FilteredCandidatesSection({
               "Toxicity Status",
               "Drug-Likeness Score",
               "Selection Score",
+              "Prediction Uncertainty (SD)",
+              "Applicability Domain Violation",
+              "Provenance Source",
+              "Lineage Status",
             ]}
             rows={csvRows}
             disabled={cards.length === 0}

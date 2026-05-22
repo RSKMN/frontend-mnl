@@ -116,6 +116,10 @@ export function GeneratedMoleculesTable({
         "Molecular Weight": formatNumber(molecule.molecular_weight),
         LogP: formatNumber(molecule.logp),
         QED: formatNumber(molecule.qed, 3),
+        "Prediction Uncertainty (SD)": molecule.uncertainty_score !== undefined ? molecule.uncertainty_score.toFixed(3) : "0.000",
+        "Applicability Domain Violation": (molecule.applicability_domain?.is_ood === true || molecule.applicability_domain?.status === "OOD" || molecule.confidence_score === 0) ? "OOD" : "In-Domain",
+        "Provenance Source": molecule.provenance?.source || molecule.source || "N/A",
+        "Lineage Status": molecule.stale ? "STALE" : "VALID",
       })),
     [pagedRows]
   );
@@ -164,14 +168,24 @@ export function GeneratedMoleculesTable({
         <div>
           <h2 className="text-lg font-semibold text-slate-100">Generated Molecules</h2>
           <p className="mt-1 text-xs text-slate-400">
-            API placeholder candidates with sortable properties and quick inspection.
+            Prioritized computational candidate compounds with predicted drug-like properties.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <p className="text-xs text-slate-400">Filtered by the global results controls above.</p>
           <CsvDownloadButton
             filename="generated-molecules.csv"
-            columns={["Molecule ID", "SMILES", "Molecular Weight", "LogP", "QED"]}
+            columns={[
+              "Molecule ID",
+              "SMILES",
+              "Molecular Weight",
+              "LogP",
+              "QED",
+              "Prediction Uncertainty (SD)",
+              "Applicability Domain Violation",
+              "Provenance Source",
+              "Lineage Status",
+            ]}
             rows={csvRows}
             disabled={pagedRows.length === 0}
           />

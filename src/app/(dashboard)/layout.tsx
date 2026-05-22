@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState, Suspense } from "react";
 
 import { isAuthenticated, removeToken, apiClient } from "@/services";
 import { ThemeToggle, PharmaAssistantWidget } from "@/components/shared";
+import { BackendStatusBanner, ConnectionHealthIndicator } from "@/components/ui";
 import logo from "../../../logo.png";
 
 type IconName =
@@ -606,6 +607,7 @@ function DashboardLayoutContent({
                 <Icon name="bell" className="h-4 w-4" />
               </button>
 
+              <ConnectionHealthIndicator />
               <ThemeToggle />
 
               <details className="group relative">
@@ -694,6 +696,7 @@ function DashboardLayoutContent({
         </header>
 
         {showContextBar && <ResearchContextBar />}
+        <BackendStatusBanner />
 
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-6 lg:px-10">
           {children}

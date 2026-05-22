@@ -191,6 +191,20 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
   const [pipelineSummary, setPipelineSummary] = useState<any>(null);
   const [pollingActive, setPollingActive] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  // Read auth token from localStorage (client-side only)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setAuthToken(localStorage.getItem("auth_token"));
+    }
+  }, []);
+
+  /** Build a download URL with ?token= query param for browser-native auth */
+  const getDownloadUrl = (fileId: string) => {
+    const base = `${getApiBaseUrl()}/files/${fileId}/download`;
+    return authToken ? `${base}?token=${encodeURIComponent(authToken)}` : base;
+  };
 
   const fetchProjectData = async () => {
     try {
@@ -356,7 +370,6 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
     const stageMap: Record<string, string> = {
       "target_ranking": "Target Ranking",
       "molecule_generation": "Generation",
-      "filtering": "ADMET Filter",
       "docking": "Docking Vina",
       "gnina": "GNINA CNN",
       "quantum": "Quantum QML",
@@ -365,24 +378,45 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
       "report": "Report PDF",
     };
 
-    return Object.entries(stageMap).map(([key, label]) => {
+    const stageKeys = Object.keys(stageMap);
+    let furthestActiveIndex = -1;
+    
+    // Find the furthest stage that is part of the current run
+    stageKeys.forEach((k, i) => {
+      if (stageStatuses[k]) {
+        furthestActiveIndex = Math.max(furthestActiveIndex, i);
+      }
+    });
+
+    return stageKeys.map((key, i) => {
+      const label = stageMap[key];
       const stageInfo = stageStatuses[key] || {};
-      const status = stageInfo.status || "queued";
+      let status = stageInfo.status;
+      
+      if (!status) {
+        if (i < furthestActiveIndex) {
+          status = "completed";
+        } else {
+          status = "queued";
+        }
+      }
       
       let description = "Awaiting run";
       if (status === "running") {
         description = `In progress (${stageInfo.progress || 50}%)`;
       } else if (status === "importing_results") {
         description = "Importing results...";
+        status = "running";
       } else if (status === "imported" || status === "completed") {
         description = "Completed";
+        status = "completed";
       } else if (status === "failed") {
         description = "Failed";
       }
 
       return {
         label,
-        status: (status === "importing_results" ? "running" : status) as any,
+        status: status as any,
         description
       };
     });
@@ -763,17 +797,18 @@ export default function ProjectDetailPage({ params }: ProjectDetailProps) {
                   <div className="flex gap-2">
                     {rep.pdf_file_id && (
                       <a
-                        href={`${getApiBaseUrl()}/projects/${params.id}/files/download/${rep.pdf_file_id}`}
-                        target="_blank"
+                        href={getDownloadUrl(rep.pdf_file_id)}
+                        download
                         rel="noreferrer"
                         className="flex-1 py-2 text-center text-bg bg-accent hover:bg-accent/90 text-[10px] font-black uppercase tracking-widest rounded transition-all"
+                        data-testid="download-pdf-btn"
                       >
                         Download PDF
                       </a>
                     )}
                     {rep.html_file_id && (
                       <a
-                        href={`${getApiBaseUrl()}/projects/${params.id}/files/download/${rep.html_file_id}`}
+                        href={getDownloadUrl(rep.html_file_id)}
                         target="_blank"
                         rel="noreferrer"
                         className="flex-1 py-2 text-center text-text border border-border hover:bg-muted-bg text-[10px] font-black uppercase tracking-widest rounded transition-all"

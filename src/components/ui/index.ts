@@ -30,3 +30,12 @@ export { default as NotificationBell } from "./NotificationBell";
 export { default as ToastContainer } from "./ToastContainer";
 export { default as CommandPalette } from "./CommandPalette";
 export * from "./SafeMotion";
+
+// Scientific Runtime States & Badges
+export { default as LoadingState } from "./LoadingState";
+export { default as UnavailableState } from "./UnavailableState";
+export { default as PartialResultsState } from "./PartialResultsState";
+export { default as PlaceholderNotice, ScientificWarning } from "./PlaceholderNotice";
+export * from "./ProvenanceBadges";
+export * from "./ConnectionStatus";
+

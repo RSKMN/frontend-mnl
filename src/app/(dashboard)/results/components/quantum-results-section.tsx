@@ -2,6 +2,8 @@ import type { ScoreBand, StabilityBand } from "./results-filter-types";
 import { CsvDownloadButton } from "./csv-download-button";
 import type { QuantumResult } from "@/types/api";
 import { CardGridSkeleton, ResultsEmptyState } from "./results-state";
+import { ProvenanceBadge } from "@/components/ui";
+import { isDemoMode } from "@/services";
 
 interface QuantumResultsSectionProps {
   items: QuantumResult[];
@@ -93,6 +95,10 @@ export function QuantumResultsSection({
     Lumo: formatNumber(candidate.lumo, 3),
     Gap: candidate.homo_lumo_gap.toFixed(3),
     Stability: candidate.interpretation,
+    "Prediction Uncertainty (SD)": candidate.uncertainty_score !== undefined ? candidate.uncertainty_score.toFixed(3) : "0.000",
+    "Applicability Domain Violation": (candidate.applicability_domain?.is_ood === true || candidate.applicability_domain?.status === "OOD" || candidate.confidence_score === 0) ? "OOD" : "In-Domain",
+    "Provenance Source": candidate.provenance?.source || candidate.source || "N/A",
+    "Lineage Status": candidate.stale ? "STALE" : "VALID",
   }));
 
   if (sortedCandidates.length === 0) {
@@ -112,9 +118,7 @@ export function QuantumResultsSection({
           <p className="mt-1 text-xs text-slate-400">Electronic energy levels, HOMO-LUMO gap, and QSVM stability classification.</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="inline-flex w-fit items-center rounded-full border border-cyan-300/40 bg-cyan-500/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-cyan-100">
-            Demo Data (Precomputed)
-          </span>
+          <ProvenanceBadge isDemo={isDemoMode()} items={items} />
           <p className="text-xs text-slate-400">Export current filtered table</p>
           <CsvDownloadButton
             filename="quantum-results.csv"
@@ -124,6 +128,10 @@ export function QuantumResultsSection({
               "Lumo",
               "Gap",
               "Stability",
+              "Prediction Uncertainty (SD)",
+              "Applicability Domain Violation",
+              "Provenance Source",
+              "Lineage Status",
             ]}
             rows={csvRows}
             disabled={csvRows.length === 0}

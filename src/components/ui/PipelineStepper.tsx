@@ -30,7 +30,7 @@ export default function PipelineStepper({
         </div>
       </div>
 
-      <div className="relative flex items-center justify-between gap-4 overflow-x-auto pb-4 pt-2 no-scrollbar">
+      <div className="relative flex items-center gap-4 flex-wrap pb-4 pt-2">
         {steps.map((step, i) => {
           const isLast = i === steps.length - 1;
           const isActive = step.status === "running";

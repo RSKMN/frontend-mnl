@@ -3,10 +3,11 @@ import {
   createExperiment as createExperimentApi,
   getExperiments as getExperimentsApi,
 } from "./experimentsApi";
+import { isDemoMode } from "./api";
 
 const EXPERIMENTS_STORAGE_KEY = "qdrugforge.experiments.v1";
 const EXPERIMENTS_UPDATED_EVENT = "qdrugforge.experiments.updated";
-const USE_EXPERIMENTS_API = false;
+const USE_EXPERIMENTS_API = !isDemoMode();
 
 function hasWindow(): boolean {
   return typeof window !== "undefined";
@@ -45,7 +46,7 @@ export function saveExperiment(experiment: ExperimentRecord): ExperimentRecord[]
 }
 
 export async function getExperiments(): Promise<ExperimentRecord[]> {
-  if (USE_EXPERIMENTS_API) {
+  if (!isDemoMode()) {
     return getExperimentsApi();
   }
 
@@ -53,7 +54,7 @@ export async function getExperiments(): Promise<ExperimentRecord[]> {
 }
 
 export async function createExperiment(experiment: ExperimentRecord): Promise<ExperimentRecord> {
-  if (USE_EXPERIMENTS_API) {
+  if (!isDemoMode()) {
     return createExperimentApi(experiment);
   }
 

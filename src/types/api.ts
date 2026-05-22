@@ -2,6 +2,7 @@
  * API response types — aligned with P5 ↔ P3 API Contract
  * @see API Contract.txt
  */
+import { ProvenanceMetadata } from "./experiment";
 
 // ─── 1. Datasets ─────────────────────────────────────────────────────────────
 
@@ -151,7 +152,37 @@ export interface ApiErrorResponse {
 
 // ─── 7. Results Showcase ─────────────────────────────────────────────────────
 
-export interface GeneratedMoleculeResult {
+export interface BaseScientificResult {
+  schema_version?: string;
+  source: string;
+  experiment_id: string;
+  pipeline_stage: string;
+  engine: string;
+  created_at: string;
+  provenance: ProvenanceMetadata;
+
+  // Uncertainty Normalization
+  confidence_score?: number;
+  uncertainty_score?: number;
+  applicability_domain?: Record<string, any>;
+  prediction_reliability?: string;
+
+  // Artifact Linkage
+  artifact_id?: string;
+  artifact_uri?: string;
+  report_id?: string;
+  imported_from?: string;
+
+  // Scientific Validity
+  partial_result?: boolean;
+
+  // Aging / Staleness
+  imported_at?: string;
+  artifact_age_days?: number;
+  stale?: boolean;
+}
+
+export interface GeneratedMoleculeResult extends BaseScientificResult {
   molecule_id: string;
   smiles: string;
   molecular_weight: number;
@@ -159,21 +190,24 @@ export interface GeneratedMoleculeResult {
   qed: number;
 }
 
-export interface DockingResult {
+export interface DockingResult extends BaseScientificResult {
   molecule_id: string;
   binding_affinity: number;
-  h_bonds: number;
-  target_protein: string;
+  /** @deprecated use target_id */
+  target_protein?: string;
+  target_id?: string;
+  /** @deprecated mapped from provenance metadata */
+  h_bonds?: number;
 }
 
-export interface SimulationResult {
+export interface SimulationResult extends BaseScientificResult {
   molecule_id: string;
   smiles: string;
   time: number;
   rmsd: number;
 }
 
-export interface QuantumResult {
+export interface QuantumResult extends BaseScientificResult {
   molecule_id: string;
   smiles: string;
   homo?: number;
@@ -282,15 +316,13 @@ export interface ReportMetadata {
   imported_source_dir?: string | null;
 }
 
-export interface ReportItem {
+export interface ReportItem extends BaseScientificResult {
   report_id: string;
   workspace_id: string;
   project_id: string;
-  experiment_id?: string | null;
   title: string;
   report_type: ReportType | string;
   status: ReportStatus | string;
-  source: ReportSource | string;
   source_module: string;
   candidate_molecule_ids: string[];
   target_ids: string[];
@@ -300,7 +332,6 @@ export interface ReportItem {
   primary_file_id?: string | null;
   metadata: ReportMetadata & Record<string, unknown>;
   created_by?: string | null;
-  created_at: string;
   updated_at: string;
   completed_at?: string | null;
   error_message?: string | null;

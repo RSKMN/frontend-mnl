@@ -53,9 +53,9 @@ function matchesScoreBand(bindingAffinity: number, scoreBand: ScoreBand): boolea
 
 function matchesStabilityBand(row: DockingResult, stabilityBand: StabilityBand): boolean {
   if (stabilityBand === "all") return true;
-  if (stabilityBand === "stable") return row.binding_affinity <= -8 && row.h_bonds >= 4;
+  if (stabilityBand === "stable") return row.binding_affinity <= -8 && (row.h_bonds ?? 0) >= 4;
   if (stabilityBand === "moderate") return row.binding_affinity <= -6.5 && row.binding_affinity > -8;
-  return row.binding_affinity > -6.5 || row.h_bonds <= 2;
+  return row.binding_affinity > -6.5 || (row.h_bonds ?? 0) <= 2;
 }
 
 export function DockingResultsTable({
@@ -90,6 +90,10 @@ export function DockingResultsTable({
     "Binding Affinity (kcal/mol)": row.binding_affinity.toFixed(1),
     "Number of H-bonds": row.h_bonds,
     "Target protein": row.target_protein,
+    "Prediction Uncertainty (SD)": row.uncertainty_score !== undefined ? row.uncertainty_score.toFixed(3) : "0.000",
+    "Applicability Domain Violation": (row.applicability_domain?.is_ood === true || row.applicability_domain?.status === "OOD" || row.confidence_score === 0) ? "OOD" : "In-Domain",
+    "Provenance Source": row.provenance?.source || row.source || "N/A",
+    "Lineage Status": row.stale ? "STALE" : "VALID",
   }));
 
   if (loading) {
@@ -117,7 +121,7 @@ export function DockingResultsTable({
         <div>
           <h2 className="text-lg font-semibold text-slate-100">Docking Results</h2>
           <p className="mt-1 text-xs text-slate-400">
-            API placeholder docking hits ordered by binding affinity with strength-based visual encoding.
+            Predicted molecular binding affinity poses ordered by binding energy (kcal/mol).
           </p>
         </div>
 
@@ -129,6 +133,10 @@ export function DockingResultsTable({
               "Binding Affinity (kcal/mol)",
               "Number of H-bonds",
               "Target protein",
+              "Prediction Uncertainty (SD)",
+              "Applicability Domain Violation",
+              "Provenance Source",
+              "Lineage Status",
             ]}
             rows={csvRows}
             disabled={rows.length === 0}
