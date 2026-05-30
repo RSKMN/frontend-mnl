@@ -1,5 +1,12 @@
 import { create } from "zustand";
-import type { ExperimentInput } from "@/types";
+export interface ExperimentInput {
+  protein: string;
+  constraints: {
+    logP: number;
+    qed: number;
+    toxicity: string;
+  };
+}
 
 export type PipelineState =
   | "idle"

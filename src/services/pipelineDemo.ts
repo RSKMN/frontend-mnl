@@ -9,6 +9,15 @@ import type {
 } from "@/types/api";
 import type { PipelineExperimentItem } from "./api";
 
+const baseResult = {
+  source: "demo",
+  experiment_id: "demo-experiment",
+  pipeline_stage: "demo",
+  engine: "demo",
+  created_at: "2026-05-29T20:35:11Z",
+  provenance: { source: "demo", evidence_status: "validated" }
+};
+
 export const DEMO_VIDEO_URL =
   "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
 
@@ -48,7 +57,7 @@ export const DEMO_GENERATED_MOLECULES: GeneratedMoleculeResult[] = [
     logp: 2.5,
     qed: 0.74,
   },
-];
+].map(item => ({ ...baseResult, ...item } as GeneratedMoleculeResult));
 
 export const DEMO_FILTERED_CANDIDATES: RankedCandidatesResponse = {
   source: "generated",
@@ -69,22 +78,22 @@ export const DEMO_DOCKING_RESULTS: DockingResult[] = [
   { molecule_id: "QDF-004", binding_affinity: -8.7, h_bonds: 5, target_protein: "EGFR" },
   { molecule_id: "QDF-003", binding_affinity: -8.2, h_bonds: 2, target_protein: "EGFR" },
   { molecule_id: "QDF-005", binding_affinity: -8.1, h_bonds: 2, target_protein: "EGFR" },
-];
+].map(item => ({ ...baseResult, ...item } as DockingResult));
 
 export const DEMO_SIMULATION_RESULTS: SimulationResult[] = [
-  { molecule_id: "QDF-001", smiles: DEMO_GENERATED_MOLECULES[0].smiles, time: 0, rmsd: 0.62 },
-  { molecule_id: "QDF-001", smiles: DEMO_GENERATED_MOLECULES[0].smiles, time: 10, rmsd: 1.02 },
-  { molecule_id: "QDF-001", smiles: DEMO_GENERATED_MOLECULES[0].smiles, time: 20, rmsd: 1.21 },
-  { molecule_id: "QDF-001", smiles: DEMO_GENERATED_MOLECULES[0].smiles, time: 30, rmsd: 1.36 },
-  { molecule_id: "QDF-001", smiles: DEMO_GENERATED_MOLECULES[0].smiles, time: 40, rmsd: 1.42 },
-  { molecule_id: "QDF-001", smiles: DEMO_GENERATED_MOLECULES[0].smiles, time: 50, rmsd: 1.35 },
-  { molecule_id: "QDF-001", smiles: DEMO_GENERATED_MOLECULES[0].smiles, time: 60, rmsd: 1.29 },
-];
+  { molecule_id: "QDF-001", smiles: "CC(=O)Nc1ccc(O)c(Cl)c1", time: 0, rmsd: 0.62 },
+  { molecule_id: "QDF-001", smiles: "CC(=O)Nc1ccc(O)c(Cl)c1", time: 10, rmsd: 1.02 },
+  { molecule_id: "QDF-001", smiles: "CC(=O)Nc1ccc(O)c(Cl)c1", time: 20, rmsd: 1.21 },
+  { molecule_id: "QDF-001", smiles: "CC(=O)Nc1ccc(O)c(Cl)c1", time: 30, rmsd: 1.36 },
+  { molecule_id: "QDF-001", smiles: "CC(=O)Nc1ccc(O)c(Cl)c1", time: 40, rmsd: 1.42 },
+  { molecule_id: "QDF-001", smiles: "CC(=O)Nc1ccc(O)c(Cl)c1", time: 50, rmsd: 1.35 },
+  { molecule_id: "QDF-001", smiles: "CC(=O)Nc1ccc(O)c(Cl)c1", time: 60, rmsd: 1.29 },
+].map(item => ({ ...baseResult, ...item } as SimulationResult));
 
 export const DEMO_QUANTUM_RESULTS: QuantumResult[] = [
   {
     molecule_id: "QDF-001",
-    smiles: DEMO_GENERATED_MOLECULES[0].smiles,
+    smiles: "CC(=O)Nc1ccc(O)c(Cl)c1",
     homo: -5.91,
     lumo: -1.52,
     homo_lumo_gap: 4.39,
@@ -94,7 +103,7 @@ export const DEMO_QUANTUM_RESULTS: QuantumResult[] = [
   },
   {
     molecule_id: "QDF-002",
-    smiles: DEMO_GENERATED_MOLECULES[1].smiles,
+    smiles: "COc1ccc(cc1)C(=O)NCCN",
     homo: -5.66,
     lumo: -1.41,
     homo_lumo_gap: 4.25,
@@ -104,7 +113,7 @@ export const DEMO_QUANTUM_RESULTS: QuantumResult[] = [
   },
   {
     molecule_id: "QDF-004",
-    smiles: DEMO_GENERATED_MOLECULES[3].smiles,
+    smiles: "Nc1ncc(cn1)C2CCNCC2",
     homo: -5.52,
     lumo: -1.31,
     homo_lumo_gap: 4.21,
@@ -112,7 +121,7 @@ export const DEMO_QUANTUM_RESULTS: QuantumResult[] = [
     stability_score: 0.72,
     interpretation: "Stable",
   },
-];
+].map(item => ({ ...baseResult, ...item } as QuantumResult));
 
 export const DEMO_ARTIFACTS: ResultArtifactsResponse = {
   count: 5,

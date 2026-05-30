@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getCandidates } from "@/services/api";
+import { getProjectCandidates } from "@/services/api";
 import type { RankedCandidatesResponse } from "@/types/api";
 
 export default function RankingsTable() {
@@ -9,10 +9,15 @@ export default function RankingsTable() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getCandidates(8).then((res) => {
+    const projectId = localStorage.getItem("active_project_id");
+    if (!projectId) {
+      setLoading(false);
+      return;
+    }
+    getProjectCandidates(projectId, 8).then((res) => {
       setData(res);
       setLoading(false);
-    });
+    }).catch(() => setLoading(false));
   }, []);
 
   const getStatusColor = (status: string) => {

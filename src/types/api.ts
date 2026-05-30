@@ -200,6 +200,14 @@ export interface DockingResult extends BaseScientificResult {
   h_bonds?: number;
 }
 
+export interface GninaResult extends BaseScientificResult {
+  molecule_id: string;
+  cnn_score: number;
+  cnn_affinity: number;
+  vina_score: number;
+  pose_evidence: string;
+}
+
 export interface SimulationResult extends BaseScientificResult {
   molecule_id: string;
   smiles: string;

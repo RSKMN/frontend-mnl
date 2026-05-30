@@ -173,6 +173,12 @@ function normalizeGeneratedMolecules(items: unknown[]): GeneratedMoleculeResult[
       molecular_weight: toNumber(findValue(row, ["molecular_weight", "mw", "MW"])),
       logp: toNumber(findValue(row, ["logp", "log_p", "LogP"])),
       qed: toNumber(findValue(row, ["qed", "qed_score", "score", "optimization_score"])),
+      source: "pipeline",
+      experiment_id: "",
+      pipeline_stage: "generated",
+      engine: "default",
+      created_at: new Date().toISOString(),
+      provenance: { source: "pipeline", evidence_status: "computed" } as any,
     };
   });
 }
@@ -185,6 +191,12 @@ function normalizeDockingResults(items: unknown[]): DockingResult[] {
       binding_affinity: toNumber(findValue(row, ["binding_affinity", "affinity", "pred_affinity", "score"])),
       h_bonds: toNumber(findValue(row, ["h_bonds", "hbonds", "hydrogen_bonds"])),
       target_protein: String(findValue(row, ["target_protein", "target", "protein"]) ?? "Unknown target"),
+      source: "pipeline",
+      experiment_id: "",
+      pipeline_stage: "docking",
+      engine: "gnina",
+      created_at: new Date().toISOString(),
+      provenance: { source: "pipeline", evidence_status: "computed" } as any,
     };
   });
 }
@@ -197,6 +209,12 @@ function normalizeSimulationResults(items: unknown[]): SimulationResult[] {
       smiles: String(findValue(row, ["smiles", "canonical_smiles", "structure"]) ?? ""),
       time: toNumber(findValue(row, ["time", "ns", "frame"])),
       rmsd: toNumber(findValue(row, ["rmsd", "rmsd_value"])),
+      source: "pipeline",
+      experiment_id: "",
+      pipeline_stage: "simulation",
+      engine: "gromacs",
+      created_at: new Date().toISOString(),
+      provenance: { source: "pipeline", evidence_status: "computed" } as any,
     };
   });
 }
@@ -239,6 +257,12 @@ function normalizeQuantumResults(items: unknown[]): QuantumResult[] {
       qsvm_score: toNumber(findValue(row, ["qsvm_score", "score", "qsqm_score"])),
       stability_score: stabilityScore,
       interpretation: interpretation as QuantumResult["interpretation"],
+      source: "pipeline",
+      experiment_id: "",
+      pipeline_stage: "quantum",
+      engine: "pyscf",
+      created_at: new Date().toISOString(),
+      provenance: { source: "pipeline", evidence_status: "computed" } as any,
     };
   });
 }

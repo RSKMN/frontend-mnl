@@ -88,7 +88,9 @@ export async function rerunExperimentMock(source: ExperimentRecord): Promise<Exp
     ...source,
     id: `${source.id}-R${Date.now().toString().slice(-6)}`,
     name: `${source.name} (Re-run)`,
-    status: "Running",
+    status: "running",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
     createdAt: new Date().toISOString(),
     pipelineStages: {
       generated: "running",

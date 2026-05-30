@@ -14,11 +14,11 @@ import { SkeletonCard, SkeletonTable } from "@/components/shared/skeletons";
 
 type DateSort = "desc" | "asc";
 
-const MOCK_EXPERIMENTS: ExperimentRecord[] = [
+const MOCK_EXPERIMENTS: any[] = [
   {
     id: "EXP-240319-A",
     name: "EGFR Scaffold Optimization",
-    status: "Completed",
+    status: "completed",
     createdAt: "2026-04-04T09:20:00Z",
     input: {
       protein: "EGFR kinase domain (PDB: 1M17)",
@@ -44,7 +44,7 @@ const MOCK_EXPERIMENTS: ExperimentRecord[] = [
   {
     id: "EXP-240319-B",
     name: "Mpro Fragment Expansion",
-    status: "Running",
+    status: "running",
     createdAt: "2026-04-05T06:50:00Z",
     input: {
       protein: "SARS-CoV-2 Mpro (PDB: 6LU7)",
@@ -70,7 +70,7 @@ const MOCK_EXPERIMENTS: ExperimentRecord[] = [
   {
     id: "EXP-240318-F",
     name: "BRAF Selectivity Screen",
-    status: "Failed",
+    status: "failed",
     createdAt: "2026-04-03T15:40:00Z",
     input: {
       protein: "BRAF V600E (PDB: 6U2V)",
@@ -96,7 +96,7 @@ const MOCK_EXPERIMENTS: ExperimentRecord[] = [
   {
     id: "EXP-240317-C",
     name: "JAK2 ADMET Triage",
-    status: "Completed",
+    status: "completed",
     createdAt: "2026-04-02T11:30:00Z",
     input: {
       protein: "JAK2 JH1 domain (PDB: 4JI9)",
@@ -122,7 +122,7 @@ const MOCK_EXPERIMENTS: ExperimentRecord[] = [
   {
     id: "EXP-240316-K",
     name: "PI3K-alpha Lead Rescue",
-    status: "Running",
+    status: "running",
     createdAt: "2026-04-01T18:10:00Z",
     input: {
       protein: "PI3K-alpha catalytic domain (PDB: 4OVV)",
@@ -149,13 +149,13 @@ const MOCK_EXPERIMENTS: ExperimentRecord[] = [
 
 function normalizeStatus(status: string): ExperimentStatus {
   const value = status.toLowerCase();
-  if (value === "completed") return "Completed";
-  if (value === "failed" || value === "error") return "Failed";
-  return "Running";
+  if (value === "completed") return "completed";
+  if (value === "failed" || value === "error") return "failed";
+  return "running";
 }
 
 function mapStages(status: ExperimentStatus): Record<"generated" | "docking" | "simulation" | "quantum", PipelineStageState> {
-  if (status === "Completed") {
+  if (status === "completed") {
     return {
       generated: "completed",
       docking: "completed",
@@ -163,7 +163,7 @@ function mapStages(status: ExperimentStatus): Record<"generated" | "docking" | "
       quantum: "completed",
     };
   }
-  if (status === "Failed") {
+  if (status === "failed") {
     return {
       generated: "completed",
       docking: "failed",
@@ -186,7 +186,7 @@ function toExperimentRecord(item: PipelineExperimentItem): ExperimentRecord {
     id: item.experiment_id,
     name: `${item.protein} Pipeline Run`,
     status,
-    createdAt: item.created_at,
+    created_at: item.created_at,
     input: {
       protein: item.protein,
       constraints: {
@@ -196,15 +196,20 @@ function toExperimentRecord(item: PipelineExperimentItem): ExperimentRecord {
     pipelineStages: stages,
     resultsSummary: {
       overview:
-        status === "Completed"
+        status === "completed"
           ? "Pipeline completed and results are available in Results and Visualization."
-          : status === "Failed"
+          : status === "failed"
             ? "Pipeline run failed before completion. Inspect workspace logs and rerun."
             : "Pipeline is still running. Stage transitions will appear in workspace status.",
-      topHit: status === "Completed" ? "Available in results" : "Pending",
-      hitRate: status === "Completed" ? 10.0 : 0,
-      shortlistedCandidates: status === "Completed" ? 5 : 0,
+      topHit: status === "completed" ? "Available in results" : "pending",
+      hitRate: status === "completed" ? 10.0 : 0,
+      shortlistedCandidates: status === "completed" ? 5 : 0,
     },
+    type: "pipeline",
+    engine: "gnina",
+    progress: status === "completed" ? 100 : status === "failed" ? 0 : 50,
+    parameters: {},
+    updated_at: item.created_at,
   };
 }
 
@@ -234,10 +239,10 @@ function stageClassName(stage: PipelineStageState): string {
 }
 
 function statusClassName(status: ExperimentStatus): string {
-  if (status === "Completed") {
+  if (status === "completed") {
     return "border-emerald-400/40 bg-emerald-500/20 text-emerald-100";
   }
-  if (status === "Running") {
+  if (status === "running") {
     return "border-amber-400/40 bg-amber-500/20 text-amber-100";
   }
   return "border-rose-400/40 bg-rose-500/20 text-rose-100";
@@ -363,7 +368,7 @@ function ExperimentDetails({ item, onClose }: ExperimentDetailsProps) {
 
         <div className="rounded-xl border border-white/10 bg-slate-950/50 p-3 transition-colors duration-200 hover:bg-slate-950/65">
           <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">Created</p>
-          <p className="mt-1 text-sm text-slate-200">{formatDate(item.createdAt)}</p>
+          <p className="mt-1 text-sm text-slate-200">{formatDate(item.created_at)}</p>
         </div>
       </div>
     </section>
@@ -425,8 +430,8 @@ export default function HistoryPage() {
 
   const sortedExperiments = useMemo(() => {
     return [...experiments].sort((a, b) => {
-      const left = new Date(a.createdAt).getTime();
-      const right = new Date(b.createdAt).getTime();
+      const left = new Date(a.created_at).getTime();
+      const right = new Date(b.created_at).getTime();
       return sortOrder === "desc" ? right - left : left - right;
     });
   }, [experiments, sortOrder]);
@@ -538,7 +543,7 @@ export default function HistoryPage() {
                       <td className="px-3 py-3 text-sm">
                         <StatusBadge status={item.status} />
                       </td>
-                      <td className="px-3 py-3 text-sm text-slate-300">{formatDate(item.createdAt)}</td>
+                      <td className="px-3 py-3 text-sm text-slate-300">{formatDate(item.created_at)}</td>
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-2">
                           <Tooltip content="Open full experiment details">

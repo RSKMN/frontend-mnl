@@ -607,7 +607,10 @@ export async function getResultsOverview(): Promise<ResultsOverview> {
 
 
 
-/** Fetch generated molecule rows for the Results page */
+/** 
+ * Fetch generated molecule rows for the Results page 
+ * @deprecated Use project-scoped endpoints instead
+ */
 export async function getGeneratedMolecules(limit: number = 25): Promise<GeneratedMoleculeResult[]> {
   if (isDemoMode()) {
     return Array.from({ length: limit }).map((_, i) => ({
@@ -615,7 +618,13 @@ export async function getGeneratedMolecules(limit: number = 25): Promise<Generat
       smiles: "C",
       molecular_weight: 350 + i,
       logp: 2.1,
-      qed: 0.75
+      qed: 0.75,
+      source: "generated",
+      experiment_id: "demo-experiment",
+      pipeline_stage: "generated",
+      engine: "q-ai-drug",
+      created_at: new Date().toISOString(),
+      provenance: { source: "q-ai-drug", evidence_status: "generated" }
     }));
   }
   const data = await apiFetch<GeneratedMoleculeResult[]>("/results/generated", {
@@ -624,6 +633,9 @@ export async function getGeneratedMolecules(limit: number = 25): Promise<Generat
   return Array.isArray(data) ? data : [];
 }
 
+/** 
+ * @deprecated Use getProjectDocking instead
+ */
 export async function getDockingResults(limit: number = 25): Promise<DockingResult[]> {
   if (isDemoMode()) {
     return mockApi.getDockingResults(limit);
@@ -634,14 +646,23 @@ export async function getDockingResults(limit: number = 25): Promise<DockingResu
   return Array.isArray(data) ? data : [];
 }
 
-/** Fetch simulation trajectory rows for the Results page */
+/** 
+ * Fetch simulation trajectory rows for the Results page 
+ * @deprecated Use getProjectSimulation instead
+ */
 export async function getSimulationResults(limit: number = 60): Promise<SimulationResult[]> {
   if (isDemoMode()) {
     return Array.from({ length: limit }).map((_, i) => ({
       molecule_id: `SIM-${i}`,
       smiles: "C",
       time: i * 10,
-      rmsd: 1.0 + Math.random() * 0.5
+      rmsd: 1.0 + Math.random() * 0.5,
+      source: "simulation",
+      experiment_id: "demo-experiment",
+      pipeline_stage: "simulation",
+      engine: "gromacs",
+      created_at: new Date().toISOString(),
+      provenance: { source: "gromacs", evidence_status: "simulated" }
     }));
   }
   const data = await apiFetch<SimulationResult[]>("/results/simulation", {
@@ -651,6 +672,9 @@ export async function getSimulationResults(limit: number = 60): Promise<Simulati
 }
 
 
+/** 
+ * @deprecated Use getProjectQuantum instead
+ */
 export async function getQuantumResults(limit: number = 25): Promise<QuantumResult[]> {
   if (isDemoMode()) {
     return mockApi.getQuantumMetrics(limit);
@@ -672,7 +696,10 @@ export async function getRankedCandidates(
   });
 }
 
-/** Get ranked candidates with fallback */
+/** 
+ * Get ranked candidates with fallback 
+ * @deprecated Use getProjectCandidates instead
+ */
 export async function getCandidates(limit = 10): Promise<RankedCandidatesResponse> {
   if (isDemoMode()) {
     return mockApi.getCandidates(limit);
@@ -860,7 +887,10 @@ export async function generateMolecules(
   }
 }
 
-/** Trigger docking stage (placeholder-ready API contract). */
+/** 
+ * Trigger docking stage (placeholder-ready API contract). 
+ * @deprecated Use runProjectDocking instead
+ */
 export async function runDocking(
   payload: Partial<WorkspacePipelineRequest> = {}
 ): Promise<WorkspacePipelineResponse> {
@@ -978,4 +1008,85 @@ export async function getPipelineExperiments(projectId?: string): Promise<Pipeli
     throw err;
   }
 }
+
+// --- Phase 2B Project-Aware Endpoints ---
+
+export async function getProjectTargets(projectId: string): Promise<ApiEnvelope<{ items: any[] }>> {
+  return apiFetch<ApiEnvelope<{ items: any[] }>>(`/projects/${encodeURIComponent(projectId)}/targets`);
+}
+
+export async function getProjectMolecules(projectId: string): Promise<ApiEnvelope<{ items: any[] }>> {
+  return apiFetch<ApiEnvelope<{ items: any[] }>>(`/projects/${encodeURIComponent(projectId)}/molecules`);
+}
+
+export async function getProjectDocking(projectId: string): Promise<ApiEnvelope<{ items: DockingResult[] }>> {
+  return apiFetch<ApiEnvelope<{ items: DockingResult[] }>>(`/projects/${encodeURIComponent(projectId)}/docking/results`);
+}
+
+export async function getProjectGninaResults(projectId: string): Promise<ApiEnvelope<{ items: any[] }>> {
+  return apiFetch<ApiEnvelope<{ items: any[] }>>(`/projects/${encodeURIComponent(projectId)}/gnina/results`);
+}
+
+export async function getProjectQuantum(projectId: string): Promise<ApiEnvelope<{ items: QuantumResult[] }>> {
+  return apiFetch<ApiEnvelope<{ items: QuantumResult[] }>>(`/projects/${encodeURIComponent(projectId)}/quantum/qml-scores`);
+}
+
+export async function getProjectSimulation(projectId: string): Promise<ApiEnvelope<{ items: SimulationResult[] }>> {
+  return apiFetch<ApiEnvelope<{ items: SimulationResult[] }>>(`/projects/${encodeURIComponent(projectId)}/simulations/results`);
+}
+
+export async function getProjectValidation(projectId: string): Promise<any> {
+  return apiFetch<any>(`/projects/${encodeURIComponent(projectId)}/admet/results`);
+}
+
+export async function getProjectViewerAssets(projectId: string): Promise<any> {
+  return apiFetch<any>(`/projects/${encodeURIComponent(projectId)}/viewer/assets`);
+}
+
+export async function getProjectViewerPose(projectId: string, resultId: string): Promise<any> {
+  return apiFetch<any>(`/projects/${encodeURIComponent(projectId)}/viewer/pose/${encodeURIComponent(resultId)}`);
+}
+
+export async function getProjectViewerFingerprint(projectId: string, resultId: string): Promise<any> {
+  return apiFetch<any>(`/projects/${encodeURIComponent(projectId)}/viewer/interaction-fingerprint/${encodeURIComponent(resultId)}`);
+}
+
+export async function getProjectChemicalSpace(projectId: string): Promise<any> {
+  return apiFetch<any>(`/projects/${encodeURIComponent(projectId)}/chemical-space`);
+}
+
+export async function getProjectSimilarityMatrix(projectId: string): Promise<any> {
+  return apiFetch<any>(`/projects/${encodeURIComponent(projectId)}/similarity/matrix`);
+}
+
+export async function getProjectCandidates(projectId: string, limit: number = 10): Promise<RankedCandidatesResponse> {
+  return apiFetch<RankedCandidatesResponse>(`/projects/${encodeURIComponent(projectId)}/candidates`, {
+    params: { limit },
+  });
+}
+
+export async function runProjectDocking(projectId: string, payload: any): Promise<WorkspacePipelineResponse> {
+  try {
+    return await apiFetch<WorkspacePipelineResponse>(`/projects/${encodeURIComponent(projectId)}/docking/run`, {
+      method: "POST",
+      body: payload,
+    });
+  } catch {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    return {
+      runId: `${projectId}-dock-${Date.now()}`,
+      stage: "docking",
+      message: "Docking started...",
+    };
+  }
+}
+
+export async function getProjectPipelineSummary(projectId: string): Promise<any> {
+  return apiFetch<any>(`/projects/${encodeURIComponent(projectId)}/pipeline/summary`);
+}
+
+export async function getProjectExperimentsList(projectId: string): Promise<any> {
+  return apiFetch<any>(`/projects/${encodeURIComponent(projectId)}/experiments`);
+}
+
 

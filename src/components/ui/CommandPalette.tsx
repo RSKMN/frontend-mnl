@@ -483,8 +483,6 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     }
   }, [selectedIndex]);
 
-  if (!isOpen) return null;
-
   // Group filtered results by category and flatten them efficiently
   const { grouped, flatFilteredList } = useMemo(() => {
     const groupedResult = filteredCommands.reduce((acc, cmd) => {
@@ -497,6 +495,8 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
     return { grouped: groupedResult, flatFilteredList: flatResult };
   }, [filteredCommands]);
+
+  if (!isOpen) return null;
 
   return (
     <div

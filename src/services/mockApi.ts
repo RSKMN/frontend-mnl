@@ -144,6 +144,12 @@ export async function getDockingResults(limit = 10): Promise<DockingResult[]> {
     binding_affinity: -(7 + Math.random() * 5).toFixed(2) as any,
     h_bonds: Math.floor(Math.random() * 6),
     target_protein: ONCOLOGY_TARGETS[i % ONCOLOGY_TARGETS.length],
+    source: "docking",
+    experiment_id: "demo-experiment",
+    pipeline_stage: "docking",
+    engine: "vina",
+    created_at: new Date().toISOString(),
+    provenance: { source: "vina", evidence_status: "docked" }
   }));
 }
 
@@ -171,6 +177,12 @@ export async function getQuantumMetrics(limit = 10): Promise<QuantumResult[]> {
     qsvm_score: 0.85 + Math.random() * 0.1,
     stability_score: 0.92 + Math.random() * 0.05,
     interpretation: Math.random() > 0.2 ? "Highly Stable" : "Stable",
+    source: "quantum",
+    experiment_id: "demo-experiment",
+    pipeline_stage: "quantum",
+    engine: "orca",
+    created_at: new Date().toISOString(),
+    provenance: { source: "orca", evidence_status: "calculated" }
   }));
 }
 

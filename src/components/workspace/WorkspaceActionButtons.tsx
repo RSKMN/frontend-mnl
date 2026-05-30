@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { Button, Card, CardContent, CardHeader } from "@/components/ui";
-import { ApiError, runDocking, runPipeline, type WorkspaceToxicityLevel } from "@/services";
+import { ApiError, runProjectDocking, runPipeline, type WorkspaceToxicityLevel } from "@/services";
 import { useWorkspaceStore } from "@/store";
 import type { IntermediateResultItem } from "@/store/workspaceStore";
 
@@ -202,7 +202,9 @@ export default function WorkspaceActionButtons() {
       }
 
       if (action === "docking") {
-        const response = await runDocking({});
+        const projectId = localStorage.getItem("active_project_id");
+        if (!projectId) throw new Error("No active project");
+        const response = await runProjectDocking(projectId, {});
         appendLog(timestamped(response.message ?? "Docking started..."));
       }
 

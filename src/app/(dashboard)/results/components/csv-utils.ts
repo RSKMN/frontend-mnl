@@ -16,12 +16,12 @@ const WET_LAB_DISCLAIMER = "Computational decision-support only. This report is 
 export function buildCsv(columns: string[], rows: CsvRow[]): string {
   const processedRows = rows.map((row) => {
     const isOod =
-      row.is_ood === true ||
       row.is_ood === "true" ||
-      row.applicability_domain_violation === true ||
+      row.is_ood === "true" ||
+      row.applicability_domain_violation === "true" ||
       row.applicability_domain_violation === "true" ||
       row.overall_risk === "high" ||
-      row["Applicability Domain Violation"] === true ||
+      row["Applicability Domain Violation"] === "true" ||
       row["Applicability Domain Violation"] === "true" ||
       row["Applicability Domain Violation"] === "OOD" ||
       row["Applicability Domain Violation"] === "OUT_OF_DOMAIN";

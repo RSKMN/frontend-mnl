@@ -3,6 +3,14 @@ const nextConfig = {
 	reactStrictMode: true,
 	compress: true,
 	poweredByHeader: false,
+	// Enforce ESLint during build to ensure validation
+	eslint: {
+		ignoreDuringBuilds: false,
+	},
+	// Enforce TypeScript build validation
+	typescript: {
+		ignoreBuildErrors: false,
+	},
 	// output: "standalone", // Temporarily disabled for debugging
 	images: {
 		formats: ["image/avif", "image/webp"],
