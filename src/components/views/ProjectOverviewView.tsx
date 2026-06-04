@@ -652,7 +652,7 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
                         <div className="flex items-center gap-4">
                           <StatusBadge status={exp.status === "importing_results" ? "running" : exp.status} size="sm" />
                           <Link 
-                            href={`/experiments?experiment_id=${exp.experiment_id}`}
+                            href={`/history?experiment_id=${exp.experiment_id}`}
                             className="px-3 py-1 text-[9px] font-black uppercase tracking-widest text-bg bg-accent hover:bg-accent/80 rounded"
                           >
                             Analyze Results

@@ -39,7 +39,7 @@ import type {
   StatsResponse,
   UpdateReportRequest,
 } from "@/types/api";
-import * as mockApi from "./mockApi";
+
 
 
 /** Normalize base URL by trimming whitespace and trailing slashes. */
@@ -82,16 +82,6 @@ function resolveApiBaseUrl(): string {
 const API_BASE_URL = resolveApiBaseUrl();
 
 export function isDemoMode(): boolean {
-  // Check Environment Variable explicitly
-  const envValue = 
-    (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_DEMO_MODE) || 
-    (typeof window !== "undefined" && (window as any)._NEXT_DATA_?.runtimeConfig?.NEXT_PUBLIC_DEMO_MODE);
-
-  if (envValue === "true" || envValue === true || envValue === "1") {
-    return true;
-  }
-
-  // Default to false for runtime scientific honesty!
   return false;
 }
 
@@ -442,9 +432,7 @@ async function apiFetch<T>(
 
 /** Fetch available datasets and their total count. */
 export async function getDatasets(): Promise<DatasetsResponse> {
-  if (isDemoMode()) {
-    return { count: 3, datasets: ["ZINC250k", "ChEMBL", "DrugBank"] };
-  }
+
   const data = await apiFetch<DatasetsResponse>("/datasets");
   return {
     count: Number(data?.count ?? 0),
@@ -454,9 +442,7 @@ export async function getDatasets(): Promise<DatasetsResponse> {
 
 /** Fetch available dashboard metrics and recent runs with fallback */
 export async function getDashboardData() {
-  if (isDemoMode()) {
-    return mockApi.getDashboardData();
-  }
+
   try {
     const [summary, recent] = await Promise.all([
       getExperimentSummary(),
@@ -471,21 +457,12 @@ export async function getDashboardData() {
 
 /** Fetch a single dataset and a preview of the first 10 rows. */
 export async function getDataset(name: string): Promise<DatasetDetailsResponse> {
-  if (isDemoMode()) {
-    return { name, file: `${name}.csv`, count: 1240, preview: [] };
-  }
+
   return apiFetch<DatasetDetailsResponse>(`/datasets/${encodeURIComponent(name)}`);
 }
 
 /** Fetch dataset statistics, optionally filtered by dataset */
 export async function getStats(dataset?: string): Promise<StatsResponse> {
-  if (isDemoMode()) {
-     return {
-       dataset,
-       summary: { molecule_count: 1240, avg_mw: 450, avg_logp: 2.8, avg_qed: 0.72 },
-       distributions: { mw: EMPTY_DISTRIBUTION, logp: EMPTY_DISTRIBUTION, tpsa: EMPTY_DISTRIBUTION, qed: EMPTY_DISTRIBUTION }
-     };
-  }
   return await apiFetch<StatsResponse>("/stats", {
     params: dataset ? { dataset } : undefined,
   });
@@ -506,9 +483,7 @@ export async function getMolecules(params: {
     page = 1,
     limit = 50,
   } = params;
-  if (isDemoMode()) {
-    return mockApi.getMolecules(page, limit);
-  }
+
   try {
     return await apiFetch<MoleculesListResponse>("/molecules", {
       params,
@@ -522,14 +497,6 @@ export async function getMolecules(params: {
 export async function getMoleculeById(
   id: string
 ): Promise<MoleculeDetails | null> {
-  if (isDemoMode()) {
-     return {
-       molecule_id: id,
-       dataset: "ZINC250k",
-       structures: { smiles: "C", inchi: "", sdf: "", pdb: "" },
-       properties: { mw: 400, logp: 2.5, tpsa: 80, qed: 0.8, hba: 5, hbd: 2, rotatable_bonds: 6 }
-     };
-  }
   try {
     return await apiFetch<MoleculeDetails>(
       `/molecule/${encodeURIComponent(id)}`
@@ -559,9 +526,7 @@ export async function searchSimilar(
 
     return data as SimilaritySearchResponse;
   } catch (err) {
-    if (isDemoMode()) {
-      return mockApi.getMolecularSimilarity(smiles, topK);
-    }
+
     throw err;
   }
 }
@@ -572,19 +537,6 @@ export async function getEmbeddingMap(
   dataset?: string,
   limit: number = 5000
 ): Promise<EmbeddingMapResponse> {
-  if (isDemoMode()) {
-    // Return some basic random points for demo
-    return Array.from({ length: 1000 }).map((_, i) => ({
-      molecule_id: `MOL-${i}`,
-      dataset: i % 3 === 0 ? "ZINC250k" : i % 3 === 1 ? "ChEMBL" : "DrugBank",
-      x: (Math.random() - 0.5) * 20,
-      y: (Math.random() - 0.5) * 20,
-      qed: 0.5 + Math.random() * 0.4,
-      mw: 300 + Math.random() * 200,
-      logp: 1 + Math.random() * 4,
-      source: i % 3 === 0 ? "dataset" : i % 3 === 1 ? "generated" : "fda"
-    }));
-  }
   const data = await apiFetch<EmbeddingMapResponse>("/embedding/umap", {
     params: { dataset, limit },
   });
@@ -593,9 +545,7 @@ export async function getEmbeddingMap(
 
 /** Fetch aggregate research summary with fallback */
 export async function getResearchSummary(): Promise<ResultsOverview> {
-  if (isDemoMode()) {
-    return mockApi.getResearchSummary();
-  }
+
   return getResultsOverview();
 }
 
@@ -612,21 +562,6 @@ export async function getResultsOverview(): Promise<ResultsOverview> {
  * @deprecated Use project-scoped endpoints instead
  */
 export async function getGeneratedMolecules(limit: number = 25): Promise<GeneratedMoleculeResult[]> {
-  if (isDemoMode()) {
-    return Array.from({ length: limit }).map((_, i) => ({
-      molecule_id: `GEN-${i}`,
-      smiles: "C",
-      molecular_weight: 350 + i,
-      logp: 2.1,
-      qed: 0.75,
-      source: "generated",
-      experiment_id: "demo-experiment",
-      pipeline_stage: "generated",
-      engine: "q-ai-drug",
-      created_at: new Date().toISOString(),
-      provenance: { source: "q-ai-drug", evidence_status: "generated" }
-    }));
-  }
   const data = await apiFetch<GeneratedMoleculeResult[]>("/results/generated", {
     params: { limit },
   });
@@ -637,9 +572,7 @@ export async function getGeneratedMolecules(limit: number = 25): Promise<Generat
  * @deprecated Use getProjectDocking instead
  */
 export async function getDockingResults(limit: number = 25): Promise<DockingResult[]> {
-  if (isDemoMode()) {
-    return mockApi.getDockingResults(limit);
-  }
+
   const data = await apiFetch<DockingResult[]>("/results/docking", {
     params: { limit },
   });
@@ -651,20 +584,6 @@ export async function getDockingResults(limit: number = 25): Promise<DockingResu
  * @deprecated Use getProjectSimulation instead
  */
 export async function getSimulationResults(limit: number = 60): Promise<SimulationResult[]> {
-  if (isDemoMode()) {
-    return Array.from({ length: limit }).map((_, i) => ({
-      molecule_id: `SIM-${i}`,
-      smiles: "C",
-      time: i * 10,
-      rmsd: 1.0 + Math.random() * 0.5,
-      source: "simulation",
-      experiment_id: "demo-experiment",
-      pipeline_stage: "simulation",
-      engine: "gromacs",
-      created_at: new Date().toISOString(),
-      provenance: { source: "gromacs", evidence_status: "simulated" }
-    }));
-  }
   const data = await apiFetch<SimulationResult[]>("/results/simulation", {
     params: { limit },
   });
@@ -676,9 +595,7 @@ export async function getSimulationResults(limit: number = 60): Promise<Simulati
  * @deprecated Use getProjectQuantum instead
  */
 export async function getQuantumResults(limit: number = 25): Promise<QuantumResult[]> {
-  if (isDemoMode()) {
-    return mockApi.getQuantumMetrics(limit);
-  }
+
   const data = await apiFetch<QuantumResult[]>("/results/quantum", {
     params: { limit },
   });
@@ -701,9 +618,7 @@ export async function getRankedCandidates(
  * @deprecated Use getProjectCandidates instead
  */
 export async function getCandidates(limit = 10): Promise<RankedCandidatesResponse> {
-  if (isDemoMode()) {
-    return mockApi.getCandidates(limit);
-  }
+
   try {
     return await getRankedCandidates("existing", limit);
   } catch (err) {
@@ -730,12 +645,6 @@ export async function getResultArtifacts(
       params: { limit },
     });
   } catch (err) {
-    if (isDemoMode()) {
-      return {
-        count: 0,
-        items: [],
-      };
-    }
     throw err;
   }
 }
@@ -851,18 +760,13 @@ export async function generateCandidateDossier(
 
 /** Fetch total experiment count for dashboard summary cards */
 export async function getExperimentSummary(): Promise<ExperimentSummaryResponse> {
-  if (isDemoMode()) {
-    return { experiment_count: 142 };
-  }
+
   return apiFetch<ExperimentSummaryResponse>("/experiments/summary");
 }
 
 /** Fetch recent experiment runs for dashboard activity panel */
 export async function getRecentRuns(limit: number = 8): Promise<RecentRunsResponse> {
-  if (isDemoMode()) {
-    const data = await mockApi.getDashboardData();
-    return data.recent;
-  }
+
   return apiFetch<RecentRunsResponse>("/runs/recent", {
     params: { limit },
   });
@@ -913,9 +817,7 @@ export async function runDocking(
 export async function runPipeline(
   payload: WorkspacePipelineRequest
 ): Promise<{ experimentId: string }> {
-  if (isDemoMode()) {
-    return { experimentId: `EXP-DEMO-${Date.now()}` };
-  }
+
   const configuredCallback =
     typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_PIPELINE_CALLBACK_URL : undefined;
   const callbackUrl =
@@ -972,9 +874,7 @@ export async function getPipelineStatus(
 
 /** Fetch validation status with fallback */
 export async function getValidationStatus(experimentId: string): Promise<WorkspacePipelineStatusResponse> {
-  if (isDemoMode()) {
-    return mockApi.getValidationStatus(experimentId);
-  }
+
   try {
     return await getPipelineStatus(experimentId);
   } catch (err) {
@@ -985,9 +885,7 @@ export async function getValidationStatus(experimentId: string): Promise<Workspa
 
 /** Fetch experiment history from the backend pipeline router. */
 export async function getPipelineExperiments(projectId?: string): Promise<PipelineExperimentItem[]> {
-  if (isDemoMode()) {
-    return mockApi.getExperiments();
-  }
+
   try {
     const activeProj = projectId || (typeof window !== "undefined" ? localStorage.getItem("active_project_id") : undefined);
     if (activeProj) {

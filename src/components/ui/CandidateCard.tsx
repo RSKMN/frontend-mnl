@@ -6,10 +6,10 @@ import StatusBadge, { StatusType } from "./StatusBadge";
 interface CandidateCardProps {
   id: string;
   target: string;
-  dockingScore: number;
-  admetRisk: "Low" | "Medium" | "High";
+  dockingScore?: number | null;
+  admetRisk?: "Low" | "Medium" | "High" | "Not Available" | "No Data" | null;
   quantumRank: number;
-  noveltyScore: number;
+  noveltyScore?: number | null;
   status?: StatusType;
   className?: string;
 }
@@ -37,7 +37,9 @@ export default function CandidateCard({
       <div className="grid grid-cols-2 gap-4 border-t border-border/40 pt-4">
         <div className="flex flex-col">
           <span className="text-[9px] font-bold uppercase tracking-widest text-muted-text/50">Docking Score</span>
-          <span className="font-mono text-xs font-black text-text/80 mt-0.5">{dockingScore.toFixed(2)}</span>
+          <span className="font-mono text-xs font-black text-text/80 mt-0.5">
+            {typeof dockingScore === "number" ? dockingScore.toFixed(2) : "Not Available"}
+          </span>
         </div>
         <div className="flex flex-col">
           <span className="text-[9px] font-bold uppercase tracking-widest text-muted-text/50">Quantum Rank</span>
@@ -48,14 +50,17 @@ export default function CandidateCard({
           <span className={`text-[10px] font-black mt-1 ${
             admetRisk === 'Low' ? 'text-success' : 
             admetRisk === 'Medium' ? 'text-warning' : 
-            'text-error'
+            admetRisk === 'High' ? 'text-error' :
+            'text-muted-text/50'
           }`}>
-            {admetRisk.toUpperCase()}
+            {admetRisk ? admetRisk.toUpperCase() : "NOT AVAILABLE"}
           </span>
         </div>
         <div className="flex flex-col">
           <span className="text-[9px] font-bold uppercase tracking-widest text-muted-text/50">Novelty</span>
-          <span className="font-mono text-xs font-black text-text/80 mt-0.5">{(noveltyScore * 100).toFixed(0)}%</span>
+          <span className="font-mono text-xs font-black text-text/80 mt-0.5">
+            {typeof noveltyScore === "number" ? `${(noveltyScore * 100).toFixed(0)}%` : "Not Available"}
+          </span>
         </div>
       </div>
 

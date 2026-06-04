@@ -126,20 +126,64 @@ export default function WorkspacePage() {
       }
       const res = await apiClient.get<any>("/projects", { params: { workspace_id: wsId } });
       if (res.success && res.data && Array.isArray(res.data.items)) {
-        // Map backend projects to UI cards props
-        const mapped = res.data.items.map((proj: any) => ({
-          id: proj.id,
-          name: proj.name,
-          disease: proj.disease_type || "General Oncology",
-          target: proj.cancer_type || "Multiple Targets",
-          stage: "Target Discovery",
-          status: (proj.status === "active" ? "active" : proj.status) as StatusType,
-          progress: 0,
-          candidates: { generated: 0, filtered: 0 },
-          lastRun: "Just initialized",
-          owner: "Current User",
-          tags: ["Active", "Target Discovery"]
+        const items = res.data.items;
+        const projectDetailsMap: Record<string, { molecules: any[], reports: any[], experiments: any[] }> = {};
+
+        await Promise.all(items.map(async (p: any) => {
+          try {
+            const [molRes, repRes, expRes] = await Promise.all([
+              apiClient.get<any>(`/projects/${p.id}/molecules`),
+              apiClient.get<any>(`/projects/${p.id}/reports`),
+              apiClient.get<any>(`/projects/${p.id}/experiments`)
+            ]);
+            projectDetailsMap[p.id] = {
+              molecules: (molRes.success && Array.isArray(molRes.data?.items)) ? molRes.data.items : [],
+              reports: (repRes.success && Array.isArray(repRes.data?.reports)) ? repRes.data.reports : [],
+              experiments: (expRes.success && Array.isArray(expRes.data?.items)) ? expRes.data.items : []
+            };
+          } catch (e) {
+            console.warn(`Failed fetching metrics for project ${p.id}`, e);
+            projectDetailsMap[p.id] = { molecules: [], reports: [], experiments: [] };
+          }
         }));
+
+        const mapped = items.map((proj: any) => {
+          const details = projectDetailsMap[proj.id] || { molecules: [], reports: [], experiments: [] };
+          const exps = details.experiments;
+          const mols = details.molecules;
+          
+          // Calculate real progress
+          const completedCount = exps.filter((e: any) => e.status === "completed").length;
+          const progress = exps.length > 0 ? Math.round((completedCount / exps.length) * 100) : 0;
+          
+          // Calculate lastRun
+          let lastRun = "Not Available";
+          if (exps.length > 0) {
+            const sortedExps = [...exps].sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime());
+            const latestDate = sortedExps[0]?.updated_at || sortedExps[0]?.created_at;
+            if (latestDate) {
+              lastRun = new Date(latestDate).toLocaleDateString();
+            }
+          }
+
+          // Calculate candidates
+          const generated = mols.length;
+          const filtered = mols.filter((m: any) => m.docking_score !== undefined && m.docking_score !== null).length;
+
+          return {
+            id: proj.id,
+            name: proj.name,
+            disease: proj.disease_type || "Not Available",
+            target: proj.cancer_type || "Not Available",
+            stage: "Not Available",
+            status: (proj.status === "active" ? "active" : proj.status) as StatusType,
+            progress,
+            candidates: { generated, filtered },
+            lastRun,
+            owner: proj.created_by || "Not Available",
+            tags: [proj.status === "active" ? "Active" : proj.status].filter(Boolean)
+          };
+        });
         setProjects(mapped);
       } else {
         setProjects([]);

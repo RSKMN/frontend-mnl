@@ -18,59 +18,9 @@ import {
 import { isDemoMode, apiClient } from "@/services/api";
 
 // Mock data for simulation stability
-const STABILITY_RESULTS = [
-  {
-    candidate: "QDF-EGFR-001",
-    target: "EGFR WT",
-    rmsdAvg: 1.2,
-    rmsdMax: 1.8,
-    mmgbsa: -64.2,
-    hBondOccupancy: 92,
-    stability: "Stable",
-    artifact: "traj_001.xtc",
-    status: "completed"
-  },
-  {
-    candidate: "QDF-EGFR-014",
-    target: "EGFR L858R",
-    rmsdAvg: 1.5,
-    rmsdMax: 2.1,
-    mmgbsa: -58.5,
-    hBondOccupancy: 85,
-    stability: "Stable",
-    artifact: "traj_014.xtc",
-    status: "completed"
-  },
-  {
-    candidate: "QDF-EGFR-027",
-    target: "EGFR T790M",
-    rmsdAvg: 2.4,
-    rmsdMax: 3.2,
-    mmgbsa: -42.1,
-    hBondOccupancy: 64,
-    stability: "Fluctuating",
-    artifact: "traj_027.xtc",
-    status: "completed"
-  },
-  {
-    candidate: "QDF-EGFR-033",
-    target: "EGFR Exon19Del",
-    rmsdAvg: null,
-    rmsdMax: null,
-    mmgbsa: null,
-    hBondOccupancy: null,
-    stability: "Pending",
-    artifact: "...",
-    status: "running"
-  }
-];
 
-const ACTIVE_MD_JOBS = [
-  { name: "ligand-pose relaxation", candidate: "QDF-EGFR-088", status: "running", progress: 65 },
-  { name: "minimization", candidate: "QDF-EGFR-042", status: "queued", progress: 0 },
-  { name: "short MD stability", candidate: "QDF-EGFR-011", status: "completed", progress: 100 },
-  { name: "MMGBSA estimation", candidate: "QDF-EGFR-009", status: "warning", progress: 85 }
-];
+
+
 
 export default function SimulationPage() {
   const [realSim, setRealSim] = useState<any[]>([]);
@@ -113,18 +63,16 @@ export default function SimulationPage() {
     fetchData();
   }, []);
 
-  const displaySim = isDemoMode()
-    ? STABILITY_RESULTS
-    : realSim.map((r: any) => ({
+  const displaySim = realSim.map((r: any) => ({
         candidate: r.compound_id || "CAND-MD",
-        target: r.metadata?.target || "EGFR WT",
-        rmsdAvg: r.rmsd_avg !== undefined && r.rmsd_avg !== null ? r.rmsd_avg : 1.2,
-        rmsdMax: r.rmsd_max !== undefined && r.rmsd_max !== null ? r.rmsd_max : 1.8,
-        mmgbsa: r.mmgbsa !== undefined && r.mmgbsa !== null ? r.mmgbsa : -64.2,
-        hBondOccupancy: r.hbond_occupancy !== undefined && r.hbond_occupancy !== null ? r.hbond_occupancy : 92,
-        stability: r.stability || "Stable",
-        artifact: r.metadata?.trajectory_file || "traj.xtc",
-        status: "completed"
+        target: r.metadata?.target || "Pending",
+        rmsdAvg: r.rmsd_avg !== undefined && r.rmsd_avg !== null ? r.rmsd_avg : "Not Available",
+        rmsdMax: r.rmsd_max !== undefined && r.rmsd_max !== null ? r.rmsd_max : "Not Available",
+        mmgbsa: r.mmgbsa !== undefined && r.mmgbsa !== null ? r.mmgbsa : "Not Available",
+        hBondOccupancy: r.hbond_occupancy !== undefined && r.hbond_occupancy !== null ? r.hbond_occupancy : "Not Available",
+        stability: r.stability || "Not Available",
+        artifact: r.metadata?.trajectory_file || "Not Available",
+        status: r.status || "Pending Computation"
       }));
 
   const [selectedResult, setSelectedResult] = useState<any>(null);
@@ -227,11 +175,11 @@ export default function SimulationPage() {
 
       {/* 2. Simulation Summary Metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <MetricCard label="Simulated Candidates" value={isDemoMode() ? "42" : displaySim.length.toString()} helperText="MD runs completed" status="completed" />
+        <MetricCard label="Simulated Candidates" value={displaySim.length.toString()} helperText="MD runs completed" status="completed" />
         <MetricCard label="Active MD Jobs" value="0" helperText="HPC threads active" status="completed" />
-        <MetricCard label="Stable Complexes" value={isDemoMode() ? "12" : displaySim.filter(s => s.stability === "Stable").length.toString()} helperText="RMSD < 2.0Å" status="completed" />
-        <MetricCard label="Best MMGBSA" value={selectedResult ? selectedResult.mmgbsa?.toString() || "---" : "---"} unit="kcal/mol" helperText={selectedResult ? selectedResult.candidate : "---"} status="active" />
-        <MetricCard label="Trajectory Artifacts" value={isDemoMode() ? "128" : (displaySim.length * 3).toString()} unit="GB" helperText="Binary storage" status="completed" />
+        <MetricCard label="Stable Complexes" value={displaySim.filter(s => s.stability === "Stable").length.toString()} helperText="RMSD < 2.0Å" status="completed" />
+        <MetricCard label="Best MMGBSA" value={selectedResult && selectedResult.mmgbsa !== "Not Available" ? selectedResult.mmgbsa.toString() : "---"} unit="kcal/mol" helperText={selectedResult ? selectedResult.candidate : "---"} status="active" />
+        <MetricCard label="Trajectory Artifacts" value={(displaySim.length * 3).toString()} unit="GB" helperText="Binary storage" status="completed" />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
@@ -300,9 +248,9 @@ export default function SimulationPage() {
                       onClick={() => setSelectedResult(res)}
                     >
                       <td className="px-4 py-3 font-mono text-xs font-bold text-text group-hover:text-accent">{res.candidate}</td>
-                      <td className="px-4 py-3 text-center font-mono text-xs text-text">{res.rmsdAvg ? `${res.rmsdAvg}Å` : '---'}</td>
-                      <td className="px-4 py-3 text-center font-mono text-xs font-black text-emerald-500">{res.mmgbsa ? `${res.mmgbsa}` : '---'}</td>
-                      <td className="px-4 py-3 text-center font-mono text-xs text-text">{res.hBondOccupancy ? `${res.hBondOccupancy}%` : '---'}</td>
+                      <td className="px-4 py-3 text-center font-mono text-xs text-text">{res.rmsdAvg !== "Not Available" ? `${res.rmsdAvg}Å` : 'Not Available'}</td>
+                      <td className="px-4 py-3 text-center font-mono text-xs font-black text-emerald-500">{res.mmgbsa !== "Not Available" ? `${res.mmgbsa}` : 'Not Available'}</td>
+                      <td className="px-4 py-3 text-center font-mono text-xs text-text">{res.hBondOccupancy !== "Not Available" ? `${res.hBondOccupancy}%` : 'Not Available'}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`text-[10px] font-black uppercase tracking-wider ${
                           res.stability === 'Stable' ? 'text-success' : res.stability === 'Fluctuating' ? 'text-warning' : 'text-muted-text/40'
@@ -333,25 +281,12 @@ export default function SimulationPage() {
               <div className="space-y-4">
                  <div className="p-4 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/20 space-y-1">
                     <div className="text-[10px] font-black uppercase text-muted-text/50 tracking-widest">Binding Free Energy (ΔG)</div>
-                    <div className="text-2xl font-black text-emerald-500 font-mono">{selectedResult.mmgbsa || '---'} <span className="text-xs">kcal/mol</span></div>
+                    <div className="text-2xl font-black text-emerald-500 font-mono">{selectedResult.mmgbsa !== 'Not Available' ? selectedResult.mmgbsa : 'Pending'} <span className="text-xs">kcal/mol</span></div>
                  </div>
 
                  <div className="space-y-3 text-[11px]">
-                    <div className="flex justify-between py-1.5 border-b border-border/20">
-                       <span className="font-bold text-muted-text">van der Waals</span>
-                       <span className="font-mono text-text">-72.4 kcal/mol</span>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-border/20">
-                       <span className="font-bold text-muted-text">Electrostatic</span>
-                       <span className="font-mono text-text">-24.8 kcal/mol</span>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-border/20">
-                       <span className="font-bold text-muted-text">Solvation Penalty</span>
-                       <span className="font-mono text-error">+33.0 kcal/mol</span>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-border/20">
-                       <span className="font-bold text-muted-text">Confidence</span>
-                       <span className="font-mono text-accent">0.94</span>
+                    <div className="flex justify-center py-4 border border-dashed border-border/40 rounded-lg">
+                       <span className="font-bold text-muted-text/60 text-[10px]">Detailed Breakdown Not Available</span>
                     </div>
                  </div>
               </div>
@@ -360,43 +295,17 @@ export default function SimulationPage() {
             {/* 5. RMSD / RMSF Chart Area */}
             <div className="ui-card-surface p-5 space-y-4" data-testid="simulation-rmsd-chart">
                <h4 className="text-xs font-black uppercase tracking-widest text-accent">RMSD Over Time</h4>
-               <div className="h-32 w-full relative">
-                  {/* Chart SVG */}
-                  <svg className="w-full h-full overflow-visible" viewBox="0 0 100 40">
-                     <path d="M0 35 Q 10 30, 20 25 T 40 28 T 60 22 T 80 24 T 100 20" fill="none" stroke="currentColor" strokeWidth="1" className="text-accent" />
-                     <path d="M0 40 L 100 40" stroke="currentColor" strokeWidth="0.5" className="text-border" />
-                     <path d="M0 0 L 0 40" stroke="currentColor" strokeWidth="0.5" className="text-border" />
-                  </svg>
-                  <div className="absolute top-0 right-0 text-[9px] font-mono text-muted-text">Avg: {selectedResult.rmsdAvg || '--'}Å</div>
+               <div className="h-32 w-full flex items-center justify-center border border-dashed border-border/40 rounded-lg">
+                  <span className="font-bold text-muted-text/60 text-[10px]">Simulation graph not available</span>
                </div>
                
                <h4 className="text-xs font-black uppercase tracking-widest text-accent mt-4">RMSF by Residue</h4>
-               <div className="h-24 w-full flex items-end gap-0.5">
-                  {[2,4,3,8,5,2,3,6,12,8,4,3,2,5,7,9,4,3,2,1,4,6,8,5,3].map((v, i) => (
-                    <div key={i} className="flex-1 bg-accent/20 rounded-t-[1px]" style={{ height: `${v * 8}%` }} />
-                  ))}
+               <div className="h-24 w-full flex items-center justify-center border border-dashed border-border/40 rounded-lg">
+                  <span className="font-bold text-muted-text/60 text-[10px]">RMSF data not available</span>
                </div>
             </div>
 
-            {/* 3. Active Simulation Jobs */}
-            {isDemoMode() && (
-              <div className="ui-card-surface p-5 space-y-4">
-                <h4 className="text-xs font-black uppercase tracking-widest text-accent">Active Simulation Jobs</h4>
-                <div className="space-y-3">
-                  {ACTIVE_MD_JOBS.map(job => (
-                    <div key={job.name} className="space-y-2">
-                       <div className="flex justify-between items-center text-[10px] font-bold">
-                          <span className="text-text">{job.name}</span>
-                          <span className="text-muted-text">{job.progress}%</span>
-                       </div>
-                       <div className="h-1 w-full bg-border/20 rounded-full overflow-hidden">
-                          <div className="h-full bg-accent" style={{ width: `${job.progress}%` }} />
-                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+
 
             {/* Next Actions */}
             <div className="flex flex-col gap-2">

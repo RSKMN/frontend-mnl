@@ -1,0 +1,484 @@
+﻿
+src\app\layout.tsx:3:import { DemoProvider } from "@/providers/DemoProvider";
+src\app\layout.tsx:24:        <DemoProvider>
+src\app\layout.tsx:26:        </DemoProvider>
+src\app\(auth)\forgot-password\page.tsx:63:          placeholder="researcher@quinfosys.com"
+src\app\(auth)\login\page.tsx:78:      setToken(`mock-${provider}-token-${Date.now()}`);
+src\app\(auth)\login\page.tsx:128:          placeholder="researcher@quinfosys.com"
+src\app\(auth)\login\page.tsx:148:          placeholder="Enter your security password"
+src\app\(auth)\signup\page.tsx:137:            placeholder="Dr. Elizabeth Blackburn"
+src\app\(auth)\signup\page.tsx:154:            placeholder="blackburn@lab.org"
+src\app\(auth)\signup\page.tsx:171:            placeholder="Salk Molecular Research"
+src\app\(auth)\signup\page.tsx:188:            placeholder="Principal Investigator"
+src\app\(auth)\signup\page.tsx:231:            placeholder="Choose secure key"
+src\app\(auth)\signup\page.tsx:248:            placeholder="Confirm secure key"
+src\app\(auth)\workspace-selector\page.tsx:46:    id: "demo",
+src\app\(auth)\workspace-selector\page.tsx:47:    name: "Demo Workspace",
+src\app\(auth)\workspace-selector\page.tsx:48:    organization: "QuDrugForge Demo",
+src\app\(auth)\workspace-selector\page.tsx:119:      console.error("Failed to fetch workspaces, falling back to 
+demo:", err);
+src\app\(dashboard)\layout.tsx:582:                placeholder="Search molecules, targets, reports..."
+src\app\(dashboard)\layout.tsx:583:                className="h-full min-w-0 flex-1 bg-transparent text-sm 
+outline-none placeholder:text-[color:var(--muted-text)]"
+src\app\(dashboard)\layout.tsx:665:                placeholder="Search molecules, targets, reports..."
+src\app\(dashboard)\layout.tsx:666:                className="h-full min-w-0 flex-1 bg-transparent text-sm 
+outline-none placeholder:text-[color:var(--muted-text)]"
+src\app\(dashboard)\chemical-space\page.tsx:11:import { isDemoMode, apiClient } from "@/services/api";
+src\app\(dashboard)\chemical-space\page.tsx:24:// Mock data fallbacks
+src\app\(dashboard)\chemical-space\page.tsx:25:const MOCK_POINTS: EmbeddingPoint[] = [
+src\app\(dashboard)\chemical-space\page.tsx:53:  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+src\app\(dashboard)\chemical-space\page.tsx:98:    if (isDemoMode()) {
+src\app\(dashboard)\chemical-space\page.tsx:99:      setDataSource("MOCK DATA");
+src\app\(dashboard)\chemical-space\page.tsx:100:      setPoints(MOCK_POINTS);
+src\app\(dashboard)\chemical-space\page.tsx:101:      setSelectedPoint(MOCK_POINTS[0]);
+src\app\(dashboard)\chemical-space\page.tsx:109:    if (isDemoMode()) return;
+src\app\(dashboard)\chemical-space\page.tsx:117:          method: "deterministic_placeholder",
+src\app\(dashboard)\chemical-space\page.tsx:132:  const displayPoints = isDemoMode() ? MOCK_POINTS : points;
+src\app\(dashboard)\chemical-space\page.tsx:163:        dataSource={isDemoMode() ? "mock" : (points.length > 0 ? 
+"real" : "missing")}
+src\app\(dashboard)\chemical-space\page.tsx:170:              disabled={isRecomputing || isDemoMode()} 
+src\app\(dashboard)\chemical-space\page.tsx:181:          isDemoMode() ? "bg-warning/20 text-warning" :
+src\app\(dashboard)\chemical-space\page.tsx:184:          {isDemoMode() ? "MOCK DATA" : dataSource}
+src\app\(dashboard)\chemical-space\page.tsx:191:        <MetricCard label="Scaffold Clusters" value={isDemoMode() ? 
+"42" : "4"} helperText="Unique structural types" status="completed" />
+src\app\(dashboard)\chemical-space\page.tsx:192:        <MetricCard label="Novel Region Leads" value={isDemoMode() ? 
+"186" : displayPoints.filter(p => p.qed > 0.8).length.toString()} helperText="Low similarity to FDA" status="active" />
+src\app\(dashboard)\chemical-space\page.tsx:193:        <MetricCard label="Approved Neighbors" value={isDemoMode() ? 
+"73" : "0"} helperText="Similar to known drugs" status="completed" />
+src\app\(dashboard)\copilot\page.tsx:76:      const response = getMockScientificResponse(content);
+src\app\(dashboard)\copilot\page.tsx:82:  const getMockScientificResponse = (query: string): string => {
+src\app\(dashboard)\copilot\page.tsx:332:                  placeholder="Query lead prioritization, docking 
+interpretations, or risk assessments..."
+src\app\(dashboard)\dashboard\page.tsx:11:  isDemoMode,
+src\app\(dashboard)\dashboard\page.tsx:146:    if (isDemoMode()) return;
+src\app\(dashboard)\dashboard\page.tsx:218:        title={isDemoMode() ? "EGFR NSCLC Discovery Program" : 
+(activeProjectName || "Scientific Discovery Program")}
+src\app\(dashboard)\dashboard\page.tsx:219:        breadcrumb={isDemoMode() ? "Oncology Research Workspace / Docking & 
+Quantum Reranking" : `${activeWorkspaceName || "Research Workspace"} / Program Workspace`}
+src\app\(dashboard)\dashboard\page.tsx:220:        description={isDemoMode() 
+src\app\(dashboard)\dashboard\page.tsx:224:        dataSource={isDemoMode() ? "mock" : (realProjects.length > 0 ? 
+"real" : "missing")}
+src\app\(dashboard)\dashboard\page.tsx:242:            {isDemoMode() ? (
+src\app\(dashboard)\dashboard\page.tsx:310:          {isDemoMode() && (
+src\app\(dashboard)\dashboard\page.tsx:334:            {isDemoMode() ? (
+src\app\(dashboard)\dashboard\page.tsx:364:          {isDemoMode() && (
+src\app\(dashboard)\dashboard\page.tsx:404:            {isDemoMode() ? (
+src\app\(dashboard)\dashboard\page.tsx:438:        {isDemoMode() ? (
+src\app\(dashboard)\dashboard\history\page.tsx:17:const MOCK_EXPERIMENTS: any[] = [
+src\app\(dashboard)\dashboard\history\page.tsx:402:        const data = normalized.length > 0 ? normalized : 
+MOCK_EXPERIMENTS;
+src\app\(dashboard)\dashboard\history\page.tsx:409:        setExperiments(MOCK_EXPERIMENTS);
+src\app\(dashboard)\dashboard\history\page.tsx:411:          setSelectedId(MOCK_EXPERIMENTS[0]?.id ?? "");
+src\app\(dashboard)\experiments\[id]\page.tsx:228:                { label: "Random Seed", val: "0x4A2F8E1" },
+src\app\(dashboard)\history\page.tsx:17:const MOCK_EXPERIMENTS: any[] = [
+src\app\(dashboard)\history\page.tsx:402:        const data = normalized.length > 0 ? normalized : MOCK_EXPERIMENTS;
+src\app\(dashboard)\history\page.tsx:410:        setExperiments(MOCK_EXPERIMENTS);
+src\app\(dashboard)\history\page.tsx:412:          setSelectedId(MOCK_EXPERIMENTS[0]?.id ?? "");
+src\app\(dashboard)\research-projects\page.tsx:16:import { isDemoMode, apiClient } from "@/services/api";
+src\app\(dashboard)\research-projects\page.tsx:18:const MOCK_PROJECTS = [
+src\app\(dashboard)\research-projects\page.tsx:118:      if (isDemoMode()) {
+src\app\(dashboard)\research-projects\page.tsx:119:        setProjects(MOCK_PROJECTS);
+src\app\(dashboard)\research-projects\page.tsx:194:  const handleLoadDemoDataset = async () => {
+src\app\(dashboard)\research-projects\page.tsx:205:          name: "EGFR Demo Program",
+src\app\(dashboard)\research-projects\page.tsx:206:          description: "One-click preloaded demo for EGFR L858R.",
+src\app\(dashboard)\research-projects\page.tsx:213:        router.push(`/research-projects/${res.data.id || 
+res.data.project_id}?loadDemo=true`);
+src\app\(dashboard)\research-projects\page.tsx:215:        alert("Failed to create demo project.");
+src\app\(dashboard)\research-projects\page.tsx:218:      alert("Error creating demo project: " + String(err));
+src\app\(dashboard)\research-projects\page.tsx:244:              label="Load Demo Dataset" 
+src\app\(dashboard)\research-projects\page.tsx:245:              onClick={handleLoadDemoDataset} 
+src\app\(dashboard)\research-projects\page.tsx:261:          isDemoMode() ? "bg-warning/20 text-warning" :
+src\app\(dashboard)\research-projects\page.tsx:264:          {isDemoMode() ? "MOCK DATA" : "REAL BACKEND DATA"}
+src\app\(dashboard)\research-projects\page.tsx:277:              placeholder="Search by project name or target..." 
+src\app\(dashboard)\results\page.tsx:18:  isDemoMode,
+src\app\(dashboard)\results\page.tsx:576:                  placeholder="mol_001, mol_002, mol_003"
+src\app\(dashboard)\results\page.tsx:611:                  placeholder="C:\\runs\\q-ai-drug\\export"
+src\app\(dashboard)\results\page.tsx:620:                  placeholder="file_123, file_456"
+src\app\(dashboard)\results\page.tsx:645:                placeholder="Search reports..."
+src\app\(dashboard)\results\page.tsx:934:            {isDemoMode() ? (
+src\app\(dashboard)\results\page.tsx:937:                  <p className="text-sm font-semibold text-amber-500">MOCK 
+DEMO REPORTS</p>
+src\app\(dashboard)\results\page.tsx:938:                  <p className="mt-1 text-xs text-amber-500/80">Running in 
+demo presentation mode. Scientific outputs are simulated.</p>
+src\app\(dashboard)\results\page.tsx:940:                <StatusBadge status="pending" size="sm" label="demo" />
+src\app\(dashboard)\results\components\quantum-results-section.tsx:6:import { isDemoMode } from "@/services";
+src\app\(dashboard)\results\components\quantum-results-section.tsx:121:          <ProvenanceBadge 
+isDemo={isDemoMode()} items={items} />
+src\app\(dashboard)\results\components\results-filter-bar.tsx:48:            placeholder="Molecule ID or SMILES"
+src\app\(dashboard)\results\components\results-filter-bar.tsx:49:            className="rounded-lg border 
+border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-cyan-500/70 
+focus:outline-none dark:border-white/15 dark:bg-slate-950/70 dark:text-slate-100 dark:placeholder:text-slate-500 
+dark:focus:border-cyan-400/60"
+src\app\(dashboard)\results\components\simulation-results-section.tsx:6:import { isDemoMode } from "@/services";
+src\app\(dashboard)\results\components\simulation-results-section.tsx:155:          <ProvenanceBadge 
+isDemo={isDemoMode()} items={items} />
+src\app\(dashboard)\results\[experimentId]\page.tsx:36:  DEMO_ARTIFACTS,
+src\app\(dashboard)\results\[experimentId]\page.tsx:37:  DEMO_DOCKING_RESULTS,
+src\app\(dashboard)\results\[experimentId]\page.tsx:38:  DEMO_FILTERED_CANDIDATES,
+src\app\(dashboard)\results\[experimentId]\page.tsx:39:  DEMO_GENERATED_MOLECULES,
+src\app\(dashboard)\results\[experimentId]\page.tsx:40:  DEMO_OVERVIEW,
+src\app\(dashboard)\results\[experimentId]\page.tsx:41:  DEMO_QUANTUM_RESULTS,
+src\app\(dashboard)\results\[experimentId]\page.tsx:42:  DEMO_SIMULATION_RESULTS,
+src\app\(dashboard)\results\[experimentId]\page.tsx:43:  DEMO_VIDEO_URL,
+src\app\(dashboard)\results\[experimentId]\page.tsx:44:  getDemoPipelinePayload,
+src\app\(dashboard)\results\[experimentId]\page.tsx:45:} from "@/services/pipelineDemo";
+src\app\(dashboard)\results\[experimentId]\page.tsx:376:    const shouldUseDemo = !hasRealRows;
+src\app\(dashboard)\results\[experimentId]\page.tsx:377:    if (shouldUseDemo) {
+src\app\(dashboard)\results\[experimentId]\page.tsx:378:      const demoPayload = getDemoPipelinePayload(experimentId);
+src\app\(dashboard)\results\[experimentId]\page.tsx:379:      mapped = mapPipelineResponse(demoPayload);
+src\app\(dashboard)\results\[experimentId]\page.tsx:380:      setPayload(asRecord(demoPayload));
+src\app\(dashboard)\results\[experimentId]\page.tsx:381:      setOverview(DEMO_OVERVIEW);
+src\app\(dashboard)\results\[experimentId]\page.tsx:382:      setGeneratedMolecules(DEMO_GENERATED_MOLECULES);
+src\app\(dashboard)\results\[experimentId]\page.tsx:383:      setFilteredRanked(DEMO_FILTERED_CANDIDATES);
+src\app\(dashboard)\results\[experimentId]\page.tsx:384:      setDockingResults(DEMO_DOCKING_RESULTS);
+src\app\(dashboard)\results\[experimentId]\page.tsx:385:      setSimulationResults(DEMO_SIMULATION_RESULTS);
+src\app\(dashboard)\results\[experimentId]\page.tsx:386:      setSimulationVideoUrl(DEMO_VIDEO_URL);
+src\app\(dashboard)\results\[experimentId]\page.tsx:387:      setQuantumResults(DEMO_QUANTUM_RESULTS);
+src\app\(dashboard)\results\[experimentId]\page.tsx:388:      setArtifacts(DEMO_ARTIFACTS);
+src\app\(dashboard)\results\[experimentId]\page.tsx:433:        storeResultData(getDemoPipelinePayload(experimentId));
+src\app\(dashboard)\similarity\page.tsx:10:import { isDemoMode, apiClient } from "@/services/api";
+src\app\(dashboard)\similarity\page.tsx:12:// Mock fallbacks
+src\app\(dashboard)\similarity\page.tsx:13:const MOCK_LABELS = [
+src\app\(dashboard)\similarity\page.tsx:22:const MOCK_MATRIX = [
+src\app\(dashboard)\similarity\page.tsx:31:const MOCK_NEIGHBORS = [
+src\app\(dashboard)\similarity\page.tsx:40:  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+src\app\(dashboard)\similarity\page.tsx:55:    if (isDemoMode()) {
+src\app\(dashboard)\similarity\page.tsx:56:      setDataSource("MOCK DATA");
+src\app\(dashboard)\similarity\page.tsx:57:      setNeighbors(MOCK_NEIGHBORS);
+src\app\(dashboard)\similarity\page.tsx:58:      setMatrixLabels(MOCK_LABELS);
+src\app\(dashboard)\similarity\page.tsx:59:      setSimilarityMatrix(MOCK_MATRIX);
+src\app\(dashboard)\similarity\page.tsx:92:    if (isDemoMode()) return;
+src\app\(dashboard)\similarity\page.tsx:112:    if (!isDemoMode()) {
+src\app\(dashboard)\similarity\page.tsx:119:    if (isDemoMode()) return;
+src\app\(dashboard)\similarity\page.tsx:190:        dataSource={isDemoMode() ? "mock" : (matrixLabels.length > 0 ? 
+"real" : "missing")}
+src\app\(dashboard)\similarity\page.tsx:198:              disabled={isMatrixLoading || isDemoMode()}
+src\app\(dashboard)\similarity\page.tsx:208:          isDemoMode() ? "bg-warning/20 text-warning" :
+src\app\(dashboard)\similarity\page.tsx:211:          {isDemoMode() ? "MOCK DATA" : dataSource}
+src\app\(dashboard)\similarity\page.tsx:219:        <MetricCard label="Novel Scaffolds" value={isDemoMode() ? "4" : 
+"0"} helperText="Low overlap with FDA" status="active" />
+src\app\(dashboard)\similarity\page.tsx:272:                    placeholder="Enter SMILES representation..."
+src\app\(dashboard)\similarity\page.tsx:277:                    disabled={isSearching || isDemoMode()}
+src\app\(dashboard)\simulation\page.tsx:18:import { isDemoMode, apiClient } from "@/services/api";
+src\app\(dashboard)\simulation\page.tsx:20:// Mock data for simulation stability
+src\app\(dashboard)\simulation\page.tsx:77:  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+src\app\(dashboard)\simulation\page.tsx:82:    if (isDemoMode()) {
+src\app\(dashboard)\simulation\page.tsx:83:      setDataSource("MOCK DATA");
+src\app\(dashboard)\simulation\page.tsx:116:  const displaySim = isDemoMode()
+src\app\(dashboard)\simulation\page.tsx:208:        dataSource={isDemoMode() ? "mock" : (realSim.length > 0 ? "real" : 
+"missing")}
+src\app\(dashboard)\simulation\page.tsx:222:          provenance={isDemoMode() ? "simulated" : (dataSource === 
+"IMPORTED Q-AI-DRUG DATA" ? "imported" : "live_compute")} 
+src\app\(dashboard)\simulation\page.tsx:230:        <MetricCard label="Simulated Candidates" value={isDemoMode() ? 
+"42" : displaySim.length.toString()} helperText="MD runs completed" status="completed" />
+src\app\(dashboard)\simulation\page.tsx:232:        <MetricCard label="Stable Complexes" value={isDemoMode() ? "12" : 
+displaySim.filter(s => s.stability === "Stable").length.toString()} helperText="RMSD < 2.0Å" status="completed" />
+src\app\(dashboard)\simulation\page.tsx:234:        <MetricCard label="Trajectory Artifacts" value={isDemoMode() ? 
+"128" : (displaySim.length * 3).toString()} unit="GB" helperText="Binary storage" status="completed" />
+src\app\(dashboard)\simulation\page.tsx:382:            {isDemoMode() && (
+src\components\api\ApiDashboard.tsx:285:                <SectionHeader title="API Playground" description="Interactive 
+environment to test endpoints against mock responses." />
+src\components\audit\AuditDashboard.tsx:74:          {/* 3. Filters Placeholder */}
+src\components\audit\AuditDashboard.tsx:80:                     placeholder="Search events, users, or resources..." 
+src\components\billing\BillingDashboard.tsx:266:          {/* Plan Comparison Placeholder */}
+src\components\claim-matrix\ClaimMatrixTable.tsx:84:            placeholder="Search claims name, definition, or 
+actions..."
+src\components\dashboard\ActivityPanel.tsx:85:    if (typeof window !== "undefined" && 
+localStorage.getItem("demo_mode") === "true") {
+src\components\dashboard\QedVsMwChart.tsx:13:const MOCK_DATA = [
+src\components\dashboard\QedVsMwChart.tsx:48:            data={MOCK_DATA}
+src\components\dashboard\TpsaVsLogpChart.tsx:13:const MOCK_DATA = [
+src\components\dashboard\TpsaVsLogpChart.tsx:47:            data={MOCK_DATA}
+src\components\embeddings\mockChemicalSpaceData.ts:1:import { MOCK_MOLECULES } from 
+"@/components/molecules/mockMolecules";
+src\components\embeddings\mockChemicalSpaceData.ts:13:export const MOCK_CHEMICAL_SPACE_DATA: ChemicalSpacePoint[] = 
+MOCK_MOLECULES.map(
+src\components\embeddings\mockEmbeddings.ts:3:/** Mock UMAP embedding points for chemical space visualization */
+src\components\embeddings\mockEmbeddings.ts:4:export const MOCK_EMBEDDINGS: EmbeddingPoint[] = (() => {
+src\components\gnina\GNINARankingTable.tsx:46:            placeholder="Search Molecule ID..."
+src\components\layout\ProjectLayout.tsx:118:                placeholder={`Search within ${projectName}...`}
+src\components\layout\ProjectLayout.tsx:119:                className="h-full min-w-0 flex-1 bg-transparent text-sm 
+outline-none placeholder:text-[color:var(--muted-text)]"
+src\components\marketing\DemoResultsSection.tsx:38:export function DemoResultsSection() {
+src\components\marketing\DemoResultsSection.tsx:42:        Demo Results
+src\components\marketing\DemoResultsSection.tsx:45:        Mock screening output from Quinfosys<span style={{ 
+verticalAlign: "super", fontSize: "0.65em", lineHeight: 0 }}>™</span> QuDrugForge, Quantum AI for Drug
+src\components\marketing\DemoResultsSection.tsx:145:              Interactive 3D panel placeholder
+src\components\marketing\FooterSection.tsx:15:              {/* Mock Social/Tech Icons */}
+src\components\marketing\HeroSection.tsx:99:            {/* Mock Dashboard Element */}
+src\components\marketing\VisualizationSection.tsx:23:            {/* Mock Visualization */}
+src\components\molecules\mockMolecules.ts:3:export const MOCK_MOLECULES: Molecule[] = [
+src\components\molecules\MoleculeTable.tsx:11:import { MOCK_MOLECULES } from "./mockMolecules";
+src\components\molecules\MoleculeTable.tsx:88:  data = MOCK_MOLECULES,
+src\components\molecules\MoleculeViewer.tsx:5:import { MOCK_MOLECULES } from "./mockMolecules";
+src\components\molecules\MoleculeViewer.tsx:53:    const molecule = MOCK_MOLECULES.find((m) => m.molecule_id === 
+moleculeId);
+src\components\shared\states\EmptyState.tsx:14:function EmptyPlaceholderIcon() {
+src\components\shared\states\EmptyState.tsx:56:        {icon ?? <EmptyPlaceholderIcon />}
+src\components\similarity\SearchBar.tsx:40:          placeholder="e.g. CC(=O)Oc1ccccc1C(=O)O"
+src\components\ui\CommandPalette.tsx:522:            placeholder="Type a command or search workspace..."
+src\components\ui\CommandPalette.tsx:525:            className="flex-1 bg-transparent text-sm text-text outline-none 
+placeholder:text-muted-text/40"
+src\components\ui\ConnectionStatus.tsx:4:import { checkBackendHealth, isDemoMode } from "@/services/api";
+src\components\ui\ConnectionStatus.tsx:11:    if (isDemoMode()) {
+src\components\ui\ConnectionStatus.tsx:53:  const demo = isDemoMode();
+src\components\ui\ConnectionStatus.tsx:55:  if (demo) {
+src\components\ui\ConnectionStatus.tsx:63:          NEXT_PUBLIC_DEMO_MODE=true
+src\components\ui\ConnectionStatus.tsx:99:  const demo = isDemoMode();
+src\components\ui\ConnectionStatus.tsx:104:        demo ? "bg-amber-500" : isConnected ? "bg-emerald-500" : 
+"bg-rose-500 animate-ping"
+src\components\ui\ConnectionStatus.tsx:107:        {demo ? "Demo Mode" : isConnected ? "System Online" : "System 
+Offline"}
+src\components\ui\index.ts:38:export { default as PlaceholderNotice, ScientificWarning } from "./PlaceholderNotice";
+src\components\ui\PageHeader.tsx:11:  dataSource?: "real" | "mock" | "partial" | "missing" | string;
+src\components\ui\PageHeader.tsx:39:                  : dataSource === "mock"
+src\components\ui\PageHeader.tsx:48:                    : dataSource === "mock"
+src\components\ui\PageHeader.tsx:56:                  : dataSource === "mock"
+src\components\ui\PageHeader.tsx:57:                  ? "MOCK DATA / DEMO MODE"
+src\components\ui\PlaceholderNotice.tsx:3:interface PlaceholderNoticeProps {
+src\components\ui\PlaceholderNotice.tsx:8:export const PlaceholderNotice: React.FC<PlaceholderNoticeProps> = ({
+src\components\ui\PlaceholderNotice.tsx:27:            This module is a layout placeholder demonstrating visual 
+integration options. No live molecular mechanics or deep network predictions are evaluated for this component.
+src\components\ui\PlaceholderNotice.tsx:34:            <span>MOCK DEFAULT</span>
+src\components\ui\PlaceholderNotice.tsx:60:export default PlaceholderNotice;
+src\components\ui\ProvenanceBadges.tsx:7:  isDemo?: boolean;
+src\components\ui\ProvenanceBadges.tsx:9:  isPlaceholder?: boolean;
+src\components\ui\ProvenanceBadges.tsx:16:  isDemo,
+src\components\ui\ProvenanceBadges.tsx:18:  isPlaceholder,
+src\components\ui\ProvenanceBadges.tsx:21:  const resolved = provenance || resolveProvenance({ items, isDemo, 
+hasError, isPlaceholder });
+src\components\ui\ProvenanceBadges.tsx:52:      label = "SIMULATED / DEMO";
+src\components\ui\ProvenanceBadges.tsx:59:    case "placeholder":
+src\components\ui\ProvenanceBadges.tsx:61:      label = "PLACEHOLDER";
+src\components\ui\ProvenanceBadges.tsx:126:    label = "Simulated Mock";
+src\components\ui\ProvenanceBadges.tsx:174:        <span>Simulated / Demo</span>
+src\components\ui\ScientificUIStates.tsx:210:interface PlaceholderNoticeProps {
+src\components\ui\ScientificUIStates.tsx:215:export const PlaceholderNotice: React.FC<PlaceholderNoticeProps> = ({
+src\components\ui\ScientificUIStates.tsx:235:            This module is a layout placeholder demonstrating visual 
+integration options. No live molecular mechanics or deep network predictions are evaluated for this component.
+src\components\ui\ScientificUIStates.tsx:243:            <span>MOCK DEFAULT</span>
+src\components\views\MoleculesView.tsx:10:import { isDemoMode, apiClient } from "@/services/api";
+src\components\views\MoleculesView.tsx:82:  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+src\components\views\MoleculesView.tsx:86:    if (isDemoMode()) {
+src\components\views\MoleculesView.tsx:87:      setDataSource("MOCK DATA");
+src\components\views\MoleculesView.tsx:121:  const displayMolecules = isDemoMode()
+src\components\views\MoleculesView.tsx:166:        dataSource={isDemoMode() ? "mock" : (realMolecules.length > 0 ? 
+"real" : "missing")}
+src\components\views\MoleculesView.tsx:180:          isDemoMode() ? "bg-warning/20 text-warning" :
+src\components\views\MoleculesView.tsx:184:          {isDemoMode() ? "MOCK DATA" : dataSource}
+src\components\views\MoleculesView.tsx:190:        <MetricCard label="Generated" value={isDemoMode() ? "15,000" : 
+realMolecules.length.toString()} helperText="Total molecules" status="completed" />
+src\components\views\MoleculesView.tsx:191:        <MetricCard label="Filtered" value={isDemoMode() ? "1,500" : 
+Math.ceil(realMolecules.length * 0.8).toString()} helperText="Passed basic filters" status="active" />
+src\components\views\MoleculesView.tsx:193:        <MetricCard label="Novel Scaffolds" value={isDemoMode() ? "42" : 
+"6"} helperText="Unique clusters" status="completed" />
+src\components\views\MoleculesView.tsx:194:        <MetricCard label="ADMET Warnings" value={isDemoMode() ? "12" : 
+"0"} helperText="Requires review" status="warning" />
+src\components\views\MoleculesView.tsx:214:                  placeholder="e.g. QDF-EGFR-001" 
+src\components\views\MoleculesView.tsx:300:                      {/* Simple 2D Molecule Placeholder */}
+src\components\views\ProjectOverviewView.tsx:198:  const handleLoadDemo = async () => {
+src\components\views\ProjectOverviewView.tsx:203:        protein_fasta_file_id: "demo_fasta_123",
+src\components\views\ProjectOverviewView.tsx:204:        protein_structure_file_id: "demo_pdb_123",
+src\components\views\ProjectOverviewView.tsx:205:        reference_ligand_file_id: "demo_ligand_123",
+src\components\views\ProjectOverviewView.tsx:206:        assay_data_file_id: "demo_assay_123",
+src\components\views\ProjectOverviewView.tsx:229:      if (urlParams.get("loadDemo") === "true") {
+src\components\views\ProjectOverviewView.tsx:231:        handleLoadDemo();
+src\components\views\ProjectOverviewView.tsx:809:                    <button onClick={handleLoadDemo} 
+className="w-full py-2.5 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/50 text-[10px] 
+font-black uppercase tracking-widest hover:bg-indigo-500/30 transition-all shadow-lg shadow-indigo-500/10 mb-2">
+src\components\views\ProjectOverviewView.tsx:810:                      Load Demo Dataset
+src\components\views\ReportsView.tsx:18:  isDemoMode,
+src\components\views\ReportsView.tsx:580:                  placeholder="mol_001, mol_002, mol_003"
+src\components\views\ReportsView.tsx:615:                  placeholder="C:\\runs\\q-ai-drug\\export"
+src\components\views\ReportsView.tsx:624:                  placeholder="file_123, file_456"
+src\components\views\ReportsView.tsx:649:                placeholder="Search reports..."
+src\components\views\ReportsView.tsx:938:            {isDemoMode() ? (
+src\components\views\ReportsView.tsx:941:                  <p className="text-sm font-semibold text-amber-500">MOCK 
+DEMO REPORTS</p>
+src\components\views\ReportsView.tsx:942:                  <p className="mt-1 text-xs text-amber-500/80">Running in 
+demo presentation mode. Scientific outputs are simulated.</p>
+src\components\views\ReportsView.tsx:944:                <StatusBadge status="pending" size="sm" label="demo" />
+src\components\views\TargetsView.tsx:10:import { isDemoMode, apiClient } from "@/services/api";
+src\components\views\TargetsView.tsx:166:    if (isDemoMode()) {
+src\components\views\TargetsView.tsx:226:  const activeTargets = isDemoMode() ? TARGETS : realTargets;
+src\components\views\TargetsView.tsx:258:        dataSource={isDemoMode() ? "mock" : (activeTargets.length > 0 ? 
+"real" : "missing")}
+src\components\views\VisualizationView.tsx:12:import { isDemoMode, apiClient } from "@/services/api";
+src\components\views\VisualizationView.tsx:24:// Mock data fallbacks for the program if backend has no results yet
+src\components\views\VisualizationView.tsx:25:const MOCK_POSES = [
+src\components\views\VisualizationView.tsx:26:  { id: "Pose 01", affinity: -10.2, cnnScore: 0.942, rmsd: 1.2, status: 
+"completed", result_id: "mock_1", pose_file_id: null },
+src\components\views\VisualizationView.tsx:27:  { id: "Pose 02", affinity: -9.8, cnnScore: 0.885, rmsd: 0.8, status: 
+"completed", result_id: "mock_2", pose_file_id: null },
+src\components\views\VisualizationView.tsx:28:  { id: "Pose 03", affinity: -9.5, cnnScore: 0.810, rmsd: 1.5, status: 
+"completed", result_id: "mock_3", pose_file_id: null },
+src\components\views\VisualizationView.tsx:31:const MOCK_RESIDUES = [
+src\components\views\VisualizationView.tsx:38:const MOCK_INTERACTIONS = [
+src\components\views\VisualizationView.tsx:50:  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+src\components\views\VisualizationView.tsx:77:    if (isDemoMode()) {
+src\components\views\VisualizationView.tsx:78:      setDataSource("MOCK DATA");
+src\components\views\VisualizationView.tsx:79:      setPoses(MOCK_POSES);
+src\components\views\VisualizationView.tsx:80:      setSelectedPose(MOCK_POSES[0]);
+src\components\views\VisualizationView.tsx:81:      setResidues(MOCK_RESIDUES);
+src\components\views\VisualizationView.tsx:82:      setInteractions(MOCK_INTERACTIONS);
+src\components\views\VisualizationView.tsx:156:    if (isDemoMode()) return;
+src\components\views\VisualizationView.tsx:172:    if (isDemoMode()) {
+src\components\views\VisualizationView.tsx:237:          setResidues(data.residue_contacts || MOCK_RESIDUES);
+src\components\views\VisualizationView.tsx:291:        dataSource={isDemoMode() ? "mock" : (poses.length > 0 ? "real" 
+: "missing")}
+src\components\views\VisualizationView.tsx:305:          isDemoMode() ? "bg-warning/20 text-warning" :
+src\components\views\VisualizationView.tsx:309:          {isDemoMode() ? "MOCK DATA" : dataSource}
+src\components\workspace\WorkspaceActionButtons.tsx:62:        { id: "gen-sample", label: "Sample Pool", value: "0 
+candidates generated", status: "queued", progress: 0 },
+src\components\workspace\WorkspaceInputFields.tsx:15:  placeholder?: string;
+src\components\workspace\WorkspaceInputFields.tsx:51:  placeholder,
+src\components\workspace\WorkspaceInputFields.tsx:63:        placeholder={placeholder}
+src\components\workspace\WorkspaceOutputPanel.tsx:6:import { getDemoPipelinePayload } from "@/services/pipelineDemo";
+src\components\workspace\WorkspaceOutputPanel.tsx:336:            resultPayload = 
+getDemoPipelinePayload(lastExperimentId);
+src\hooks\themeConfig.ts:48: * Map of deprecated hardcoded colors to theme variables
+src\lib\projectRoutes.ts:5: * eliminating hardcoded strings and supporting future nesting.
+src\providers\DemoProvider.tsx:5:import { isDemoMode } from "@/services/api";
+src\providers\DemoProvider.tsx:18:interface DemoContextType {
+src\providers\DemoProvider.tsx:22:const DemoContext = createContext<DemoContextType>({ isActive: false });
+src\providers\DemoProvider.tsx:24:export function DemoProvider({ children }: { children: React.ReactNode }) {
+src\providers\DemoProvider.tsx:28:    const demo = isDemoMode();
+src\providers\DemoProvider.tsx:29:    setIsActive(demo);
+src\providers\DemoProvider.tsx:31:    if (demo) {
+src\providers\DemoProvider.tsx:32:      console.log("🚀 Demo Mode is active. Simulating scientific events...");
+src\providers\DemoProvider.tsx:54:    <DemoContext.Provider value={{ isActive }}>
+src\providers\DemoProvider.tsx:59:           <span className="text-[10px] font-black uppercase tracking-widest 
+text-accent">Demo Mode Active</span>
+src\providers\DemoProvider.tsx:63:    </DemoContext.Provider>
+src\providers\DemoProvider.tsx:67:export const useDemo = () => useContext(DemoContext);
+src\services\api.ts:42:import * as mockApi from "./mockApi";
+src\services\api.ts:84:export function isDemoMode(): boolean {
+src\services\api.ts:87:    (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_DEMO_MODE) || 
+src\services\api.ts:88:    (typeof window !== "undefined" && (window as 
+any)._NEXT_DATA_?.runtimeConfig?.NEXT_PUBLIC_DEMO_MODE);
+src\services\api.ts:416:function createPlaceholderRunId(prefix: string): string {
+src\services\api.ts:445:  if (isDemoMode()) {
+src\services\api.ts:457:  if (isDemoMode()) {
+src\services\api.ts:458:    return mockApi.getDashboardData();
+src\services\api.ts:474:  if (isDemoMode()) {
+src\services\api.ts:482:  if (isDemoMode()) {
+src\services\api.ts:509:  if (isDemoMode()) {
+src\services\api.ts:510:    return mockApi.getMolecules(page, limit);
+src\services\api.ts:525:  if (isDemoMode()) {
+src\services\api.ts:562:    if (isDemoMode()) {
+src\services\api.ts:563:      return mockApi.getMolecularSimilarity(smiles, topK);
+src\services\api.ts:575:  if (isDemoMode()) {
+src\services\api.ts:576:    // Return some basic random points for demo
+src\services\api.ts:596:  if (isDemoMode()) {
+src\services\api.ts:597:    return mockApi.getResearchSummary();
+src\services\api.ts:615:  if (isDemoMode()) {
+src\services\api.ts:623:      experiment_id: "demo-experiment",
+src\services\api.ts:640:  if (isDemoMode()) {
+src\services\api.ts:641:    return mockApi.getDockingResults(limit);
+src\services\api.ts:654:  if (isDemoMode()) {
+src\services\api.ts:661:      experiment_id: "demo-experiment",
+src\services\api.ts:679:  if (isDemoMode()) {
+src\services\api.ts:680:    return mockApi.getQuantumMetrics(limit);
+src\services\api.ts:704:  if (isDemoMode()) {
+src\services\api.ts:705:    return mockApi.getCandidates(limit);
+src\services\api.ts:733:    if (isDemoMode()) {
+src\services\api.ts:854:  if (isDemoMode()) {
+src\services\api.ts:862:  if (isDemoMode()) {
+src\services\api.ts:863:    const data = await mockApi.getDashboardData();
+src\services\api.ts:871:/** Trigger molecule generation stage (placeholder-ready API contract). */
+src\services\api.ts:883:      runId: createPlaceholderRunId("gen"),
+src\services\api.ts:891: * Trigger docking stage (placeholder-ready API contract). 
+src\services\api.ts:905:      runId: createPlaceholderRunId("dock"),
+src\services\api.ts:916:  if (isDemoMode()) {
+src\services\api.ts:917:    return { experimentId: `EXP-DEMO-${Date.now()}` };
+src\services\api.ts:975:  if (isDemoMode()) {
+src\services\api.ts:976:    return mockApi.getValidationStatus(experimentId);
+src\services\api.ts:988:  if (isDemoMode()) {
+src\services\api.ts:989:    return mockApi.getExperiments();
+src\services\experiments.ts:6:import { isDemoMode } from "./api";
+src\services\experiments.ts:10:const USE_EXPERIMENTS_API = !isDemoMode();
+src\services\experiments.ts:49:  if (!isDemoMode()) {
+src\services\experiments.ts:57:  if (!isDemoMode()) {
+src\services\experiments.ts:86:export async function rerunExperimentMock(source: ExperimentRecord): 
+Promise<ExperimentRecord> {
+src\services\experimentsApi.ts:3:// Backend placeholders for future integration.
+src\services\index.ts:3:export * from "./pipelineDemo";
+src\services\index.ts:7:	createExperiment as createExperimentApiPlaceholder,
+src\services\index.ts:8:	getExperiments as getExperimentsApiPlaceholder,
+src\services\mockApi.ts:2: * Centralized Mock API Layer for Oncology Research Platform
+src\services\mockApi.ts:36:const MOCK_SMILES = [
+src\services\mockApi.ts:113:      smiles: MOCK_SMILES[i % MOCK_SMILES.length],
+src\services\mockApi.ts:130:      smiles: MOCK_SMILES[i % MOCK_SMILES.length],
+src\services\mockApi.ts:148:    experiment_id: "demo-experiment",
+src\services\mockApi.ts:173:    smiles: MOCK_SMILES[i % MOCK_SMILES.length],
+src\services\mockApi.ts:181:    experiment_id: "demo-experiment",
+src\services\mockApi.ts:217:      smiles: smiles || MOCK_SMILES[0],
+src\services\mockApi.ts:225:export const mockApi = {
+src\services\pipelineDemo.ts:13:  source: "demo",
+src\services\pipelineDemo.ts:14:  experiment_id: "demo-experiment",
+src\services\pipelineDemo.ts:15:  pipeline_stage: "demo",
+src\services\pipelineDemo.ts:16:  engine: "demo",
+src\services\pipelineDemo.ts:18:  provenance: { source: "demo", evidence_status: "validated" }
+src\services\pipelineDemo.ts:21:export const DEMO_VIDEO_URL =
+src\services\pipelineDemo.ts:24:export const DEMO_GENERATED_MOLECULES: GeneratedMoleculeResult[] = [
+src\services\pipelineDemo.ts:62:export const DEMO_FILTERED_CANDIDATES: RankedCandidatesResponse = {
+src\services\pipelineDemo.ts:64:  file: "demo-filtered.csv",
+src\services\pipelineDemo.ts:75:export const DEMO_DOCKING_RESULTS: DockingResult[] = [
+src\services\pipelineDemo.ts:83:export const DEMO_SIMULATION_RESULTS: SimulationResult[] = [
+src\services\pipelineDemo.ts:93:export const DEMO_QUANTUM_RESULTS: QuantumResult[] = [
+src\services\pipelineDemo.ts:126:export const DEMO_ARTIFACTS: ResultArtifactsResponse = {
+src\services\pipelineDemo.ts:129:    { name: "generated_candidates.csv", path: "demo/generated_candidates.csv", 
+size_bytes: 18432 },
+src\services\pipelineDemo.ts:130:    { name: "filtered_candidates.csv", path: "demo/filtered_candidates.csv", 
+size_bytes: 9216 },
+src\services\pipelineDemo.ts:131:    { name: "docking_scores.csv", path: "demo/docking_scores.csv", size_bytes: 12288 
+},
+src\services\pipelineDemo.ts:132:    { name: "simulation_rmsd.csv", path: "demo/simulation_rmsd.csv", size_bytes: 8192 
+},
+src\services\pipelineDemo.ts:133:    { name: "quantum_profiles.csv", path: "demo/quantum_profiles.csv", size_bytes: 
+10240 },
+src\services\pipelineDemo.ts:137:export const DEMO_OVERVIEW: ResultsOverview = {
+src\services\pipelineDemo.ts:139:    existing_ranked: DEMO_FILTERED_CANDIDATES.items.length,
+src\services\pipelineDemo.ts:140:    generated_candidates: DEMO_GENERATED_MOLECULES.length,
+src\services\pipelineDemo.ts:141:    qm_profiles: DEMO_QUANTUM_RESULTS.length,
+src\services\pipelineDemo.ts:142:    md_stability: DEMO_SIMULATION_RESULTS.length,
+src\services\pipelineDemo.ts:143:    md_rmsd: DEMO_SIMULATION_RESULTS.length,
+src\services\pipelineDemo.ts:146:    docking_result_files: DEMO_DOCKING_RESULTS.length,
+src\services\pipelineDemo.ts:149:    top_existing: DEMO_FILTERED_CANDIDATES.items[0] ?? null,
+src\services\pipelineDemo.ts:150:    best_qm: DEMO_QUANTUM_RESULTS[0]
+src\services\pipelineDemo.ts:152:          molecule_id: DEMO_QUANTUM_RESULTS[0].molecule_id,
+src\services\pipelineDemo.ts:153:          qsvm_score: DEMO_QUANTUM_RESULTS[0].qsvm_score,
+src\services\pipelineDemo.ts:154:          homo_lumo_gap: DEMO_QUANTUM_RESULTS[0].homo_lumo_gap,
+src\services\pipelineDemo.ts:159:    existing_candidates: "demo-filtered.csv",
+src\services\pipelineDemo.ts:160:    generated_candidates: "demo-generated.csv",
+src\services\pipelineDemo.ts:161:    qm_results: "demo-quantum.csv",
+src\services\pipelineDemo.ts:162:    md_stability: "demo-simulation.csv",
+src\services\pipelineDemo.ts:163:    md_rmsd: "demo-simulation.csv",
+src\services\pipelineDemo.ts:167:export const DEMO_PIPELINE_EXPERIMENTS: PipelineExperimentItem[] = [
+src\services\pipelineDemo.ts:169:    experiment_id: "EXP-DEMO-001",
+src\services\pipelineDemo.ts:175:    experiment_id: "EXP-DEMO-002",
+src\services\pipelineDemo.ts:182:export function getDemoPipelinePayload(experimentId?: string): Record<string, 
+unknown> {
+src\services\pipelineDemo.ts:184:    experiment_id: experimentId ?? "EXP-DEMO-001",
+src\services\pipelineDemo.ts:186:      generated: DEMO_GENERATED_MOLECULES,
+src\services\pipelineDemo.ts:187:      filtered: DEMO_FILTERED_CANDIDATES.items,
+src\services\pipelineDemo.ts:188:      docking: DEMO_DOCKING_RESULTS,
+src\services\pipelineDemo.ts:190:        rmsd: DEMO_SIMULATION_RESULTS,
+src\services\pipelineDemo.ts:192:      quantum: DEMO_QUANTUM_RESULTS,
+src\services\pipelineDemo.ts:193:      artifacts: DEMO_ARTIFACTS.items,
+src\services\pipelineDemo.ts:195:    simulation_video: DEMO_VIDEO_URL,
+src\services\pipelineDemo.ts:196:    overview: DEMO_OVERVIEW,
+src\utils\provenanceResolver.ts:10:  | "simulated"    // Demo/presentation fake data
+src\utils\provenanceResolver.ts:11:  | "placeholder"  // Stubs for unimplemented workflows (marked "Not scientifically 
+implemented")
+src\utils\provenanceResolver.ts:19:  isDemo?: boolean;
+src\utils\provenanceResolver.ts:21:  isPlaceholder?: boolean;
+src\utils\provenanceResolver.ts:26: * Enforces strict precedence: Error -> Placeholder -> Demo/Simulated -> Missing -> 
+Imported -> Live
+src\utils\provenanceResolver.ts:29:  const { items, isDemo = false, hasError = false, isPlaceholder = false } = 
+options;
+src\utils\provenanceResolver.ts:35:  if (isPlaceholder) {
+src\utils\provenanceResolver.ts:36:    return "placeholder";
+src\utils\provenanceResolver.ts:39:  if (isDemo) {
+
+

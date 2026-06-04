@@ -8,7 +8,7 @@ import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGro
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
 import EmptyState from "@/components/ui/EmptyState";
-import { isDemoMode, apiClient } from "@/services/api";
+import { apiClient } from "@/services/api";
 
 const EmbeddingPlot = dynamic(() => import("@/components/embeddings/EmbeddingPlot"), {
   ssr: false,
@@ -21,36 +21,10 @@ const EmbeddingPlot = dynamic(() => import("@/components/embeddings/EmbeddingPlo
 });
 import type { EmbeddingPoint } from "@/types/api";
 
-// Mock data fallbacks
-const MOCK_POINTS: EmbeddingPoint[] = [
-  { x: 1.5, y: -2.2, molecule_id: "QDF-EGFR-001", dataset: "Generated", qed: 0.85, mw: 421.4, logp: 3.82, source: "generated" },
-  { x: -3.1, y: 4.2, molecule_id: "FDA-101", dataset: "FDA", qed: 0.72, mw: 320.5, logp: 2.1, source: "fda" },
-  { x: 2.4, y: 1.8, molecule_id: "HIT-501", dataset: "Screening", qed: 0.65, mw: 380.0, logp: 3.2, source: "dataset" }
-];
 
-const CLUSTERS = [
-  { name: "quinazoline-like", count: 450, avgScore: -9.2, novelty: "High", color: "bg-indigo-500" },
-  { name: "pyrimidine-like", count: 320, avgScore: -8.8, novelty: "Medium", color: "bg-cyan-500" },
-  { name: "indazole-like", count: 210, avgScore: -8.5, novelty: "High", color: "bg-emerald-500" },
-  { name: "macrocycle-like", count: 120, avgScore: -8.2, novelty: "Extreme", color: "bg-amber-500" },
-  { name: "approved-drug-like", count: 73, avgScore: -7.5, novelty: "Low", color: "bg-success" },
-];
-
-const SCAFFOLDS = [
-  { name: "N-phenylquinazolin-4-amine", count: 124, avgDocking: -9.4, risk: "Low", novelty: 0.45 },
-  { name: "pyrido[2,3-d]pyrimidine", count: 86, avgDocking: -8.9, risk: "Low", novelty: 0.72 },
-  { name: "1H-indazol-3-amine", count: 62, avgDocking: -8.6, risk: "Medium", novelty: 0.81 },
-  { name: "macrocyclic peptide mimic", count: 34, avgDocking: -8.1, risk: "Low", novelty: 0.94 },
-];
-
-const PROPERTIES = [
-  { label: "Molecular Weight", val: "421.4", unit: "g/mol", dist: [20, 40, 80, 100, 60, 30] },
-  { label: "LogP (Lipophilicity)", val: "3.82", unit: "o/w", dist: [10, 30, 70, 90, 80, 40] },
-  { label: "QED (Drug-likeness)", val: "0.85", unit: "score", dist: [5, 15, 45, 95, 75, 25] },
-];
 
 export default function ChemicalSpacePage() {
-  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+  const [dataSource, setDataSource] = useState<string>("REAL BACKEND DATA");
   const [points, setPoints] = useState<EmbeddingPoint[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<EmbeddingPoint | null>(null);
   const [colorMode, setColorMode] = useState<"dataset" | "qed">("dataset");
@@ -95,18 +69,12 @@ export default function ChemicalSpacePage() {
   };
 
   useEffect(() => {
-    if (isDemoMode()) {
-      setDataSource("MOCK DATA");
-      setPoints(MOCK_POINTS);
-      setSelectedPoint(MOCK_POINTS[0]);
-      setIsLoading(false);
-      return;
-    }
+    
     fetchPoints();
   }, []);
 
   const handleRecompute = async () => {
-    if (isDemoMode()) return;
+    
     setIsRecomputing(true);
     try {
       const projectId = localStorage.getItem("active_project_id");
@@ -129,7 +97,7 @@ export default function ChemicalSpacePage() {
     }
   };
 
-  const displayPoints = isDemoMode() ? MOCK_POINTS : points;
+  const displayPoints = points;
 
   if (!isLoading && displayPoints.length === 0) {
     return (
@@ -141,7 +109,7 @@ export default function ChemicalSpacePage() {
           dataSource="missing"
         />
         <EmptyState
-          title="No Embedded Molecular Points Found"
+          title="Chemical space analysis unavailable."
           description="This project workspace doesn't have chemical space points calculated yet. Run a t-SNE or UMAP spatial embedding computation for your candidate compounds."
           action={
             <button className="flex items-center gap-2 rounded bg-accent px-4 py-2 text-[10px] font-black uppercase tracking-widest text-bg hover:bg-accent/90 transition-all">
@@ -160,14 +128,14 @@ export default function ChemicalSpacePage() {
         title="Chemical Space Topography"
         breadcrumb="Research / Spatial intelligence"
         description="Navigate the multidimensional landscape of molecular embeddings. Identify scaffold clusters, analyze diversity gradients, and detect novel regions relative to known pharmaceutical space."
-        dataSource={isDemoMode() ? "mock" : (points.length > 0 ? "real" : "missing")}
+        dataSource={points.length > 0 ? "real" : "missing"}
         actions={
           <ActionButtonGroup>
             <ActionButton 
               label={isRecomputing ? "Recomputing..." : "Recompute Space"} 
               variant="primary" 
               onClick={handleRecompute} 
-              disabled={isRecomputing || isDemoMode()} 
+              disabled={isRecomputing} 
             />
             <ActionButton label="Export Embedding" variant="secondary" />
           </ActionButtonGroup>
@@ -178,19 +146,18 @@ export default function ChemicalSpacePage() {
       <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
         <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
-          isDemoMode() ? "bg-warning/20 text-warning" :
           dataSource === "REAL BACKEND DATA" ? "bg-accent/20 text-accent" : "bg-warning/20 text-warning"
         }`}>
-          {isDemoMode() ? "MOCK DATA" : dataSource}
+          {dataSource}
         </span>
       </div>
 
       {/* 2. Chemical Space Summary Metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard label="Embedded Molecules" value={String(displayPoints.length)} helperText="Total active manifold" status="completed" />
-        <MetricCard label="Scaffold Clusters" value={isDemoMode() ? "42" : "4"} helperText="Unique structural types" status="completed" />
-        <MetricCard label="Novel Region Leads" value={isDemoMode() ? "186" : displayPoints.filter(p => p.qed > 0.8).length.toString()} helperText="Low similarity to FDA" status="active" />
-        <MetricCard label="Approved Neighbors" value={isDemoMode() ? "73" : "0"} helperText="Similar to known drugs" status="completed" />
+        <MetricCard label="Scaffold Clusters" value={"0"} helperText="Unique structural types" status="completed" />
+        <MetricCard label="Novel Region Leads" value={displayPoints.filter(p => p.qed > 0.8).length.toString()} helperText="Low similarity to FDA" status="active" />
+        <MetricCard label="Approved Neighbors" value={"0"} helperText="Similar to known drugs" status="completed" />
         <MetricCard label="Applicability Alerts" value="0" helperText="Out-of-domain detections" status="completed" />
       </div>
 
@@ -229,50 +196,7 @@ export default function ChemicalSpacePage() {
           </div>
 
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            {/* 6. Scaffold Distribution */}
-            <div className="space-y-4">
-              <SectionHeader title="Scaffold Distribution" description="Primary structural frameworks and their average performance metrics." />
-              <div className="space-y-3">
-                {SCAFFOLDS.map(scaffold => (
-                  <div key={scaffold.name} className="ui-card-surface p-4 flex items-center justify-between group hover:border-accent/40 transition-all cursor-pointer">
-                    <div className="min-w-0">
-                      <div className="text-[11px] font-black text-text truncate uppercase tracking-tight">{scaffold.name}</div>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-[10px] font-bold text-muted-text">Count: {scaffold.count}</span>
-                        <span className="text-[10px] font-bold text-emerald-500">Avg: {scaffold.avgDocking}</span>
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-[10px] font-black text-accent">{(scaffold.novelty * 100).toFixed(0)}%</div>
-                      <div className="text-[9px] font-bold text-muted-text uppercase">Novelty</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 7. Property Distribution */}
-            <div className="space-y-4">
-              <SectionHeader title="Property Gradients" description="Distribution of physicochemical properties across the embedded space." />
-              <div className="space-y-4">
-                {PROPERTIES.map(prop => (
-                  <div key={prop.label} className="ui-card-surface p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest">{prop.label}</span>
-                      <span className="text-[10px] font-black text-primary">
-                        {selectedPoint ? (prop.label === "QED (Drug-likeness)" ? selectedPoint.qed : (prop.label === "Molecular Weight" ? selectedPoint.mw : selectedPoint.logp)) : "---"} 
-                        <span className="text-[8px] text-muted-text/50"> {prop.unit}</span>
-                      </span>
-                    </div>
-                    <div className="h-6 flex items-end gap-1">
-                      {prop.dist.map((v, i) => (
-                        <div key={i} className="flex-1 bg-primary/10 rounded-t-[1px]" style={{ height: `${v}%` }} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Property Gradients currently unavailable */}
           </div>
         </div>
 
@@ -323,22 +247,6 @@ export default function ChemicalSpacePage() {
               </div>
             </div>
           )}
-
-          {/* 4. Cluster Legend */}
-          <div className="ui-card-surface p-5 space-y-4">
-            <h4 className="text-xs font-black uppercase tracking-widest text-text-secondary/60">Manifold Clusters</h4>
-            <div className="space-y-2">
-              {CLUSTERS.map(cluster => (
-                <div key={cluster.name} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted-bg/50 cursor-pointer transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-2.5 w-2.5 rounded-full ${cluster.color}`} />
-                    <span className="text-[11px] font-bold text-text truncate">{cluster.name}</span>
-                  </div>
-                  <span className="text-[10px] font-black text-muted-text/50">{cluster.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
 
           {/* 8. Actions */}
           <div className="flex flex-col gap-2">

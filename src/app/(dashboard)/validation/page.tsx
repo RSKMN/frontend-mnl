@@ -144,24 +144,24 @@ function ValidationPageContent() {
 
   const displayAdmet = realAdmet.map((r: any) => {
     const rawTox = r.critical_risks || {};
-    const hergVal = rawTox.herg_risk?.level || "low";
-    const hepVal = rawTox.hepatotoxicity_risk?.level || "low";
-    const cypVal = r.radar?.metabolism?.label || "low";
-    const bbbVal = r.radar?.permeability?.label || "low";
+    const hergVal = rawTox.herg_risk?.level || null;
+    const hepVal = rawTox.hepatotoxicity_risk?.level || null;
+    const cypVal = r.radar?.metabolism?.label || null;
+    const bbbVal = r.radar?.permeability?.label || null;
     
     return {
       candidate: r.compound_id || "CAND-ADMET",
       overallRisk: r.overall_risk ? r.overall_risk.charAt(0).toUpperCase() + r.overall_risk.slice(1) : "Low",
-      herg: hergVal.charAt(0).toUpperCase() + hergVal.slice(1),
-      cyp3a4: cypVal.charAt(0).toUpperCase() + cypVal.slice(1),
-      cyp2d6: "Low",
-      bbb: bbbVal === "High" || bbbVal === "high" ? "High" : bbbVal === "medium" || bbbVal === "Medium" ? "Med" : "Low",
-      clearance: "Med",
-      hepatotox: hepVal.charAt(0).toUpperCase() + hepVal.slice(1),
-      lipinski: r.lipinski_violations === 0 ? "Pass" : "Fail",
-      uncertainty: r.metadata?.uncertainty || 0.05,
-      applicability_domain: r.metadata?.applicability_domain_status || "within_domain",
-      status: "completed"
+      herg: hergVal ? hergVal.charAt(0).toUpperCase() + hergVal.slice(1) : "Pending Analysis",
+      cyp3a4: cypVal ? cypVal.charAt(0).toUpperCase() + cypVal.slice(1) : "Pending Analysis",
+      cyp2d6: "Not Available",
+      bbb: bbbVal ? (bbbVal.toLowerCase() === "high" ? "High" : bbbVal.toLowerCase() === "medium" ? "Med" : "Low") : "Pending Analysis",
+      clearance: "Not Available",
+      hepatotox: hepVal ? hepVal.charAt(0).toUpperCase() + hepVal.slice(1) : "Pending Analysis",
+      lipinski: r.lipinski_violations !== undefined ? (r.lipinski_violations === 0 ? "Pass" : "Fail") : "Not Available",
+      uncertainty: r.metadata?.uncertainty ?? "Not Available",
+      applicability_domain: r.metadata?.applicability_domain_status ?? "Not Available",
+      status: r.status || "completed"
     };
   });
 
@@ -279,13 +279,13 @@ function ValidationPageContent() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-[10px] font-black ${res.herg === 'High' ? 'text-error' : res.herg === 'Med' ? 'text-warning' : 'text-success'}`}>
-                          {res.herg[0]}
+                        <span className={`text-[10px] font-black ${res.herg === 'High' ? 'text-error' : res.herg === 'Pending Analysis' ? 'text-muted-text/50' : 'text-success'}`}>
+                          {res.herg === 'Pending Analysis' ? '-' : res.herg[0]}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-[10px] font-black ${res.cyp3a4 === 'High' ? 'text-error' : 'text-success'}`}>
-                          {res.cyp3a4[0]}
+                        <span className={`text-[10px] font-black ${res.cyp3a4 === 'High' ? 'text-error' : res.cyp3a4 === 'Pending Analysis' ? 'text-muted-text/50' : 'text-success'}`}>
+                          {res.cyp3a4 === 'Pending Analysis' ? '-' : res.cyp3a4[0]}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -399,7 +399,7 @@ function ValidationPageContent() {
                     </div>
                     <div className="flex justify-between py-1 border-b border-border/20">
                       <span className="font-bold text-muted-text">Uncertainty</span>
-                      <span className={`font-mono ${selectedResult.uncertainty > 0.1 ? 'text-warning' : 'text-text'}`}>{selectedResult.uncertainty}</span>
+                      <span className={`font-mono ${selectedResult.uncertainty !== "Not Available" && selectedResult.uncertainty > 0.1 ? 'text-warning' : 'text-text'}`}>{selectedResult.uncertainty}</span>
                     </div>
                  </div>
               </div>

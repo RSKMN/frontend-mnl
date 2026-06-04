@@ -135,7 +135,7 @@ test.describe('Phase G — Complete Drug Discovery Workflow (Full Demo Version)'
     
     await page.locator('button[type="submit"]').click();
 
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(5000);
     const currentUrl = page.url();
     if (currentUrl.includes('/signup') || currentUrl.includes('/login')) {
       await page.goto('/login');

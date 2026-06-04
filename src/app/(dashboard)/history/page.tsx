@@ -14,143 +14,14 @@ import { SkeletonCard, SkeletonTable } from "@/components/shared/skeletons";
 
 type DateSort = "desc" | "asc";
 
-const MOCK_EXPERIMENTS: any[] = [
-  {
-    id: "EXP-240319-A",
-    name: "EGFR Scaffold Optimization",
-    status: "completed",
-    createdAt: "2026-04-04T09:20:00Z",
-    input: {
-      protein: "EGFR kinase domain (PDB: 1M17)",
-      constraints: {
-        minQED: 0.55,
-        maxLogP: 4.5,
-        maxToxicity: "Low",
-      },
-    },
-    pipelineStages: {
-      generated: "completed",
-      docking: "completed",
-      simulation: "completed",
-      quantum: "completed",
-    },
-    resultsSummary: {
-      overview: "Top-10 hits passed docking threshold; 3 candidates advanced for synthesis.",
-      topHit: "QDF-EGFR-077",
-      hitRate: 11.2,
-      shortlistedCandidates: 3,
-    },
-  },
-  {
-    id: "EXP-240319-B",
-    name: "Mpro Fragment Expansion",
-    status: "running",
-    createdAt: "2026-04-05T06:50:00Z",
-    input: {
-      protein: "SARS-CoV-2 Mpro (PDB: 6LU7)",
-      constraints: {
-        minQED: 0.52,
-        maxLogP: 4.8,
-        maxToxicity: "Medium",
-      },
-    },
-    pipelineStages: {
-      generated: "completed",
-      docking: "running",
-      simulation: "pending",
-      quantum: "pending",
-    },
-    resultsSummary: {
-      overview: "Docking in progress with 220 molecules queued for scoring.",
-      topHit: "QDF-MPRO-031",
-      hitRate: 8.9,
-      shortlistedCandidates: 0,
-    },
-  },
-  {
-    id: "EXP-240318-F",
-    name: "BRAF Selectivity Screen",
-    status: "failed",
-    createdAt: "2026-04-03T15:40:00Z",
-    input: {
-      protein: "BRAF V600E (PDB: 6U2V)",
-      constraints: {
-        minQED: 0.5,
-        maxLogP: 4.2,
-        maxToxicity: "Low",
-      },
-    },
-    pipelineStages: {
-      generated: "completed",
-      docking: "failed",
-      simulation: "pending",
-      quantum: "pending",
-    },
-    resultsSummary: {
-      overview: "Run aborted due to invalid protein configuration; parameter sanity check failed.",
-      topHit: "N/A",
-      hitRate: 0,
-      shortlistedCandidates: 0,
-    },
-  },
-  {
-    id: "EXP-240317-C",
-    name: "JAK2 ADMET Triage",
-    status: "completed",
-    createdAt: "2026-04-02T11:30:00Z",
-    input: {
-      protein: "JAK2 JH1 domain (PDB: 4JI9)",
-      constraints: {
-        minQED: 0.57,
-        maxLogP: 4.1,
-        maxToxicity: "Low",
-      },
-    },
-    pipelineStages: {
-      generated: "completed",
-      docking: "completed",
-      simulation: "completed",
-      quantum: "completed",
-    },
-    resultsSummary: {
-      overview: "17 compounds passed ADMET triage with stable projected solubility profile.",
-      topHit: "QDF-JAK2-114",
-      hitRate: 13.4,
-      shortlistedCandidates: 17,
-    },
-  },
-  {
-    id: "EXP-240316-K",
-    name: "PI3K-alpha Lead Rescue",
-    status: "running",
-    createdAt: "2026-04-01T18:10:00Z",
-    input: {
-      protein: "PI3K-alpha catalytic domain (PDB: 4OVV)",
-      constraints: {
-        minQED: 0.54,
-        maxLogP: 4.0,
-        maxToxicity: "Medium",
-      },
-    },
-    pipelineStages: {
-      generated: "completed",
-      docking: "completed",
-      simulation: "running",
-      quantum: "pending",
-    },
-    resultsSummary: {
-      overview: "Constraint model active; simulation currently refining lead conformation stability.",
-      topHit: "QDF-PI3K-056",
-      hitRate: 9.4,
-      shortlistedCandidates: 5,
-    },
-  },
-];
+
 
 function normalizeStatus(status: string): ExperimentStatus {
   const value = status.toLowerCase();
   if (value === "completed") return "completed";
   if (value === "failed" || value === "error") return "failed";
+  if (value === "queued" || value === "pending") return "queued";
+  if (value === "cancelled") return "cancelled";
   return "running";
 }
 
@@ -167,6 +38,14 @@ function mapStages(status: ExperimentStatus): Record<"generated" | "docking" | "
     return {
       generated: "completed",
       docking: "failed",
+      simulation: "pending",
+      quantum: "pending",
+    };
+  }
+  if (status === "queued") {
+    return {
+      generated: "pending",
+      docking: "pending",
       simulation: "pending",
       quantum: "pending",
     };
@@ -200,14 +79,16 @@ function toExperimentRecord(item: PipelineExperimentItem): ExperimentRecord {
           ? "Pipeline completed and results are available in Results and Visualization."
           : status === "failed"
             ? "Pipeline run failed before completion. Inspect workspace logs and rerun."
-            : "Pipeline is still running. Stage transitions will appear in workspace status.",
+            : status === "queued"
+              ? "Pipeline is queued and waiting for compute resources."
+              : "Pipeline is still running. Stage transitions will appear in workspace status.",
       topHit: status === "completed" ? "Available in results" : "pending",
       hitRate: status === "completed" ? 10.0 : 0,
       shortlistedCandidates: status === "completed" ? 5 : 0,
     },
     type: "pipeline",
     engine: "gnina",
-    progress: status === "completed" ? 100 : status === "failed" ? 0 : 50,
+    progress: status === "completed" ? 100 : status === "failed" ? 0 : status === "queued" ? 0 : 50,
     parameters: {},
     updated_at: item.created_at,
   };
@@ -244,6 +125,9 @@ function statusClassName(status: ExperimentStatus): string {
   }
   if (status === "running") {
     return "border-amber-400/40 bg-amber-500/20 text-amber-100";
+  }
+  if (status === "queued" || status === "partial") {
+    return "border-cyan-400/40 bg-cyan-500/20 text-cyan-100";
   }
   return "border-rose-400/40 bg-rose-500/20 text-rose-100";
 }
@@ -399,18 +283,15 @@ export default function HistoryPage() {
         if (!active) return;
 
         const normalized = rows.map(toExperimentRecord);
-        const data = normalized.length > 0 ? normalized : MOCK_EXPERIMENTS;
-        setExperiments(data);
-        if (!data.some((item) => item.id === selectedIdRef.current)) {
-          setSelectedId(data[0]?.id ?? "");
+        setExperiments(normalized);
+        if (!normalized.some((item) => item.id === selectedIdRef.current)) {
+          setSelectedId(normalized[0]?.id ?? "");
         }
       } catch (err) {
         console.error("DEBUG loadExperiments error:", err);
         if (!active) return;
-        setExperiments(MOCK_EXPERIMENTS);
-        if (!selectedIdRef.current) {
-          setSelectedId(MOCK_EXPERIMENTS[0]?.id ?? "");
-        }
+        setExperiments([]);
+        setSelectedId("");
       } finally {
         if (active) {
           setIsLoading(false);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import type { MoleculeDetails } from "@/types/api";
-import { MOCK_MOLECULES } from "./mockMolecules";
+import { getMoleculeById } from "@/services/api";
 
 interface MoleculeViewerProps {
   moleculeId?: string | null;
@@ -49,38 +49,35 @@ export default function MoleculeViewer({ moleculeId }: MoleculeViewerProps) {
     setContentVisible(false);
     const frame = window.requestAnimationFrame(() => setContentVisible(true));
 
-    // Determine target based on ID
-    const molecule = MOCK_MOLECULES.find((m) => m.molecule_id === moleculeId);
-    
-    if (molecule) {
-      setIsViewerReady(false);
-      setError3D(null);
-      setDetails({
-        molecule_id: molecule.molecule_id,
-        dataset: molecule.dataset,
-        structures: {
-          smiles: molecule.smiles,
-          inchi: "",
-          sdf: "", // Ensure this is present
-          pdb: "",
-        },
-        properties: {
-          mw: molecule.mw,
-          logp: molecule.logp,
-          qed: molecule.qed,
-          tpsa: 63.60,
-          hbd: 1,
-          hba: 4,
-          rotatable_bonds: 2,
-        }
-      });
-    } else {
+    if (!moleculeId) {
       setIsViewerReady(false);
       setError3D(null);
       setDetails(null);
+      return;
     }
 
+    let active = true;
+    setIsViewerReady(false);
+    setError3D(null);
+
+    getMoleculeById(moleculeId)
+      .then((mol) => {
+        if (!active) return;
+        if (mol) {
+          setDetails(mol);
+        } else {
+          setDetails(null);
+          setError3D("Molecule details not found in database.");
+        }
+      })
+      .catch((err) => {
+        if (!active) return;
+        setDetails(null);
+        setError3D("Failed to fetch molecule details from server.");
+      });
+
     return () => {
+      active = false;
       window.cancelAnimationFrame(frame);
     };
   }, [moleculeId]);

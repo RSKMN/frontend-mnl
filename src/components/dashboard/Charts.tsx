@@ -12,44 +12,10 @@ import {
 } from "recharts";
 import ChartCard from "./ChartCard";
 
-const mwData = [
-	{ range: "150-200", count: 24 },
-	{ range: "200-250", count: 38 },
-	{ range: "250-300", count: 56 },
-	{ range: "300-350", count: 49 },
-	{ range: "350-400", count: 31 },
-	{ range: "400-450", count: 18 },
-	{ range: "450+", count: 9 },
-];
-
-const logpData = [
-	{ range: "<0", count: 11 },
-	{ range: "0-1", count: 22 },
-	{ range: "1-2", count: 44 },
-	{ range: "2-3", count: 58 },
-	{ range: "3-4", count: 36 },
-	{ range: "4-5", count: 19 },
-	{ range: "5+", count: 7 },
-];
-
-const velocityData = [
-	{ date: "05/08", experiments: 12 },
-	{ date: "05/09", experiments: 18 },
-	{ date: "05/10", experiments: 15 },
-	{ date: "05/11", experiments: 25 },
-	{ date: "05/12", experiments: 22 },
-	{ date: "05/13", experiments: 30 },
-	{ date: "05/14", experiments: 28 },
-];
-
-const correlationData = [
-	{ docking: -8.2, quantum: 0.82, id: "C1" },
-	{ docking: -9.5, quantum: 0.88, id: "C2" },
-	{ docking: -7.1, quantum: 0.75, id: "C3" },
-	{ docking: -11.2, quantum: 0.94, id: "C4" },
-	{ docking: -8.8, quantum: 0.81, id: "C5" },
-	{ docking: -10.4, quantum: 0.91, id: "C6" },
-];
+const mwData: any[] = [];
+const logpData: any[] = [];
+const velocityData: any[] = [];
+const correlationData: any[] = [];
 
 const axisTick = { fontSize: 10, fill: "var(--muted-text)", fontWeight: 600 };
 

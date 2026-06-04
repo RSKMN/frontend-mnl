@@ -26,6 +26,9 @@ export async function loginUser(page: Page, email = E2E_EMAIL, password = E2E_PA
   await page.fill(SELECTORS.auth.loginEmail, email);
   await page.fill(SELECTORS.auth.loginPassword, password);
   
+  // Wait for submit button to be enabled (not disabled)
+  await page.waitForSelector(`${SELECTORS.auth.loginSubmit}:not([disabled])`, { timeout: 15000 });
+  
   // Submit Form
   await page.click(SELECTORS.auth.loginSubmit);
   

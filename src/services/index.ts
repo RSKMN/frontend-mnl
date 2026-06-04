@@ -1,6 +1,5 @@
 export * from "./api";
 export * from "./auth";
-export * from "./pipelineDemo";
 export * from "./claimMatrix";
 export * from "./experiments";
 export {

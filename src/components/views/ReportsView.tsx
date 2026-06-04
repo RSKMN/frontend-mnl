@@ -15,7 +15,7 @@ import {
   getReportSummary,
   getReports,
   importQAiDrugReport,
-  isDemoMode,
+  
 } from "@/services";
 import type {
   ReportFileItem,
@@ -935,15 +935,6 @@ export default function ReportsView({ projectId: propProjectId }: ReportsViewPro
 
           <section className="ui-card-surface border border-border/40 p-5">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/50">Data source</p>
-            {isDemoMode() ? (
-              <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
-                <div>
-                  <p className="text-sm font-semibold text-amber-500">MOCK DEMO REPORTS</p>
-                  <p className="mt-1 text-xs text-amber-500/80">Running in demo presentation mode. Scientific outputs are simulated.</p>
-                </div>
-                <StatusBadge status="pending" size="sm" label="demo" />
-              </div>
-            ) : (
               <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-success/20 bg-success/10 p-4">
                 <div>
                   <p className="text-sm font-semibold text-success">REAL BACKEND REPORTS</p>
@@ -951,7 +942,6 @@ export default function ReportsView({ projectId: propProjectId }: ReportsViewPro
                 </div>
                 <StatusBadge status="completed" size="sm" label="live" />
               </div>
-            )}
           </section>
         </aside>
       </div>

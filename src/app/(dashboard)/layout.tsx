@@ -112,7 +112,6 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 const PAGE_CONTEXTS: Array<{ href: string; title: string; breadcrumb: string }> = [
-  { href: "/dashboard/history", title: "Experiment History", breadcrumb: "Research Projects / Pipeline history" },
   { href: "/research-projects", title: "Research Projects", breadcrumb: "QuDrugForge™ / Research Projects" },
   { href: "/history", title: "Experiments", breadcrumb: "Research Projects / Experiment history" },
   { href: "/results", title: "Reports", breadcrumb: "Reports / Candidate evidence packages" },

@@ -7,69 +7,11 @@ import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGro
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
 import EmptyState from "@/components/ui/EmptyState";
-import { isDemoMode, apiClient } from "@/services/api";
+import { apiClient } from "@/services/api";
 
-const CANDIDATES = [
-  {
-    id: "QDF-EGFR-001",
-    target: "EGFR WT",
-    smiles: "CC1=C(C(=CC=C1)C)C2=NC(=NC(=N2)N3CCC(CC3)O)N4C=C(C=N4)C",
-    dockingScore: -9.8,
-    admetRisk: "Low",
-    novelty: 0.94,
-    qed: 0.81,
-    logp: 2.8,
-    saScore: 1.8,
-    quantumRank: 1,
-    status: "completed"
-  },
-  {
-    id: "QDF-EGFR-002",
-    target: "EGFR L858R",
-    smiles: "CNC(=O)C1=C(C=CC=C1)SC2=C3C(=NC=C2)N=C(N=C3N)N4CCN(CC4)C",
-    dockingScore: -9.2,
-    admetRisk: "Low",
-    novelty: 0.88,
-    qed: 0.79,
-    logp: 3.1,
-    saScore: 2.2,
-    quantumRank: 2,
-    status: "completed"
-  },
-  {
-    id: "QDF-EGFR-003",
-    target: "EGFR T790M",
-    smiles: "CS(=O)(=O)CCN1CCN(CC1)CC2=CC=C(C=C2)NC3=NC=CC(=C3)C4=CN(C=N4)C",
-    dockingScore: -8.9,
-    admetRisk: "Medium",
-    novelty: 0.82,
-    qed: 0.68,
-    logp: 3.4,
-    saScore: 2.6,
-    quantumRank: 3,
-    status: "completed"
-  },
-  {
-    id: "QDF-EGFR-004",
-    target: "EGFR C797S",
-    smiles: "CC(=O)N1CCN(CC1)CC2=CC=C(C=C2)C3=CN4C(=N3)C=C(N=C4N)C5=CC=CC=C5",
-    dockingScore: -8.5,
-    admetRisk: "High",
-    novelty: 0.91,
-    qed: 0.72,
-    logp: 3.9,
-    saScore: 2.9,
-    quantumRank: 4,
-    status: "completed"
-  }
-];
 
-const CLUSTERS = [
-  { name: "quinazoline-like", count: 450, avgScore: -9.1, risk: "Low" },
-  { name: "pyrimidine-like", count: 320, avgScore: -8.8, risk: "Medium" },
-  { name: "indazole-like", count: 210, avgScore: -8.5, risk: "Low" },
-  { name: "macrocycle-like", count: 120, avgScore: -8.2, risk: "High" }
-];
+
+
 
 export interface MoleculesViewProps {
   projectId?: string;
@@ -79,15 +21,11 @@ export default function MoleculesView({ projectId }: MoleculesViewProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [realMolecules, setRealMolecules] = useState<any[]>([]);
-  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+  const [dataSource, setDataSource] = useState<string>("REAL BACKEND DATA");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (isDemoMode()) {
-      setDataSource("MOCK DATA");
-      setIsLoading(false);
-      return;
-    }
+    
 
     const fetchMolecules = async () => {
       try {
@@ -118,20 +56,18 @@ export default function MoleculesView({ projectId }: MoleculesViewProps) {
     );
   };
 
-  const displayMolecules = isDemoMode()
-    ? CANDIDATES
-    : realMolecules.map((m: any) => ({
+  const displayMolecules = realMolecules.map((m: any) => ({
         id: m.compound_id || m.id,
-        target: m.metadata?.target || "EGFR WT",
+        target: m.metadata?.target || "Pending",
         smiles: m.smiles,
-        dockingScore: m.metadata?.docking_score || m.metadata?.binding_energy || -8.5,
-        admetRisk: m.metadata?.admet_risk || "Low",
-        novelty: m.metadata?.novelty || 0.85,
-        qed: m.qed !== undefined && m.qed !== null ? m.qed : 0.72,
-        logp: m.logp !== undefined && m.logp !== null ? m.logp : 3.2,
-        saScore: m.metadata?.sa_score || 2.1,
-        quantumRank: m.metadata?.quantum_rank || 1,
-        status: m.status || "completed"
+        dockingScore: m.metadata?.docking_score || m.metadata?.binding_energy || "Not Available",
+        admetRisk: m.metadata?.admet_risk || "Pending",
+        novelty: m.metadata?.novelty !== undefined ? m.metadata.novelty : "Not Available",
+        qed: m.qed !== undefined && m.qed !== null ? m.qed : "Not Available",
+        logp: m.logp !== undefined && m.logp !== null ? m.logp : "Not Available",
+        saScore: m.metadata?.sa_score !== undefined ? m.metadata.sa_score : "Not Available",
+        quantumRank: m.metadata?.quantum_rank !== undefined ? m.metadata.quantum_rank : "Not Available",
+        status: m.status || "Pending"
       }));
 
   if (!isLoading && displayMolecules.length === 0) {
@@ -163,7 +99,7 @@ export default function MoleculesView({ projectId }: MoleculesViewProps) {
         title="Molecular Library"
         breadcrumb="Oncology Research / Candidates"
         description="Explore, filter, and prioritize generated candidate molecules. Analyze ADMET profiles, docking scores, and quantum reranking results."
-        dataSource={isDemoMode() ? "mock" : (realMolecules.length > 0 ? "real" : "missing")}
+        dataSource={realMolecules.length > 0 ? "real" : "missing"}
         actions={
           <ActionButtonGroup>
             <ActionButton label="Export CSV" variant="outline" />
@@ -177,21 +113,20 @@ export default function MoleculesView({ projectId }: MoleculesViewProps) {
       <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
         <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
-          isDemoMode() ? "bg-warning/20 text-warning" :
           dataSource === "IMPORTED Q-AI-DRUG DATA" ? "bg-emerald-500/20 text-emerald-400" :
           "bg-accent/20 text-accent"
         }`}>
-          {isDemoMode() ? "MOCK DATA" : dataSource}
+          {dataSource}
         </span>
       </div>
 
       {/* 2. Molecule Summary Metrics */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <MetricCard label="Generated" value={isDemoMode() ? "15,000" : realMolecules.length.toString()} helperText="Total molecules" status="completed" />
-        <MetricCard label="Filtered" value={isDemoMode() ? "1,500" : Math.ceil(realMolecules.length * 0.8).toString()} helperText="Passed basic filters" status="active" />
+        <MetricCard label="Generated" value={realMolecules.length.toString()} helperText="Total molecules" status="completed" />
+        <MetricCard label="Filtered" value={Math.ceil(realMolecules.length * 0.8).toString()} helperText="Passed basic filters" status="active" />
         <MetricCard label="Selected" value={selectedIds.length.toString()} helperText="Selected leads" status="completed" />
-        <MetricCard label="Novel Scaffolds" value={isDemoMode() ? "42" : "6"} helperText="Unique clusters" status="completed" />
-        <MetricCard label="ADMET Warnings" value={isDemoMode() ? "12" : "0"} helperText="Requires review" status="warning" />
+        <MetricCard label="Novel Scaffolds" value="Pending" helperText="Unique clusters" status="completed" />
+        <MetricCard label="ADMET Warnings" value="Pending" helperText="Requires review" status="warning" />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
@@ -255,20 +190,9 @@ export default function MoleculesView({ projectId }: MoleculesViewProps) {
               Scaffold Clusters
             </h4>
             <div className="space-y-2">
-              {CLUSTERS.map(cluster => (
-                <div key={cluster.name} className="p-3 rounded-lg bg-muted-bg/50 border border-border/20 group hover:border-accent/30 cursor-pointer transition-all">
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-[11px] font-black text-text">{cluster.name}</span>
-                    <span className="text-[10px] font-black text-accent">{cluster.count}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-wider">
-                    <span className="text-muted-text/50">Avg Dock: {cluster.avgScore}</span>
-                    <span className={cluster.risk === 'Low' ? 'text-success' : cluster.risk === 'Medium' ? 'text-warning' : 'text-error'}>
-                      Risk: {cluster.risk}
-                    </span>
-                  </div>
-                </div>
-              ))}
+              <div className="p-3 rounded-lg bg-muted-bg/50 border border-dashed border-border/40 flex items-center justify-center text-center">
+                <span className="text-[10px] font-bold text-muted-text/60">Clustering not available</span>
+              </div>
             </div>
           </div>
         </div>
@@ -325,7 +249,7 @@ export default function MoleculesView({ projectId }: MoleculesViewProps) {
                          <div className="flex flex-col">
                            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-text/40">ADMET Risk</span>
                            <span className={`text-[10px] font-black ${
-                             mol.admetRisk === 'Low' ? 'text-success' : mol.admetRisk === 'Medium' ? 'text-warning' : 'text-error'
+                             mol.admetRisk === 'Low' ? 'text-success' : mol.admetRisk === 'Medium' ? 'text-warning' : mol.admetRisk === 'High' ? 'text-error' : 'text-muted-text'
                            }`}>
                              {mol.admetRisk.toUpperCase()}
                            </span>
@@ -380,16 +304,16 @@ export default function MoleculesView({ projectId }: MoleculesViewProps) {
                         <td className="px-4 py-3 text-center font-mono text-xs text-text">{mol.dockingScore}</td>
                         <td className="px-4 py-3 text-center">
                           <span className={`text-[10px] font-black ${
-                             mol.admetRisk === 'Low' ? 'text-success' : mol.admetRisk === 'Medium' ? 'text-warning' : 'text-error'
+                             mol.admetRisk === 'Low' ? 'text-success' : mol.admetRisk === 'Medium' ? 'text-warning' : mol.admetRisk === 'High' ? 'text-error' : 'text-muted-text'
                            }`}>
-                             {mol.admetRisk[0]}
+                             {mol.admetRisk === 'Pending' ? '-' : mol.admetRisk[0]}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center text-[11px] font-bold text-text">{mol.qed}</td>
                         <td className="px-4 py-3 text-center text-[11px] font-bold text-muted-text">{mol.logp}</td>
                         <td className="px-4 py-3 text-center text-[11px] font-bold text-muted-text">{mol.saScore}</td>
                         <td className="px-4 py-3 text-center text-[11px] font-bold text-muted-text">{mol.novelty}</td>
-                        <td className="px-4 py-3 text-center font-black text-xs text-accent">#{mol.quantumRank}</td>
+                        <td className="px-4 py-3 text-center font-black text-xs text-accent">{mol.quantumRank !== 'Not Available' ? `#${mol.quantumRank}` : '-'}</td>
                         <td className="px-4 py-3 text-right">
                           <StatusBadge status={mol.status as any} size="sm" />
                         </td>

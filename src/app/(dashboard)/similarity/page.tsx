@@ -7,37 +7,10 @@ import ActionButtonGroup, { ActionButton } from "@/components/ui/ActionButtonGro
 import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
 import EmptyState from "@/components/ui/EmptyState";
-import { isDemoMode, apiClient } from "@/services/api";
-
-// Mock fallbacks
-const MOCK_LABELS = [
-  "QDF-EGFR-001",
-  "QDF-EGFR-014",
-  "QDF-EGFR-027",
-  "Gefitinib",
-  "Erlotinib",
-  "Osimertinib"
-];
-
-const MOCK_MATRIX = [
-  [1.00, 0.82, 0.75, 0.78, 0.72, 0.65],
-  [0.82, 1.00, 0.88, 0.71, 0.68, 0.58],
-  [0.75, 0.88, 1.00, 0.65, 0.62, 0.52],
-  [0.78, 0.71, 0.65, 1.00, 0.89, 0.61],
-  [0.72, 0.68, 0.62, 0.89, 1.00, 0.59],
-  [0.65, 0.58, 0.52, 0.61, 0.59, 1.00]
-];
-
-const MOCK_NEIGHBORS = [
-  { id: "Gefitinib", type: "Approved Drug", similarity: 0.78, scaffold: "Quinazoline", activity: "EGFR WT/L858R", risk: "Low", notes: "Shared binding mode" },
-  { id: "Erlotinib", type: "Approved Drug", similarity: 0.72, scaffold: "Quinazoline", activity: "EGFR WT", risk: "Low", notes: "Secondary neighbor" },
-  { id: "Osimertinib", type: "Approved Drug", similarity: 0.65, scaffold: "Pyrimidine", activity: "EGFR T790M", risk: "Low", notes: "Low structural similarity" },
-  { id: "QDF-EGFR-014", type: "Generated", similarity: 0.82, scaffold: "Quinazoline", activity: "Predicted High", risk: "Low", notes: "Isostere variant" },
-  { id: "QDF-EGFR-027", type: "Generated", similarity: 0.75, scaffold: "Quinazoline", activity: "Predicted Med", risk: "Medium", notes: "TPSA alert" },
-];
+import { apiClient } from "@/services/api";
 
 export default function SimilarityPage() {
-  const [dataSource, setDataSource] = useState<string>("MOCK DATA");
+  const [dataSource, setDataSource] = useState<string>("REAL BACKEND DATA");
   const [moleculesList, setMoleculesList] = useState<any[]>([]);
   const [querySmiles, setQuerySmiles] = useState("CN(C)C/C=C/C(=O)NC1=CC2=C(C=C1)N=CN=C2NC3=CC(=C(C=C3)F)Cl");
   const [selectedMoleculeId, setSelectedMoleculeId] = useState("");
@@ -52,15 +25,6 @@ export default function SimilarityPage() {
 
   // Fetch project molecules list to populate search selectors
   useEffect(() => {
-    if (isDemoMode()) {
-      setDataSource("MOCK DATA");
-      setNeighbors(MOCK_NEIGHBORS);
-      setMatrixLabels(MOCK_LABELS);
-      setSimilarityMatrix(MOCK_MATRIX);
-      setIsLoading(false);
-      return;
-    }
-
     const loadMolecules = async () => {
       try {
         setIsLoading(true);
@@ -89,7 +53,6 @@ export default function SimilarityPage() {
 
   // Fetch pairwise similarity matrix
   const fetchSimilarityMatrix = async () => {
-    if (isDemoMode()) return;
     setIsMatrixLoading(true);
     try {
       const projectId = localStorage.getItem("active_project_id");
@@ -109,14 +72,11 @@ export default function SimilarityPage() {
   };
 
   useEffect(() => {
-    if (!isDemoMode()) {
-      fetchSimilarityMatrix();
-    }
+    fetchSimilarityMatrix();
   }, []);
 
   // Trigger structural similarity search
   const handleSimilaritySearch = async () => {
-    if (isDemoMode()) return;
     if (!querySmiles.trim()) return;
     setIsSearching(true);
     try {
@@ -162,14 +122,14 @@ export default function SimilarityPage() {
     return (
       <div className="space-y-8 pb-12">
         <PageHeader
-          title="Structural Similarity Matrix"
+          title="Similarity analysis unavailable."
           breadcrumb="Research / Structural similarity"
-          description="Quantify structural relationships and scaffold novelties across the candidate library."
+          description="Run similarity computation workflows to populate this view."
           dataSource="missing"
         />
         <EmptyState
-          title="No Pairwise Similarity Matrices Found"
-          description="This project workspace doesn't have a similarity grid calculated yet. Start by generating or importing compounds."
+          title="Similarity analysis unavailable."
+          description="Run similarity computation workflows to populate this view."
           action={
             <button className="flex items-center gap-2 rounded bg-accent px-4 py-2 text-[10px] font-black uppercase tracking-widest text-bg hover:bg-accent/90 transition-all">
               Initialize Matrix Calculation
@@ -187,7 +147,7 @@ export default function SimilarityPage() {
         title="Structural Similarity Matrix"
         breadcrumb="Research / Structural similarity"
         description="Quantify structural relationships and scaffold novelties across the candidate library. Compare lead molecules against known drug space and detect applicability domain risks."
-        dataSource={isDemoMode() ? "mock" : (matrixLabels.length > 0 ? "real" : "missing")}
+        dataSource={matrixLabels.length > 0 ? "real" : "missing"}
         actions={
           <ActionButtonGroup>
             <ActionButton label="Export Report" variant="secondary" />
@@ -195,7 +155,7 @@ export default function SimilarityPage() {
               label={isMatrixLoading ? "Computing Matrix..." : "Recalculate Matrix"} 
               variant="primary" 
               onClick={fetchSimilarityMatrix}
-              disabled={isMatrixLoading || isDemoMode()}
+              disabled={isMatrixLoading}
             />
           </ActionButtonGroup>
         }
@@ -205,10 +165,9 @@ export default function SimilarityPage() {
       <div className="flex items-center gap-2 px-6 py-2 bg-muted-bg border border-border/20 rounded-lg max-w-max" data-testid="data-source-badge">
         <span className="text-[10px] font-bold text-muted-text/60 uppercase tracking-widest">Data Source:</span>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
-          isDemoMode() ? "bg-warning/20 text-warning" :
           dataSource === "REAL BACKEND DATA" ? "bg-accent/20 text-accent" : "bg-warning/20 text-warning"
         }`}>
-          {isDemoMode() ? "MOCK DATA" : dataSource}
+          {dataSource}
         </span>
       </div>
 
@@ -216,7 +175,7 @@ export default function SimilarityPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard label="Compared Candidates" value={String(matrixLabels.length)} helperText="Active comparison set" status="completed" />
         <MetricCard label="Nearest Neighbors" value={String(neighbors.length)} helperText="Similar lead counts" status="completed" />
-        <MetricCard label="Novel Scaffolds" value={isDemoMode() ? "4" : "0"} helperText="Low overlap with FDA" status="active" />
+        <MetricCard label="Novel Scaffolds" value="0" helperText="Low overlap with FDA" status="active" />
         <MetricCard label="Similarity Alerts" value="0" helperText="Potential IP conflict" status="completed" />
         <MetricCard label="Out-of-domain" value="0" helperText="Reliability warning" status="completed" />
       </div>
@@ -274,7 +233,7 @@ export default function SimilarityPage() {
                   />
                   <button 
                     onClick={handleSimilaritySearch} 
-                    disabled={isSearching || isDemoMode()}
+                    disabled={isSearching}
                     className="px-6 py-2.5 rounded-lg bg-accent text-bg text-[10px] font-black uppercase tracking-[0.2em] hover:bg-accent/90 disabled:opacity-50 transition-all shrink-0"
                   >
                     {isSearching ? "Searching..." : "Search"}

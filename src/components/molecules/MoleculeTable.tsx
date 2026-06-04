@@ -8,7 +8,6 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import type { Molecule } from "@/types/api";
-import { MOCK_MOLECULES } from "./mockMolecules";
 
 const getDatasetBadge = (dataset: string) => {
   const base = "inline-flex items-center rounded-lg border-2 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm";
@@ -85,7 +84,7 @@ interface MoleculeTableProps {
 }
 
 export default function MoleculeTable({
-  data = MOCK_MOLECULES,
+  data = [],
   onRowSelect,
   selectedId,
   isLoading = false,

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui";
 import { getPipelineResult, getPipelineStatus } from "@/services";
-import { getDemoPipelinePayload } from "@/services/pipelineDemo";
+
 import { useWorkspaceStore } from "@/store";
 import type { PipelineState } from "@/store";
 
@@ -325,15 +325,6 @@ export default function WorkspaceOutputPanel() {
           let resultPayload = await getPipelineResult(lastExperimentId);
           if (!active) {
             return;
-          }
-
-          const normalized = normalizePipelineResults(resultPayload);
-          const hasAnyRows =
-            normalized.generated.length > 0 ||
-            normalized.filtered.length > 0 ||
-            normalized.docking.length > 0;
-          if (!hasAnyRows) {
-            resultPayload = getDemoPipelinePayload(lastExperimentId);
           }
 
           setPipelineResults(normalizePipelineResults(resultPayload));

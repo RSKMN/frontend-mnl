@@ -143,15 +143,15 @@ export default function QMView({ projectId }: QMViewProps) {
 
   const displayQuantum = realQuantum.map((r: any) => ({
     candidate: r.compound_id || "CAND-QML",
-    classicalRank: r.qm_descriptors?.classical_rank || 12,
-    quantumRank: r.quantum_rank || r.rank || 1,
+    classicalRank: r.qm_descriptors?.classical_rank ?? "Not Available",
+    quantumRank: (r.quantum_rank || r.rank) ?? "Not Available",
     qmlScore: r.qml_score !== undefined && r.qml_score !== null ? r.qml_score : "-",
     homo: r.qm_descriptors?.homo_ev !== undefined ? r.qm_descriptors.homo_ev : "-",
     lumo: r.qm_descriptors?.lumo_ev !== undefined ? r.qm_descriptors.lumo_ev : "-",
     gap: r.qm_descriptors?.gap_ev !== undefined ? r.qm_descriptors.gap_ev : "-",
     dipole: r.qm_descriptors?.dipole_debye !== undefined ? r.qm_descriptors.dipole_debye : "-",
-    uncertainty: r.metadata?.uncertainty || 0.05,
-    applicability_domain: r.metadata?.applicability_domain_status || "within_domain",
+    uncertainty: r.metadata?.uncertainty ?? "Not Available",
+    applicability_domain: r.metadata?.applicability_domain_status ?? "Not Available",
     status: "completed"
   }));
 
@@ -266,7 +266,7 @@ export default function QMView({ projectId }: QMViewProps) {
                       <td className="px-4 py-3 text-center font-mono text-[11px] text-text">{res.homo}</td>
                       <td className="px-4 py-3 text-center font-mono text-[11px] text-text">{res.lumo}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-[10px] font-black ${res.uncertainty > 0.1 ? "text-warning" : "text-success"}`}>
+                        <span className={`text-[10px] font-black ${res.uncertainty === "Not Available" ? "text-muted-text" : res.uncertainty > 0.1 ? "text-warning" : "text-success"}`}>
                            {res.uncertainty}
                         </span>
                       </td>
@@ -342,12 +342,12 @@ export default function QMView({ projectId }: QMViewProps) {
               <h4 className="text-xs font-black uppercase tracking-widest text-accent">Quantum Uncertainty</h4>
               <div className="space-y-4">
                  <div className={`p-4 rounded-xl border space-y-3 ${
-                   selectedCandidate.applicability_domain === 'outside_domain' ? 'bg-error/10 border-error/20' : 'bg-accent/[0.03] border-accent/20'
+                   selectedCandidate.applicability_domain === 'outside_domain' ? 'bg-error/10 border-error/20' : 'bg-muted-bg border-border/20'
                  }`}>
                     <div className="flex justify-between items-center">
                       <span className="text-[10px] font-black uppercase text-muted-text/50">Applicability Domain</span>
-                      <span className={`text-xs font-black ${selectedCandidate.applicability_domain === 'outside_domain' ? 'text-error' : 'text-emerald-500'}`}>
-                        {selectedCandidate.applicability_domain}
+                      <span className={`text-xs font-black ${selectedCandidate.applicability_domain === 'outside_domain' ? 'text-error' : selectedCandidate.applicability_domain === 'within_domain' ? 'text-emerald-500' : 'text-muted-text'}`}>
+                        {selectedCandidate.applicability_domain === 'Not Available' ? 'Pending Computation' : selectedCandidate.applicability_domain}
                       </span>
                     </div>
                     {selectedCandidate.applicability_domain === 'outside_domain' && (

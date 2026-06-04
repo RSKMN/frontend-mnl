@@ -1,0 +1,11 @@
+{
+  "01_signup": 1,
+  "02_workspace_creation": 10,
+  "03_project_creation": 24,
+  "04_pipeline_execution": 16,
+  "05_experiment_review": 11,
+  "06_reports_generation": 11,
+  "07_molecules_analysis": 11,
+  "08_dashboard_metrics": 11,
+  "09_scientific_workflows": 19
+}
