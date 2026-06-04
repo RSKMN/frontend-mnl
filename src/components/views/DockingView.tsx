@@ -17,6 +17,7 @@ import {
   Button
 } from "@/components/ui";
 import { apiClient } from "@/services/api";
+import { GNINAMetricsCards } from "@/components/gnina/GNINAMetricsCards";
 
 export interface DockingViewProps {
   projectId?: string;
@@ -232,6 +233,10 @@ function DockingWorkspaceContent({ projectId }: DockingViewProps) {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-8">
+          {isGnina && activeResults.length > 0 && (
+            <GNINAMetricsCards items={activeResults} />
+          )}
+          
           <SectionHeader title={isGnina ? "CNN Rescoring Results" : "Simulation Ledger"} description="Live execution results." />
           
           {activeResults.length === 0 ? (

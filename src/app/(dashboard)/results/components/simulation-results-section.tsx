@@ -123,8 +123,8 @@ export function SimulationResultsSection({
     <section className="rounded-xl border border-white/10 bg-slate-900/60 p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-100">Simulation Results</h2>
-          <p className="mt-1 text-xs text-slate-400">RMSD evolution and trajectory stability profile from the simulation stage.</p>
+          <h2 className="text-lg font-semibold text-slate-100">OpenMM Stability Analysis (Ligand Pose Relaxation)</h2>
+          <p className="mt-1 text-xs text-slate-400">RMSD evolution and trajectory stability profile. Note: This is an efficient ligand pose relaxation triage step, not a full explicit-solvent production MD.</p>
         </div>
 
         <div className="flex items-center gap-3">

@@ -8,6 +8,7 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import type { Molecule } from "@/types/api";
+import MoleculeStructure from "./MoleculeStructure";
 
 const getDatasetBadge = (dataset: string) => {
   const base = "inline-flex items-center rounded-lg border-2 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm";
@@ -35,11 +36,9 @@ const columns: ColumnDef<Molecule>[] = [
   },
   {
     accessorKey: "smiles",
-    header: "SMILES Sequence",
+    header: "2D Structure",
     cell: ({ getValue }) => (
-      <span className="font-mono text-[11px] truncate max-w-[240px] block text-text-secondary opacity-70">
-        {getValue() as string}
-      </span>
+      <MoleculeStructure smiles={getValue() as string} width={120} height={80} />
     ),
   },
   {
@@ -141,7 +140,7 @@ export default function MoleculeTable({
                   }`}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="whitespace-nowrap px-6 py-4 transition-transform duration-200 group-hover:translate-x-0.5">
+                    <td key={cell.id} className="px-6 py-2 transition-transform duration-200 group-hover:translate-x-0.5">
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()

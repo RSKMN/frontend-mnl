@@ -14,8 +14,32 @@ import {
   StatusBadge,
   StatusType
 } from "@/components/ui";
-import { AssistantWidget, ChartsSection } from "@/components/dashboard";
+import { 
+  AssistantWidget, 
+  ChartsSection, 
+  DatasetInsightsPanel, 
+  MwDistributionChart, 
+  LogpDistributionChart, 
+  QedDistributionChart, 
+  ChartSkeleton 
+} from "@/components/dashboard";
 import { apiClient, getApiBaseUrl } from "@/services";
+
+const generateDistribution = (values: number[], numBins: number = 10) => {
+  if (!values.length) return { bins: [], counts: [] };
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const step = Math.max((max - min) / numBins, 0.01);
+  const bins = Array.from({ length: numBins + 1 }, (_, i) => min + i * step);
+  const counts = Array(numBins).fill(0);
+  values.forEach(v => {
+    let binIdx = Math.floor((v - min) / step);
+    if (binIdx >= numBins) binIdx = numBins - 1;
+    if (binIdx < 0) binIdx = 0;
+    counts[binIdx]++;
+  });
+  return { bins, counts };
+};
 
 interface ProjectDetailProps {
   params: {
@@ -186,6 +210,8 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
   const [inputs, setInputs] = useState<any>(null);
   const [completeness, setCompleteness] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [molecules, setMolecules] = useState<any[]>([]);
+  const [metricsLoading, setMetricsLoading] = useState(true);
 
   // Real-time Orchestration States
   const [pipelineRunning, setPipelineRunning] = useState(false);
@@ -286,6 +312,20 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
     }
   };
 
+  const fetchMoleculesForAnalytics = async () => {
+    try {
+      setMetricsLoading(true);
+      const res = await apiClient.get<any>(`/molecules?project_id=${projectId}&limit=1000`);
+      if (res.success && res.data) {
+        setMolecules(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to load molecules for analytics", err);
+    } finally {
+      setMetricsLoading(false);
+    }
+  };
+
   const fetchSummaryData = async () => {
     try {
       const res = await apiClient.get<any>(`/projects/${projectId}/pipeline/summary`);
@@ -334,6 +374,7 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
   useEffect(() => {
     fetchProjectData();
     fetchSummaryData();
+    fetchMoleculesForAnalytics();
   }, [projectId]);
 
   useEffect(() => {
@@ -623,6 +664,33 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
               <p className="text-[13px] font-medium leading-relaxed text-text/80">
                 {project.objective}
               </p>
+            </section>
+
+            {/* Analytics Dashboard (Recovered) */}
+            <section className="space-y-4">
+              <SectionHeader title="Molecular Analytics Dashboard" description="Live distributions of generated candidates." />
+              {metricsLoading ? (
+                <div className="grid gap-6 lg:grid-cols-2">
+                   <ChartSkeleton type="chart" className="col-span-2 md:col-span-1" />
+                   <ChartSkeleton type="chart" className="col-span-2 md:col-span-1" />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <DatasetInsightsPanel 
+                    totalDatasets={2} 
+                    activeDataset="Default Project Generative Set"
+                    totalMolecules={molecules.length || 0}
+                  />
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <MwDistributionChart 
+                      distribution={generateDistribution(molecules.map((m: any) => m.properties?.mw || m.properties?.exact_mass || 400).filter(Boolean), 15)} 
+                    />
+                    <LogpDistributionChart 
+                      distribution={generateDistribution(molecules.map((m: any) => m.properties?.logp || 2.5).filter(Boolean), 15)} 
+                    />
+                  </div>
+                </div>
+              )}
             </section>
 
             {/* Pipeline Progress */}

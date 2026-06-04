@@ -16,6 +16,7 @@
     "test:e2e:live-workflow": "playwright test tests/e2e/live-scientific-workflow.spec.ts"
   },
   "dependencies": {
+    "@rdkit/rdkit": "^2025.3.4-1.0.0",
     "@tanstack/react-table": "^8.20.6",
     "3dmol": "^2.5.4",
     "framer-motion": "^12.38.0",

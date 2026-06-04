@@ -56,6 +56,7 @@ function VisualizationViewContent({ projectId: propProjectId }: { projectId?: st
   const [selectedProteinId, setSelectedProteinId] = useState<string>("");
   const [selectedLigandId, setSelectedLigandId] = useState<string>("");
   const [selectedPose, setSelectedPose] = useState<any>(null);
+  const [selectedPoseProperties, setSelectedPoseProperties] = useState<any>(null);
 
   const [viewerSource, setViewerSource] = useState<any>(null);
   const [viewerLoading, setViewerLoading] = useState<boolean>(false);
@@ -66,10 +67,10 @@ function VisualizationViewContent({ projectId: propProjectId }: { projectId?: st
 
   // Stats cards states
   const [stats, setStats] = useState({
-    affinity: "-10.2",
-    cnnScore: "0.94",
-    hBondsCount: "4",
-    rmsd: "1.2Å"
+    affinity: "Not Available",
+    cnnScore: "Not Available",
+    hBondsCount: "Not Available",
+    rmsd: "Not Available"
   });
 
   // Fetch initial viewer assets
@@ -107,9 +108,9 @@ function VisualizationViewContent({ projectId: propProjectId }: { projectId?: st
           if (poseList.length > 0) {
             const mappedPoses = poseList.map((p, idx) => ({
               id: p.metadata?.compound_id || p.filename || `Pose ${idx + 1}`,
-              affinity: p.metadata?.binding_affinity_kcal_mol || -8.5,
-              cnnScore: p.metadata?.cnn_pose_score || 0.85,
-              rmsd: 1.0,
+              affinity: p.metadata?.binding_affinity_kcal_mol !== undefined && p.metadata.binding_affinity_kcal_mol !== null ? p.metadata.binding_affinity_kcal_mol : null,
+              cnnScore: p.metadata?.cnn_pose_score !== undefined && p.metadata.cnn_pose_score !== null ? p.metadata.cnn_pose_score : null,
+              rmsd: null,
               status: "completed",
               result_id: p.linked_result_id || p.asset_id,
               pose_file_id: p.file_id
@@ -172,15 +173,27 @@ function VisualizationViewContent({ projectId: propProjectId }: { projectId?: st
     if (isDemoMode()) {
       if (selectedPose) {
         setStats({
-          affinity: String(selectedPose.affinity),
-          cnnScore: String(selectedPose.cnnScore),
+          affinity: selectedPose.affinity !== null && selectedPose.affinity !== undefined ? String(selectedPose.affinity) : "Not Available",
+          cnnScore: selectedPose.cnnScore !== null && selectedPose.cnnScore !== undefined ? String(selectedPose.cnnScore) : "Not Available",
           hBondsCount: "4",
-          rmsd: `${selectedPose.rmsd}Å`
+          rmsd: selectedPose.rmsd !== null && selectedPose.rmsd !== undefined ? `${selectedPose.rmsd}Å` : "Not Available"
         });
         setViewerSource({
           format: "smiles",
           value: "CC(=O)OC1=CC=CC=C1C(=O)O",
           label: selectedPose.id
+        });
+        setSelectedPoseProperties({
+          scores: {
+            binding_affinity_kcal_mol: selectedPose.affinity,
+            cnn_pose_score: selectedPose.cnnScore
+          },
+          molecule_properties: {
+            mw: 180.16,
+            logp: 1.19,
+            qed: 0.73,
+            tpsa: 63.3
+          }
         });
       }
       return;
@@ -188,6 +201,7 @@ function VisualizationViewContent({ projectId: propProjectId }: { projectId?: st
 
     if (!selectedPose || !selectedPose.pose_file_id) {
       setViewerSource(null);
+      setSelectedPoseProperties(null);
       return;
     }
 
@@ -201,15 +215,16 @@ function VisualizationViewContent({ projectId: propProjectId }: { projectId?: st
         const metadataRes = await apiClient.get<any>(`/projects/${projectId}/viewer/pose/${selectedPose.result_id}`);
         if (metadataRes.success && metadataRes.data) {
           const data = metadataRes.data;
+          setSelectedPoseProperties(data);
           
           // Update stats dynamically
-          const aff = data.scores?.binding_affinity_kcal_mol !== undefined ? String(data.scores.binding_affinity_kcal_mol) : "-8.5";
-          const cnn = data.scores?.cnn_pose_score !== undefined ? String(data.scores.cnn_pose_score) : "0.85";
+          const aff = data.scores?.binding_affinity_kcal_mol !== undefined && data.scores?.binding_affinity_kcal_mol !== null ? String(data.scores.binding_affinity_kcal_mol) : "Not Available";
+          const cnn = data.scores?.cnn_pose_score !== undefined && data.scores?.cnn_pose_score !== null ? String(data.scores.cnn_pose_score) : "Not Available";
           setStats(prev => ({
             ...prev,
             affinity: aff,
             cnnScore: cnn,
-            rmsd: selectedPose.rmsd ? `${selectedPose.rmsd}Å` : "1.0Å"
+            rmsd: selectedPose.rmsd !== null && selectedPose.rmsd !== undefined ? `${selectedPose.rmsd}Å` : "Not Available"
           }));
 
           // Download visualizable structure file content
@@ -335,7 +350,15 @@ function VisualizationViewContent({ projectId: propProjectId }: { projectId?: st
             {/* Fenced 3D Canvas component */}
             <div className="flex-1 bg-slate-950 border border-border/20 rounded-2xl min-h-[500px] overflow-hidden relative">
               {viewerSource ? (
-                <ThreeDMoleculeViewer source={viewerSource} />
+                <ThreeDMoleculeViewer 
+                  source={viewerSource} 
+                  affinity={selectedPoseProperties?.scores?.binding_affinity_kcal_mol}
+                  hBonds={stats.hBondsCount === "Not Available" ? null : stats.hBondsCount}
+                  qed={selectedPoseProperties?.molecule_properties?.qed}
+                  mw={selectedPoseProperties?.molecule_properties?.mw}
+                  logp={selectedPoseProperties?.molecule_properties?.logp}
+                  cnnScore={selectedPoseProperties?.scores?.cnn_pose_score}
+                />
               ) : (
                 <div className="h-full w-full flex items-center justify-center text-muted-text/30 font-bold uppercase tracking-widest text-xs">
                    No structure loaded

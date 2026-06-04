@@ -9,6 +9,17 @@ function joinClasses(...classes: Array<string | undefined | false>) {
   return classes.filter(Boolean).join(" ");
 }
 
+function renderMetric(val: any, unit?: string) {
+  if (val === undefined || val === null || val === "" || String(val).toLowerCase() === "null") {
+    return <span className="text-xs text-muted-text/40 italic font-medium">Not Available</span>;
+  }
+  return (
+    <>
+      {val}{unit ? " " : ""}{unit && <span className="text-[10px] text-text-secondary/50 font-medium">{unit}</span>}
+    </>
+  );
+}
+
 export interface ThreeDMoleculeViewerSource {
   format: "smiles" | "pdb" | "sdf";
   value: string;
@@ -33,6 +44,15 @@ export interface ThreeDMoleculeViewerProps {
   className?: string;
   initialRepresentation?: "stick" | "sphere" | "cartoon";
   showSurfaceControl?: boolean;
+  affinity?: number | string | null;
+  hBonds?: number | string | null;
+  qed?: number | string | null;
+  mw?: number | string | null;
+  logp?: number | string | null;
+  cnnScore?: number | string | null;
+  toxicity?: string | null;
+  mdStabilityClass?: string | null;
+  mdRmsd?: number | string | null;
 }
 
 type ViewerRepresentation = "stick" | "sphere" | "cartoon";
@@ -50,6 +70,15 @@ export default function ThreeDMoleculeViewer({
   className,
   initialRepresentation = "stick",
   showSurfaceControl = true,
+  affinity,
+  hBonds,
+  qed,
+  mw,
+  logp,
+  cnnScore,
+  toxicity,
+  mdStabilityClass,
+  mdRmsd,
 }: ThreeDMoleculeViewerProps) {
   const [internalSelectedId, setInternalSelectedId] = useState(moleculeOptions?.[0]?.id ?? "");
   const [activeSourceSlot, setActiveSourceSlot] = useState<"primary" | "alternate">("primary");
@@ -429,20 +458,28 @@ export default function ThreeDMoleculeViewer({
               <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary/60">Simulation Telemetry</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl border p-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
+                  <p className="text-[9px] font-bold text-text-secondary uppercase">MD Stability</p>
+                  <p className="text-lg font-black text-cyan-400">{renderMetric(mdStabilityClass)}</p>
+                </div>
+                <div className="rounded-xl border p-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
+                  <p className="text-[9px] font-bold text-text-secondary uppercase">MD RMSD</p>
+                  <p className="text-lg font-black text-cyan-500">{renderMetric(mdRmsd, "Å")}</p>
+                </div>
+                <div className="rounded-xl border p-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
                   <p className="text-[9px] font-bold text-text-secondary uppercase">Affinity</p>
-                  <p className="text-lg font-black text-primary">-9.2 <span className="text-[10px] text-text-secondary/50">kcal/mol</span></p>
+                  <p className="text-lg font-black text-primary">{renderMetric(affinity, "kcal/mol")}</p>
                 </div>
                 <div className="rounded-xl border p-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
                   <p className="text-[9px] font-bold text-text-secondary uppercase">H-Bonds</p>
-                  <p className="text-lg font-black text-success">4 <span className="text-[10px] text-text-secondary/50">active</span></p>
+                  <p className="text-lg font-black text-success">{renderMetric(hBonds, "active")}</p>
                 </div>
                 <div className="rounded-xl border p-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
                   <p className="text-[9px] font-bold text-text-secondary uppercase">Quantum</p>
-                  <p className="text-lg font-black text-accent">0.96 <span className="text-[10px] text-text-secondary/50">QSVM</span></p>
+                  <p className="text-lg font-black text-accent">{renderMetric(qed, "QSVM")}</p>
                 </div>
                 <div className="rounded-xl border p-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
                   <p className="text-[9px] font-bold text-text-secondary uppercase">Toxicity</p>
-                  <p className="text-lg font-black text-success">Low <span className="text-[10px] text-text-secondary/50">score</span></p>
+                  <p className="text-lg font-black text-success">{renderMetric(toxicity, "score")}</p>
                 </div>
               </div>
             </div>
@@ -453,19 +490,19 @@ export default function ThreeDMoleculeViewer({
               <div className="rounded-xl border p-4 space-y-3 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] font-bold text-text-secondary">MW</span>
-                  <span className="text-[11px] font-black text-text">421.4 g/mol</span>
+                  <span className="text-[11px] font-black text-text">{renderMetric(mw, "g/mol")}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] font-bold text-text-secondary">LogP</span>
-                  <span className="text-[11px] font-black text-text">3.82</span>
+                  <span className="text-[11px] font-black text-text">{renderMetric(logp)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] font-bold text-text-secondary">QED</span>
-                  <span className="text-[11px] font-black text-text">0.88</span>
+                  <span className="text-[11px] font-black text-text">{renderMetric(qed)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[11px] font-bold text-text-secondary">GNINA Conf.</span>
-                  <span className="text-[11px] font-black text-accent">98.4%</span>
+                  <span className="text-[11px] font-black text-accent">{renderMetric(cnnScore !== undefined && cnnScore !== null && cnnScore !== "" && String(cnnScore).toLowerCase() !== "null" ? `${Math.round(Number(cnnScore) * 1000) / 10}%` : null)}</span>
                 </div>
               </div>
             </div>
