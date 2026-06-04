@@ -5,6 +5,9 @@ export { default as DatasetSelector } from "./DatasetSelector";
 export { default as DatasetInsightsPanel } from "./DatasetInsightsPanel";
 export { default as LogpDistributionChart } from "./LogpDistributionChart";
 export { default as MwDistributionChart } from "./MwDistributionChart";
+export { default as QedDistributionChart } from "./QedDistributionChart";
+export { default as TpsaDistributionChart } from "./TpsaDistributionChart";
 export { default as QedVsMwChart } from "./QedVsMwChart";
 export { default as TpsaVsLogpChart } from "./TpsaVsLogpChart";
 export { default as AssistantWidget } from "./AssistantWidget";
+

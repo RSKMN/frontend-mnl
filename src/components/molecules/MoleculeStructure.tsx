@@ -10,17 +10,42 @@ const loadRDKit = () => {
   if (rdkitModule) return Promise.resolve(rdkitModule);
   if (!initRDKitPromise) {
     initRDKitPromise = new Promise((resolve, reject) => {
-      // @ts-ignore
       import("@rdkit/rdkit")
-        .then((RDKit) => {
-          RDKit.default()
+        .then((module: any) => {
+          let initFn: any = null;
+          if (typeof module === "function") {
+            initFn = module;
+          } else if (module && typeof module.default === "function") {
+            initFn = module.default;
+          } else if (typeof window !== "undefined" && typeof (window as any).initRDKitModule === "function") {
+            initFn = (window as any).initRDKitModule;
+          }
+
+          if (!initFn) {
+            reject(new Error("Could not find RDKit initialization function"));
+            return;
+          }
+
+          initFn()
             .then((m: any) => {
               rdkitModule = m;
               resolve(rdkitModule);
             })
             .catch(reject);
         })
-        .catch(reject);
+        .catch((err) => {
+          // If direct import fails, try window.initRDKitModule as a last resort
+          if (typeof window !== "undefined" && typeof (window as any).initRDKitModule === "function") {
+            (window as any).initRDKitModule()
+              .then((m: any) => {
+                rdkitModule = m;
+                resolve(rdkitModule);
+              })
+              .catch(reject);
+          } else {
+            reject(err);
+          }
+        });
     });
   }
   return initRDKitPromise;
@@ -41,10 +66,16 @@ export default function MoleculeStructure({
 }: MoleculeStructureProps) {
   const [svg, setSvg] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [rdkitFailed, setRdkitFailed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let mounted = true;
+    
+    // Reset states on smiles/dimensions change
+    setSvg(null);
+    setError(false);
+    setRdkitFailed(false);
     
     // Simple Intersection Observer to only render when visible
     const observer = new IntersectionObserver(
@@ -69,7 +100,7 @@ export default function MoleculeStructure({
             })
             .catch((err) => {
               console.error("Failed to load RDKit:", err);
-              if (mounted) setError(true);
+              if (mounted) setRdkitFailed(true);
             });
           observer.disconnect();
         }
@@ -95,6 +126,13 @@ export default function MoleculeStructure({
     >
       {svg ? (
         <div dangerouslySetInnerHTML={{ __html: svg }} />
+      ) : rdkitFailed ? (
+        <span 
+          className="text-[10px] font-mono text-gray-500 opacity-70 truncate max-w-full px-1 text-center" 
+          title={smiles}
+        >
+          {smiles}
+        </span>
       ) : error ? (
         <span className="text-[10px] font-mono text-error">Invalid SMILES</span>
       ) : (
@@ -103,3 +141,4 @@ export default function MoleculeStructure({
     </div>
   );
 }
+
