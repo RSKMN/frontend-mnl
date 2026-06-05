@@ -257,7 +257,7 @@ export default function ExperimentDetailPage() {
               <div className="flex flex-col gap-1">
                 <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Experiment Status</span>
                 <StatusBadge 
-                  status={statusStr === "completed" ? "completed" : statusStr === "failed" ? "error" : "running"} 
+                  status={statusStr === "completed" ? "completed" : statusStr === "failed" ? "failed" : "running"} 
                   label={statusStr.toUpperCase()} 
                 />
               </div>
