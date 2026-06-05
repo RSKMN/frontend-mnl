@@ -15,97 +15,10 @@ import {
 import { useRouter } from "next/navigation";
 import { isDemoMode, apiClient } from "@/services/api";
 
-const MOCK_PROJECTS = [
-  { 
-    id: "egfr-nsclc",
-    name: "EGFR NSCLC Discovery Program", 
-    disease: "Lung Cancer",
-    target: "EGFR (L858R)", 
-    stage: "Lead Optimization",
-    status: "running" as StatusType, 
-    progress: 68, 
-    candidates: { generated: 1240, filtered: 450 }, 
-    lastRun: "2 mins ago",
-    owner: "Dr. Sarah Chen",
-    tags: ["Oncology", "Docking", "GNINA", "Active"]
-  },
-  { 
-    id: "parp1-oncology",
-    name: "PARP1 Oncology Program", 
-    disease: "Breast/Ovarian",
-    target: "PARP1 / DNA Repair", 
-    stage: "Fragment Screening",
-    status: "completed" as StatusType, 
-    progress: 100, 
-    candidates: { generated: 5600, filtered: 210 }, 
-    lastRun: "4 hours ago",
-    owner: "David Kim",
-    tags: ["Oncology", "Quantum", "ADMET", "Completed"]
-  },
-  { 
-    id: "pik3ca-screening",
-    name: "PIK3CA Molecular Screening", 
-    disease: "Multiple Solid Tumors",
-    target: "PIK3CA (H1047R)", 
-    stage: "Target Validation",
-    status: "active" as StatusType, 
-    progress: 12, 
-    candidates: { generated: 8900, filtered: 1240 }, 
-    lastRun: "1 day ago",
-    owner: "Dr. Elena Rossi",
-    tags: ["Oncology", "High-Throughput", "Active"]
-  },
-  { 
-    id: "kras-exploratory",
-    name: "KRAS G12D Exploratory Campaign", 
-    disease: "Pancreatic Cancer",
-    target: "KRAS G12D", 
-    stage: "Hit Identification",
-    status: "running" as StatusType, 
-    progress: 42, 
-    candidates: { generated: 12500, filtered: 890 }, 
-    lastRun: "5 hours ago",
-    owner: "Michael Wong",
-    tags: ["Oncology", "GNINA", "Quantum", "Running"]
-  },
-  { 
-    id: "brd4-epigenetic",
-    name: "BRD4 Epigenetic Targeting", 
-    disease: "Leukemia",
-    target: "BRD4 Bromodomain", 
-    stage: "Completed",
-    status: "completed" as StatusType, 
-    progress: 100, 
-    candidates: { generated: 4500, filtered: 180 }, 
-    lastRun: "3 days ago",
-    owner: "Dr. Sarah Chen",
-    tags: ["Oncology", "Epigenetics", "Completed"]
-  },
-  { 
-    id: "cdk9-inhibitor",
-    name: "CDK9 Inhibitor Design", 
-    disease: "Lymphoma",
-    target: "CDK9 / P-TEFb", 
-    stage: "Lead Optimization",
-    status: "warning" as StatusType, 
-    progress: 85, 
-    candidates: { generated: 2100, filtered: 95 }, 
-    lastRun: "1 week ago",
-    owner: "David Kim",
-    tags: ["Oncology", "ADMET", "Warning"]
-  },
-];
-
-const RECENT_ACTIVITY = [
-  { id: 1, action: "GNINA rescoring completed", project: "EGFR NSCLC", time: "12 mins ago", type: "success" },
-  { id: 2, action: "ADMET filter produced warnings", project: "CDK9 Inhibitor", time: "1 hour ago", type: "warning" },
-  { id: 3, action: "Quantum reranking queued", project: "KRAS G12D", time: "3 hours ago", type: "info" },
-  { id: 4, action: "Candidate dossier generated", project: "PARP1 Oncology", time: "5 hours ago", type: "success" },
-  { id: 5, action: "Dataset uploaded", project: "PIK3CA Screening", time: "1 day ago", type: "info" },
-];
-
+import Link from "next/link";
 export default function WorkspacePage() {
   const [projects, setProjects] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [diseaseFilter, setDiseaseFilter] = useState("all");
@@ -116,7 +29,7 @@ export default function WorkspacePage() {
     try {
       setIsLoading(true);
       if (isDemoMode()) {
-        setProjects(MOCK_PROJECTS);
+        setProjects([]);
         return;
       }
       const wsId = localStorage.getItem("active_workspace_id");
@@ -185,6 +98,52 @@ export default function WorkspacePage() {
           };
         });
         setProjects(mapped);
+
+        // Compute global recent activity
+        const allActivity: any[] = [];
+        items.forEach((proj: any) => {
+          const details = projectDetailsMap[proj.id];
+          if (!details) return;
+          details.experiments.forEach((exp: any) => {
+            allActivity.push({
+              id: `exp-${exp.id}`,
+              action: `Experiment ${exp.run_type || "started"}`,
+              project: proj.name,
+              projectId: proj.id,
+              date: new Date(exp.updated_at || exp.created_at || 0),
+              type: exp.status === "failed" ? "warning" : "info",
+              link: `/experiments/${exp.id}`
+            });
+          });
+          details.reports.forEach((rep: any) => {
+            allActivity.push({
+              id: `rep-${rep.id}`,
+              action: `Report generated: ${rep.title}`,
+              project: proj.name,
+              projectId: proj.id,
+              date: new Date(rep.created_at || 0),
+              type: "success",
+              link: `/projects/${proj.id}/reports`
+            });
+          });
+        });
+        allActivity.sort((a, b) => b.date.getTime() - a.date.getTime());
+        
+        // Format relative time
+        const formattedActivity = allActivity.slice(0, 8).map(act => {
+          const diffMs = new Date().getTime() - act.date.getTime();
+          const diffMins = Math.floor(diffMs / 60000);
+          const diffHours = Math.floor(diffMins / 60);
+          const diffDays = Math.floor(diffHours / 24);
+          let timeStr = "just now";
+          if (diffDays > 0) timeStr = `${diffDays}d ago`;
+          else if (diffHours > 0) timeStr = `${diffHours}h ago`;
+          else if (diffMins > 0) timeStr = `${diffMins}m ago`;
+          
+          return { ...act, time: timeStr };
+        });
+        setRecentActivity(formattedActivity);
+
       } else {
         setProjects([]);
       }
@@ -398,32 +357,34 @@ export default function WorkspacePage() {
             <div className="ui-card-surface p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <span className="text-[24px] font-black text-text">14</span>
+                  <span className="text-[24px] font-black text-text">{projects.length < 10 ? `0${projects.length}` : projects.length}</span>
                   <span className="block text-[9px] font-bold uppercase tracking-widest text-muted-text/50">Total Programs</span>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[24px] font-black text-accent">06</span>
+                  <span className="text-[24px] font-black text-accent">{projects.filter(p => p.status === 'active' || p.status === 'running').length < 10 ? `0${projects.filter(p => p.status === 'active' || p.status === 'running').length}` : projects.filter(p => p.status === 'active' || p.status === 'running').length}</span>
                   <span className="block text-[9px] font-bold uppercase tracking-widest text-muted-text/50">Active Now</span>
                 </div>
               </div>
-              <div className="h-1.5 w-full bg-muted-bg rounded-full overflow-hidden flex">
-                <div className="h-full bg-accent" style={{ width: '45%' }} />
-                <div className="h-full bg-success" style={{ width: '30%' }} />
-                <div className="h-full bg-warning" style={{ width: '15%' }} />
-                <div className="h-full bg-muted-text/20" style={{ width: '10%' }} />
-              </div>
+              {projects.length > 0 && (
+                <div className="h-1.5 w-full bg-muted-bg rounded-full overflow-hidden flex">
+                  <div className="h-full bg-accent" style={{ width: `${(projects.filter(p => p.status === 'running').length / projects.length) * 100}%` }} />
+                  <div className="h-full bg-success" style={{ width: `${(projects.filter(p => p.status === 'completed').length / projects.length) * 100}%` }} />
+                  <div className="h-full bg-warning" style={{ width: `${(projects.filter(p => p.status === 'warning' || p.status === 'failed').length / projects.length) * 100}%` }} />
+                  <div className="h-full bg-muted-text/20" style={{ width: `${(projects.filter(p => p.status === 'active' || p.status === 'draft').length / projects.length) * 100}%` }} />
+                </div>
+              )}
               <div className="flex flex-wrap gap-x-4 gap-y-2">
                 <div className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full bg-accent" />
-                  <span className="text-[9px] font-bold uppercase text-muted-text/70">Running (6)</span>
+                  <span className="text-[9px] font-bold uppercase text-muted-text/70">Running ({projects.filter(p => p.status === 'running').length})</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full bg-success" />
-                  <span className="text-[9px] font-bold uppercase text-muted-text/70">Completed (4)</span>
+                  <span className="text-[9px] font-bold uppercase text-muted-text/70">Completed ({projects.filter(p => p.status === 'completed').length})</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="h-2 w-2 rounded-full bg-warning" />
-                  <span className="text-[9px] font-bold uppercase text-muted-text/70">Warning (2)</span>
+                  <span className="text-[9px] font-bold uppercase text-muted-text/70">Warning ({projects.filter(p => p.status === 'warning' || p.status === 'failed').length})</span>
                 </div>
               </div>
             </div>
@@ -434,8 +395,8 @@ export default function WorkspacePage() {
             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60">Recent Project Activity</h4>
             <div className="ui-card-surface p-0 overflow-hidden">
               <div className="divide-y divide-border/40">
-                {RECENT_ACTIVITY.map((item) => (
-                  <div key={item.id} className="p-4 hover:bg-surface-subtle/20 transition-colors">
+                {recentActivity.length > 0 ? recentActivity.map((item) => (
+                  <Link key={item.id} href={item.link} className="block p-4 hover:bg-surface-subtle/20 transition-colors">
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <p className="text-[11px] font-bold text-text/90 leading-tight">{item.action}</p>
@@ -445,8 +406,10 @@ export default function WorkspacePage() {
                       </div>
                       <span className="text-[8px] font-black text-muted-text/40 uppercase whitespace-nowrap">{item.time}</span>
                     </div>
-                  </div>
-                ))}
+                  </Link>
+                )) : (
+                  <div className="p-4 text-[10px] text-muted-text/60 text-center font-bold">No recent activity found in backend.</div>
+                )}
               </div>
               <button className="w-full py-3 text-[9px] font-black uppercase tracking-widest text-muted-text hover:text-accent hover:bg-accent/5 transition-all border-t border-border/40">
                 View All Activity

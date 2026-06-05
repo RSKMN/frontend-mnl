@@ -355,7 +355,12 @@ export default function DashboardPage() {
 
       <section className="space-y-4">
         <SectionHeader title="Molecular Property Distributions" description="Aggregated chemical space metrics for the current screening batch." />
-        <ChartsSection />
+        <ChartsSection 
+          molecules={realMolecules} 
+          experiments={realExperiments} 
+          projects={realProjects} 
+          reports={realReports} 
+        />
       </section>
     </FadeIn>
   );

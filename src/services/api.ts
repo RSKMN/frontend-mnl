@@ -273,13 +273,7 @@ async function request<T>(
       headers: mergedHeaders,
       signal: controller.signal,
     });
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("backend-connection-status", { detail: { connected: true } }));
-    }
   } catch (error) {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("backend-connection-status", { detail: { connected: false } }));
-    }
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new ApiError(`Request timeout after ${timeoutMs}ms`, 408, undefined, url);
     }

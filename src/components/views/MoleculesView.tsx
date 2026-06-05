@@ -8,8 +8,7 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import SectionHeader from "@/components/ui/SectionHeader";
 import EmptyState from "@/components/ui/EmptyState";
 import { apiClient } from "@/services/api";
-
-
+import MoleculeStructure from "@/components/molecules/MoleculeStructure";
 
 
 
@@ -221,16 +220,7 @@ export default function MoleculesView({ projectId }: MoleculesViewProps) {
 
                   <div className="flex items-start gap-4">
                     <div className="w-24 h-24 rounded-lg bg-white/5 border border-border/40 flex items-center justify-center p-2 shrink-0">
-                      {/* Simple 2D Molecule Placeholder */}
-                      <div className="w-full h-full relative opacity-40 group-hover:opacity-80 transition-opacity">
-                         <svg viewBox="0 0 100 100" className="w-full h-full text-text/40">
-                           <path d="M50 20 L80 40 L80 70 L50 90 L20 70 L20 40 Z" fill="none" stroke="currentColor" strokeWidth="2" />
-                           <circle cx="50" cy="20" r="4" fill="currentColor" />
-                           <circle cx="80" cy="40" r="4" fill="currentColor" />
-                           <path d="M50 20 L50 5" stroke="currentColor" strokeWidth="2" />
-                           <text x="45" y="15" className="text-[12px] font-bold">N</text>
-                         </svg>
-                      </div>
+                      <MoleculeStructure smiles={mol.smiles} className="w-full h-full opacity-40 group-hover:opacity-80 transition-opacity" />
                     </div>
                     
                     <div className="min-w-0 flex-1">
@@ -279,6 +269,7 @@ export default function MoleculesView({ projectId }: MoleculesViewProps) {
                   <thead>
                     <tr className="bg-muted-bg/30 text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60 border-b border-border/40">
                       <th className="px-4 py-4">Candidate</th>
+                      <th className="px-4 py-4">2D Structure</th>
                       <th className="px-4 py-4">Target</th>
                       <th className="px-4 py-4 text-center">Docking</th>
                       <th className="px-4 py-4 text-center">ADMET</th>
@@ -299,6 +290,9 @@ export default function MoleculesView({ projectId }: MoleculesViewProps) {
                       >
                         <td className="px-4 py-3 font-mono text-xs font-bold text-text group-hover:text-accent transition-colors">
                           {mol.id}
+                        </td>
+                        <td className="px-4 py-3">
+                          <MoleculeStructure smiles={mol.smiles} width={60} height={40} className="opacity-80 group-hover:opacity-100 transition-opacity" />
                         </td>
                         <td className="px-4 py-3 text-[11px] font-bold text-muted-text">{mol.target}</td>
                         <td className="px-4 py-3 text-center font-mono text-xs text-text">{mol.dockingScore}</td>
