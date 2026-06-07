@@ -216,6 +216,7 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
   // Real-time Orchestration States
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [pipelineSummary, setPipelineSummary] = useState<any>(null);
+  const [pipelineReadiness, setPipelineReadiness] = useState<any>(null);
   const [pollingActive, setPollingActive] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -371,9 +372,21 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
     }
   };
 
+  const fetchReadinessData = async () => {
+    try {
+      const res = await apiClient.get<any>(`/projects/${projectId}/pipeline/readiness`);
+      if (res.success && res.data) {
+        setPipelineReadiness(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to load pipeline readiness", err);
+    }
+  };
+
   useEffect(() => {
     fetchProjectData();
     fetchSummaryData();
+    fetchReadinessData();
     fetchMoleculesForAnalytics();
   }, [projectId]);
 
@@ -407,6 +420,7 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
         if (assignRes.success) {
           alert(`File "${file.name}" uploaded and assigned successfully!`);
           fetchProjectData();
+          fetchReadinessData();
         } else {
           alert("Failed to assign file to inputs.");
         }
@@ -592,19 +606,50 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col items-end gap-3 w-full lg:w-auto mt-4 lg:mt-0">
+            {/* Readiness Panel */}
+            {pipelineReadiness && (
+              <div className="w-full lg:w-96 bg-surface-subtle/30 rounded-lg p-3 border border-border/40 text-xs">
+                <h3 className="font-black uppercase tracking-wider mb-2 flex items-center justify-between text-[10px]">
+                  <span>Pipeline Readiness</span>
+                  {pipelineReadiness.full_pipeline_ready ? (
+                    <span className="text-[9px] text-green-400 bg-green-400/10 px-2 py-0.5 rounded">Fully Ready</span>
+                  ) : pipelineReadiness.generation_ready ? (
+                    <span className="text-[9px] text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded">Generation Only</span>
+                  ) : (
+                    <span className="text-[9px] text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded">Action Required</span>
+                  )}
+                </h3>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div className="flex items-center gap-1">
+                    <StatusBadge status={pipelineReadiness.generation_ready ? "completed" : "failed"} />
+                    <span className="text-[10px]">Generation</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <StatusBadge status={pipelineReadiness.docking_ready ? "completed" : "failed"} />
+                    <span className="text-[10px]">Structural Stages</span>
+                  </div>
+                </div>
+                {pipelineReadiness.missing && pipelineReadiness.missing.length > 0 && (
+                  <div className="mt-1 p-1.5 bg-red-500/10 text-red-400 rounded text-[9px]">
+                    <strong>Missing:</strong> {pipelineReadiness.missing.join(", ")}
+                  </div>
+                )}
+              </div>
+            )}
+
             <ActionButtonGroup>
               <ActionButton 
                 label="Generate Report" 
                 onClick={() => triggerPipeline(["report"])}
-                disabled={pipelineRunning}
+                disabled={pipelineRunning || (pipelineReadiness && !pipelineReadiness.report_ready)}
                 icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 10-8 0v2a2 2 0 002 2h4a2 2 0 002-2zm3-9a9 9 0 1118 0 9 9 0 01-18 0z" /></svg>} 
               />
               <ActionButton 
                 label={pipelineRunning ? "Orchestrating..." : "Run Full Pipeline"} 
                 variant="primary" 
                 onClick={() => triggerPipeline(["target_ranking", "molecule_generation", "filtering", "docking", "gnina", "quantum", "admet", "simulation", "report"])}
-                disabled={pipelineRunning}
+                disabled={pipelineRunning || (pipelineReadiness && !pipelineReadiness.full_pipeline_ready)}
                 icon={
                   pipelineRunning ? (
                     <svg className="animate-spin h-4 w-4 text-bg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
