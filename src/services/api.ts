@@ -878,23 +878,20 @@ export async function getValidationStatus(experimentId: string): Promise<Workspa
 
 
 /** Fetch experiment history from the backend pipeline router. */
-export async function getPipelineExperiments(projectId?: string): Promise<PipelineExperimentItem[]> {
-
+export async function getPipelineExperiments(projectId: string): Promise<PipelineExperimentItem[]> {
   try {
-    const activeProj = projectId || (typeof window !== "undefined" ? localStorage.getItem("active_project_id") : undefined);
-    if (activeProj) {
-      const res = await apiFetch<{ data?: { items?: any[] } }>(`/projects/${activeProj}/experiments`);
-      if (res?.data?.items) {
-        return res.data.items.map((item: any) => ({
-          experiment_id: item.id || item.experiment_id,
-          protein: item.name || item.protein || "Protein",
-          status: item.status,
-          created_at: item.created_at || item.createdAt || new Date().toISOString()
-        }));
-      }
+    if (!projectId) return [];
+    const res = await apiFetch<{ data?: { items?: any[] }, items?: any[] }>(`/projects/${encodeURIComponent(projectId)}/experiments`);
+    const items = res?.data?.items || res?.items;
+    if (items && Array.isArray(items)) {
+      return items.map((item: any) => ({
+        experiment_id: item.id || item.experiment_id,
+        protein: item.name || item.protein || "Protein",
+        status: item.status || "completed",
+        created_at: item.created_at || item.createdAt || new Date().toISOString()
+      }));
     }
-    const data = await apiFetch<PipelineExperimentsResponse>("/pipeline/experiments");
-    return Array.isArray(data.experiments) ? data.experiments : [];
+    return [];
   } catch (err) {
     console.error("DEBUG: getPipelineExperiments error:", err);
     throw err;

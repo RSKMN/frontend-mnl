@@ -60,7 +60,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Dashboard", href: "/dashboard", icon: "circleGauge" },
       { label: "Research Projects", href: "/research-projects", icon: "folderKanban" },
-      { label: "Experiments", href: "/history", icon: "flask" },
       { label: "Reports", href: "/results", icon: "fileText" },
     ],
   },
@@ -113,7 +112,6 @@ const NAV_GROUPS: NavGroup[] = [
 
 const PAGE_CONTEXTS: Array<{ href: string; title: string; breadcrumb: string }> = [
   { href: "/research-projects", title: "Research Projects", breadcrumb: "QuDrugForge™ / Research Projects" },
-  { href: "/history", title: "Experiments", breadcrumb: "Research Projects / Experiment history" },
   { href: "/results", title: "Reports", breadcrumb: "Reports / Candidate evidence packages" },
   { href: "/targets", title: "Targets", breadcrumb: "Research / Target intelligence" },
   { href: "/molecules", title: "Molecules", breadcrumb: "Research / Molecular library" },
@@ -263,11 +261,6 @@ function isSidebarItemActive(pathname: string, currentSearch: string, label: str
              normPath.startsWith("/research-projects/") || 
              normPath === "/projects" || 
              normPath.startsWith("/projects/");
-    case "Experiments":
-      return normPath === "/history" || 
-             normPath.startsWith("/history/") || 
-             normPath === "/experiments" || 
-             normPath.startsWith("/experiments/");
     case "Reports":
       return normPath === "/results" || 
              normPath.startsWith("/results/") || 

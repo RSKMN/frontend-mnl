@@ -58,14 +58,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       icon: "📁",
       action: () => { router.push("/research-projects"); onClose(); }
     },
-    {
-      id: "nav-exp",
-      title: "Go to Experiments",
-      category: "Navigation",
-      shortcut: ["G", "E"],
-      icon: "🧪",
-      action: () => { router.push("/history"); onClose(); }
-    },
+
     {
       id: "nav-rep",
       title: "Go to Reports",

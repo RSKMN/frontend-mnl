@@ -12,6 +12,7 @@ export const ProjectRoutes = {
 
   // Research Area
   targets: (projectId: string) => `/projects/${projectId}/targets`,
+  experiments: (projectId: string) => `/projects/${projectId}/experiments`,
   molecules: (projectId: string) => `/projects/${projectId}/candidates`,
   docking: (projectId: string) => `/projects/${projectId}/docking`,
   gnina: (projectId: string) => `/projects/${projectId}/gnina`,
@@ -26,7 +27,6 @@ export const ProjectRoutes = {
 
   // Global cross-project views (used outside of specific project context)
   global: {
-    history: () => '/history',
     reports: () => '/results',
     researchProjects: () => '/research-projects'
   }

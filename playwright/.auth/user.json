@@ -6,7 +6,7 @@
       "localStorage": [
         {
           "name": "auth_token",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODA4MzM2NzEsInN1YiI6IjZhMjU0Zjc3NDM0ODE3NjQ4ODBhMjFmZiIsImVtYWlsIjoiZTJlX3J1bm5lcl8wZTY0NGRlN0BxdWluZm9zeXMuY29tIiwidHlwZSI6ImFjY2VzcyIsImp0aSI6IjA4YWFmNzkyLTY3MDAtNDYwNS1hMzhkLTliYzg4ZjdkYjY3YyJ9.2VtdERS8wiAW9BfEyDOmyf9Xa_PeUGJH4z27wtOTD30"
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODA4NTYwOTMsInN1YiI6IjZhMjVhNzBkMjEyMzRhNDcyMzcyNGExMSIsImVtYWlsIjoiZTJlX3J1bm5lcl9lNjgzMzcwZEBxdWluZm9zeXMuY29tIiwidHlwZSI6ImFjY2VzcyIsImp0aSI6IjBiMmIyMWM4LTJkMDMtNDlmYS04NjA2LWM5ODBiZWQ5YjdkNiJ9.1_Jl7OsRs4BUpo9_Xn1LcDPwDgByeNCwV7oksjCJrPQ"
         },
         {
           "name": "qdrugforge.theme",

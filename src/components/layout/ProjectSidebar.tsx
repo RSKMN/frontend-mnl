@@ -95,6 +95,7 @@ export function ProjectSidebar({
       label: "Project",
       items: [
         { label: "Overview", href: ProjectRoutes.dashboard(projectId), icon: "folderKanban" },
+        { label: "Experiments", href: ProjectRoutes.experiments(projectId), icon: "flask" },
         { label: "Reports", href: ProjectRoutes.reports(projectId), icon: "fileText" },
       ],
     },
@@ -122,7 +123,6 @@ export function ProjectSidebar({
       label: "Global Navigation",
       items: [
         { label: "All Projects", href: ProjectRoutes.global.researchProjects(), icon: "folderKanban" },
-        { label: "Experiments", href: ProjectRoutes.global.history(), icon: "flask" },
       ],
     }
   ];
@@ -135,6 +135,8 @@ export function ProjectSidebar({
     switch(label) {
         case "Overview":
             return normPath === `/projects/${projectId.toLowerCase()}`;
+        case "Experiments":
+            return normPath.includes("/experiments");
         case "Reports":
             return normPath.includes("/reports");
         case "Targets":

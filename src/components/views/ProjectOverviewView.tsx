@@ -24,6 +24,7 @@ import {
   ChartSkeleton 
 } from "@/components/dashboard";
 import { apiClient, getApiBaseUrl } from "@/services";
+import { ProjectRoutes } from "@/lib/projectRoutes";
 
 const generateDistribution = (values: number[], numBins: number = 10) => {
   if (!values.length) return { bins: [], counts: [] };
@@ -765,7 +766,7 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
                         <div className="flex items-center gap-4">
                           <StatusBadge status={exp.status === "importing_results" ? "running" : exp.status} size="sm" />
                           <Link 
-                            href={`/history?experiment_id=${exp.experiment_id}`}
+                            href={`${ProjectRoutes.experiments(projectId)}?experiment_id=${exp.experiment_id}`}
                             className="px-3 py-1 text-[9px] font-black uppercase tracking-widest text-bg bg-accent hover:bg-accent/80 rounded"
                           >
                             Analyze Results
