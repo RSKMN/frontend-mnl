@@ -217,7 +217,8 @@ function buildUrl(
     return query ? `${endpointPath}?${query}` : endpointPath;
   }
 
-  const base = new URL(`${API_BASE_URL}/`);
+  const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "http://localhost:3000";
+  const base = new URL(`${API_BASE_URL}/`, API_BASE_URL.startsWith("http") ? undefined : origin);
   const normalizedEndpoint = path.replace(/^\/+/, "");
   const basePath = base.pathname.replace(/\/+$/, "");
   base.pathname = `${basePath}/${normalizedEndpoint}`.replace(/\/+/g, "/");
