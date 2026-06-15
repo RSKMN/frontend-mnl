@@ -248,6 +248,7 @@ export default function ReportsView({ projectId: propProjectId }: ReportsViewPro
   const reportStats = useMemo(
     () => [
       { label: "Total reports", value: summary?.total_reports ?? 0, note: "All report records" },
+      { label: "Available", value: (summary as any)?.available_reports ?? summary?.completed_reports ?? 0, note: "Ready to view" },
       { label: "Completed", value: summary?.completed_reports ?? 0, note: "Finished exports" },
       { label: "Drafts", value: summary?.draft_reports ?? 0, note: "Needs generation" },
       { label: "Imported", value: summary?.imported_reports ?? 0, note: "q-ai-drug artifacts" },

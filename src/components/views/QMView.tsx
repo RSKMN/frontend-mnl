@@ -44,7 +44,7 @@ export default function QMView({ projectId }: QMViewProps) {
       if (!activeProjectId) return null;
       
       const [qmRes, summaryRes] = await Promise.all([
-        apiClient.get<any>(`/projects/${activeProjectId}/quantum/qml-scores`),
+        apiClient.get<any>(`/projects/${activeProjectId}/quantum/descriptors?limit=100`),
         apiClient.get<any>(`/projects/${activeProjectId}/pipeline/summary`)
       ]);
 
@@ -143,16 +143,21 @@ export default function QMView({ projectId }: QMViewProps) {
 
   const displayQuantum = realQuantum.map((r: any) => ({
     candidate: r.compound_id || "CAND-QML",
-    classicalRank: r.qm_descriptors?.classical_rank ?? "Not Available",
-    quantumRank: (r.quantum_rank || r.rank) ?? "Not Available",
-    qmlScore: r.qml_score !== undefined && r.qml_score !== null ? r.qml_score : "-",
+    classicalRank: r.qm_descriptors?.classical_rank ?? r.rank ?? "N/A",
+    quantumRank: (r.quantum_rank || r.rank) ?? "N/A",
+    // Use quantum_score from qm_descriptors (xTB-based composite) as primary display score
+    qmlScore: r.qm_descriptors?.quantum_score !== undefined && r.qm_descriptors?.quantum_score !== null
+      ? r.qm_descriptors.quantum_score
+      : (r.qml_score !== null && r.qml_score !== undefined ? r.qml_score : "-"),
     homo: r.qm_descriptors?.homo_ev !== undefined ? r.qm_descriptors.homo_ev : "-",
     lumo: r.qm_descriptors?.lumo_ev !== undefined ? r.qm_descriptors.lumo_ev : "-",
-    gap: r.qm_descriptors?.gap_ev !== undefined ? r.qm_descriptors.gap_ev : "-",
+    gap: r.qm_descriptors?.homo_lumo_gap_ev !== undefined ? r.qm_descriptors.homo_lumo_gap_ev : "-",
     dipole: r.qm_descriptors?.dipole_debye !== undefined ? r.qm_descriptors.dipole_debye : "-",
-    uncertainty: r.metadata?.uncertainty ?? "Not Available",
-    applicability_domain: r.metadata?.applicability_domain_status ?? "Not Available",
-    status: "completed"
+    energy: r.qm_descriptors?.xtb_total_energy_eh !== undefined ? r.qm_descriptors.xtb_total_energy_eh : "-",
+    qmMode: r.qm_descriptors?.qm_mode || "-",
+    uncertainty: r.metadata?.uncertainty ?? "N/A",
+    applicability_domain: r.metadata?.applicability_domain_status ?? "N/A",
+    status: r.status || "imported"
   }));
 
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);

@@ -918,7 +918,9 @@ export async function getProjectGninaResults(projectId: string): Promise<ApiEnve
 }
 
 export async function getProjectQuantum(projectId: string): Promise<ApiEnvelope<{ items: QuantumResult[] }>> {
-  return apiFetch<ApiEnvelope<{ items: QuantumResult[] }>>(`/projects/${encodeURIComponent(projectId)}/quantum/qml-scores`);
+  // Use /descriptors endpoint: qm_descriptors (HOMO/LUMO/xTB) are populated.
+  // /qml-scores returns 0 items because qml_score/quantum_kernel_score/quantum_prefilter_score are null.
+  return apiFetch<ApiEnvelope<{ items: QuantumResult[] }>>(`/projects/${encodeURIComponent(projectId)}/quantum/descriptors`);
 }
 
 export async function getProjectSimulation(projectId: string): Promise<ApiEnvelope<{ items: SimulationResult[] }>> {
