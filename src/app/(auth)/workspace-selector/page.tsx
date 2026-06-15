@@ -53,36 +53,7 @@ const STATIC_WORKSPACES: Workspace[] = [
   },
 ];
 
-const RECENT_PROJECTS: RecentProject[] = [
-  {
-    name: "EGFR NSCLC Discovery Program",
-    diseaseArea: "Oncology",
-    stage: "Lead Optimization",
-    status: "Active",
-    lastUpdated: "2 hours ago",
-  },
-  {
-    name: "PARP1 Oncology Program",
-    diseaseArea: "Oncology",
-    stage: "Hit Validation",
-    status: "Idle",
-    lastUpdated: "1 day ago",
-  },
-  {
-    name: "PIK3CA Molecular Screening",
-    diseaseArea: "Oncology",
-    stage: "De Novo Generation",
-    status: "Completed",
-    lastUpdated: "3 days ago",
-  },
-  {
-    name: "KRAS G12D Exploratory Campaign",
-    diseaseArea: "Oncology",
-    stage: "Target Identification",
-    status: "Active",
-    lastUpdated: "1 week ago",
-  },
-];
+const RECENT_PROJECTS: RecentProject[] = [];
 
 export default function WorkspaceSelectorPage() {
   const router = useRouter();
@@ -326,30 +297,38 @@ export default function WorkspaceSelectorPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {RECENT_PROJECTS.map((project, idx) => (
-                      <tr 
-                        key={idx}
-                        className="hover:bg-slate-900/10 dark:hover:bg-slate-100/5 transition-colors border-b last:border-0"
-                        style={{ borderColor: "color-mix(in srgb, var(--border) 40%, transparent)" }}
-                      >
-                        <td className="p-3.5 pl-4 font-semibold text-text">{project.name}</td>
-                        <td className="p-3.5" style={{ color: "var(--muted-text)" }}>{project.diseaseArea}</td>
-                        <td className="p-3.5 font-mono text-[10px]">{project.stage}</td>
-                        <td className="p-3.5">
-                          <span
-                            className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide border"
-                            style={{
-                              backgroundColor: project.status === "Active" ? "rgba(16, 185, 129, 0.08)" : project.status === "Idle" ? "rgba(245, 158, 11, 0.08)" : "rgba(6, 182, 212, 0.08)",
-                              borderColor: project.status === "Active" ? "rgba(16, 185, 129, 0.2)" : project.status === "Idle" ? "rgba(245, 158, 11, 0.2)" : "rgba(6, 182, 212, 0.2)",
-                              color: project.status === "Active" ? "var(--success)" : project.status === "Idle" ? "var(--warning)" : "var(--accent)"
-                            }}
-                          >
-                            {project.status}
-                          </span>
+                    {RECENT_PROJECTS.length > 0 ? (
+                      RECENT_PROJECTS.map((project, idx) => (
+                        <tr 
+                          key={idx}
+                          className="hover:bg-slate-900/10 dark:hover:bg-slate-100/5 transition-colors border-b last:border-0"
+                          style={{ borderColor: "color-mix(in srgb, var(--border) 40%, transparent)" }}
+                        >
+                          <td className="p-3.5 pl-4 font-semibold text-text">{project.name}</td>
+                          <td className="p-3.5" style={{ color: "var(--muted-text)" }}>{project.diseaseArea}</td>
+                          <td className="p-3.5 font-mono text-[10px]">{project.stage}</td>
+                          <td className="p-3.5">
+                            <span
+                              className="rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide border"
+                              style={{
+                                backgroundColor: project.status === "Active" ? "rgba(16, 185, 129, 0.08)" : project.status === "Idle" ? "rgba(245, 158, 11, 0.08)" : "rgba(6, 182, 212, 0.08)",
+                                borderColor: project.status === "Active" ? "rgba(16, 185, 129, 0.2)" : project.status === "Idle" ? "rgba(245, 158, 11, 0.2)" : "rgba(6, 182, 212, 0.2)",
+                                color: project.status === "Active" ? "var(--success)" : project.status === "Idle" ? "var(--warning)" : "var(--accent)"
+                              }}
+                            >
+                              {project.status}
+                            </span>
+                          </td>
+                          <td className="p-3.5 pr-4 text-right font-mono text-[10px] opacity-75">{project.lastUpdated}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-sm" style={{ color: "var(--muted-text)" }}>
+                          No projects found. Create a workspace or import a project to get started.
                         </td>
-                        <td className="p-3.5 pr-4 text-right font-mono text-[10px] opacity-75">{project.lastUpdated}</td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -482,13 +461,8 @@ export default function WorkspaceSelectorPage() {
             <div className="space-y-1.5">
               <span className="text-[10px] font-mono opacity-60 block">RECENT REPORTS GENERATED</span>
               <div className="space-y-1 text-[10px] font-mono">
-                <div className="flex items-center justify-between hover:text-cyan-400 cursor-pointer">
-                  <span className="truncate">📄 EGFR-L858R_Hit_Assessment.pdf</span>
-                  <span className="opacity-50 shrink-0 font-sans">1d ago</span>
-                </div>
-                <div className="flex items-center justify-between hover:text-cyan-400 cursor-pointer">
-                  <span className="truncate">📄 JAK3_Toxicity_Assay_Dossier.pdf</span>
-                  <span className="opacity-50 shrink-0 font-sans">3d ago</span>
+                <div className="flex items-center justify-between text-muted-text">
+                  <span>No recent reports.</span>
                 </div>
               </div>
             </div>
@@ -497,19 +471,8 @@ export default function WorkspaceSelectorPage() {
             <div className="space-y-1.5">
               <span className="text-[10px] font-mono opacity-60 block">ACTIVE CALCULATIONS (SIMULATOR)</span>
               <div className="space-y-1 text-[10px] font-mono">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
-                    <span className="truncate">GNINA EGFR Docking Run #42</span>
-                  </div>
-                  <span className="opacity-70 shrink-0">82%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
-                    <span className="truncate">Quantum Rerank PIK3CA-01</span>
-                  </div>
-                  <span className="opacity-70 shrink-0">14%</span>
+                <div className="flex items-center justify-between text-muted-text">
+                  <span>No active calculations.</span>
                 </div>
               </div>
             </div>

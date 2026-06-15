@@ -184,7 +184,7 @@ Based on the current project stage (**Docking & Quantum**), I recommend the foll
           <div className="flex items-center gap-6">
              <div className="flex flex-col">
                 <span className="text-[10px] font-black uppercase tracking-widest text-accent/70">Project Context</span>
-                <span className="text-sm font-bold text-text">EGFR NSCLC Discovery Program</span>
+                <span className="text-sm font-bold text-text">Active Project Workspace</span>
              </div>
              <div className="h-8 w-px bg-border/20" />
              <div className="flex flex-col">

@@ -206,7 +206,7 @@ const RECENT_ACTIVITY = [
 
 export interface ProjectOverviewViewProps { projectId: string; }
 export default function ProjectOverviewView({ projectId }: ProjectOverviewViewProps) {
-  const [project, setProject] = useState<any>(PROJECTS_DB[projectId] || PROJECTS_DB["egfr-nsclc"]);
+  const [project, setProject] = useState<any>(PROJECTS_DB[projectId] || null);
   const [activeTab, setActiveTab] = useState("Overview");
   const [inputs, setInputs] = useState<any>(null);
   const [completeness, setCompleteness] = useState<any>(null);
@@ -222,6 +222,28 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [isValidated, setIsValidated] = useState(false);
+
+  useEffect(() => {
+    const fetchRealData = async () => {
+      const storedProjectName = localStorage.getItem("active_project_name");
+      if (storedProjectName && !project) {
+        setProject({
+          name: storedProjectName,
+          disease: "Unspecified",
+          target: "Unspecified",
+          uniprot: "Unspecified",
+          description: "New research program initialized.",
+          metadata: {
+            created_at: new Date().toISOString(),
+            status: "Preparation",
+            priority: "High"
+          }
+        });
+      }
+    };
+    fetchRealData();
+  }, [projectId, project]);
+
 
   const handleLoadDemo = async () => {
     try {
@@ -549,6 +571,18 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
     "GNINA", "Quantum", "Simulations", "ADMET", "Reports"
   ];
 
+  if (!project) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-8 space-y-4">
+        <div className="h-16 w-16 bg-muted-bg rounded-full flex items-center justify-center mb-2 text-muted-text">
+          <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+        </div>
+        <h2 className="text-xl font-semibold text-text">No Project Active</h2>
+        <p className="text-sm text-muted-text max-w-md">Create a new workspace or select an existing research project to begin analysis.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="page-shell ui-fade-in flex flex-col gap-0 pb-10">
       {/* Dynamic Error Banner */}
@@ -847,7 +881,7 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
                   title="Protein FASTA"
                   description="Amino acid sequence of the target."
                   formats=".fasta, .fa, .txt"
-                  {...getCardInfo("protein_fasta_file_id", "Uploaded", "EGFR_P00533.fasta")}
+                  {...getCardInfo("protein_fasta_file_id", "Missing", "")}
                   onUpload={(file) => handleUploadInputFile("protein_fasta_file_id", file)}
                   required
                 />
@@ -855,7 +889,7 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
                   title="Protein PDB / mmCIF"
                   description="Experimental crystal structure."
                   formats=".pdb, .cif, .mmcif"
-                  {...getCardInfo("protein_structure_file_id", "Uploaded", "6V6O_human_egfr.pdb")}
+                  {...getCardInfo("protein_structure_file_id", "Missing", "")}
                   onUpload={(file) => handleUploadInputFile("protein_structure_file_id", file)}
                   required
                 />
@@ -863,7 +897,7 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
                   title="AlphaFold Structure"
                   description="AI-predicted protein folding data."
                   formats=".pdb, .json"
-                  {...getCardInfo("alphafold_structure_file_id", "Uploaded", "AF-P00533-F1-model_v4.pdb")}
+                  {...getCardInfo("alphafold_structure_file_id", "Missing", "")}
                   onUpload={(file) => handleUploadInputFile("alphafold_structure_file_id", file)}
                   optional
                 />
@@ -887,7 +921,7 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
                   title="Known Reference Ligand"
                   description="Co-crystallized or known potent inhibitor."
                   formats=".sdf, .mol2"
-                  {...getCardInfo("reference_ligand_file_id", "Uploaded", "Osimertinib_ref.sdf")}
+                  {...getCardInfo("reference_ligand_file_id", "Missing", "")}
                   onUpload={(file) => handleUploadInputFile("reference_ligand_file_id", file)}
                   required
                 />

@@ -381,7 +381,8 @@ export async function checkBackendHealth(): Promise<boolean> {
     }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    const response = await fetch(`${url}/system/info`, {
+    const healthUrl = url.replace(/\/api\/v1$/, "");
+    const response = await fetch(`${healthUrl}/health`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,

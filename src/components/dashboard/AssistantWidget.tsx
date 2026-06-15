@@ -82,9 +82,9 @@ export default function AssistantWidget({
           <span className="text-[9px] font-black uppercase tracking-widest text-accent">Active Research Context</span>
         </div>
         <div className="space-y-1">
-          <p className="text-[11px] font-bold text-text/90">EGFR NSCLC Discovery Program</p>
+          <p className="text-[11px] font-bold text-text/90">Active Project Workspace</p>
           <div className="flex items-center gap-2 text-[10px] text-muted-text/70">
-            <span>EGFR / P00533</span>
+            <span>Target Pipeline</span>
             <span className="h-1 w-1 rounded-full bg-border" />
             <span>Docking & Quantum</span>
           </div>

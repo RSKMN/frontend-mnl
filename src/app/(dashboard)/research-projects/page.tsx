@@ -212,8 +212,7 @@ export default function WorkspacePage() {
         }
       });
       if (res.success && res.data) {
-        // Automatically route to the new project and pass a query param to trigger preloading
-        router.push(`/research-projects/${res.data.id || res.data.project_id}?loadDemo=true`);
+        router.push(`/research-projects/${res.data.id || res.data.project_id}`);
       } else {
         alert("Failed to create demo project.");
       }

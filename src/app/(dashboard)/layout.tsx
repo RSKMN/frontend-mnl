@@ -178,6 +178,15 @@ function Icon({ name, className = "h-4 w-4" }: { name: IconName; className?: str
 }
 
 function ResearchContextBar() {
+  const [projectName, setProjectName] = useState<string>("No Active Project");
+  
+  useEffect(() => {
+    const activeProject = localStorage.getItem("active_project_name");
+    if (activeProject) {
+      setProjectName(activeProject);
+    }
+  }, []);
+
   return (
     <div 
       className="shrink-0 border-b px-6 py-2 flex items-center justify-between gap-6"
@@ -186,14 +195,14 @@ function ResearchContextBar() {
       <div className="flex items-center gap-6 min-w-0">
         <div className="flex flex-col">
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">Active Project</span>
-          <h2 className="text-sm font-black text-text truncate">EGFR NSCLC Discovery Program</h2>
+          <h2 className="text-sm font-black text-text truncate">{projectName}</h2>
         </div>
         
         <div className="h-8 w-px bg-border/40 hidden md:block" />
         
         <div className="hidden md:flex flex-col">
           <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Disease / Target</span>
-          <span className="text-[11px] font-bold text-text/80 truncate">Lung Cancer / EGFR (P00533)</span>
+          <span className="text-[11px] font-bold text-text/80 truncate">{projectName !== "No Active Project" ? "Pending Target" : "None"}</span>
         </div>
 
         <div className="h-8 w-px bg-border/40 hidden lg:block" />
@@ -201,8 +210,8 @@ function ResearchContextBar() {
         <div className="hidden lg:flex flex-col">
           <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Current Stage</span>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-text/80 truncate">Docking & Quantum Reranking</span>
-            <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+            <span className="text-[11px] font-bold text-text/80 truncate">{projectName !== "No Active Project" ? "Preparation" : "N/A"}</span>
+            {projectName !== "No Active Project" && <div className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />}
           </div>
         </div>
 
@@ -211,7 +220,7 @@ function ResearchContextBar() {
         <div className="hidden xl:flex flex-col w-32">
           <div className="flex items-center justify-between mb-0.5">
             <span className="text-[9px] font-black uppercase tracking-widest text-muted-text/40">Progress</span>
-            <span className="text-[9px] font-black text-accent">68%</span>
+            <span className="text-[9px] font-black text-accent">{projectName !== "No Active Project" ? "0%" : "-"}</span>
           </div>
           <div className="h-1 w-full bg-border/20 rounded-full overflow-hidden">
             <div className="h-full bg-accent" style={{ width: '68%' }} />
