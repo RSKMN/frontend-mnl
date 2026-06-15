@@ -3,6 +3,10 @@
     {
       "source": "/api/v1/:path*",
       "destination": "https://decide-lafayette-quoted-advocate.trycloudflare.com/api/v1/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://decide-lafayette-quoted-advocate.trycloudflare.com/health"
     }
   ],
   "headers": [
