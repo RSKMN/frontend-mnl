@@ -161,48 +161,7 @@ function InputDataCard({
   );
 }
 
-const PROJECTS_DB: Record<string, any> = {
-  "egfr-nsclc": {
-    name: "EGFR NSCLC Discovery Program",
-    disease: "Non-small cell lung cancer",
-    target: "EGFR",
-    uniprot: "P00533",
-    stage: "Docking & Quantum Reranking",
-    status: "active" as StatusType,
-    workspace: "Oncology Research Workspace",
-    team: "Quinfosys Research Division",
-    lastUpdated: "12 mins ago",
-    objective: "Development of brain-penetrant, mutant-selective inhibitors of EGFR (L858R/T790M) to address resistance in non-small cell lung cancer patients.",
-    collaborators: ["SC", "DK", "ER", "MW"],
-  },
-  "parp1-oncology": {
-    name: "PARP1 Oncology Program",
-    disease: "Breast/Ovarian",
-    target: "PARP1 / DNA Repair",
-    uniprot: "P09874",
-    stage: "Fragment Screening",
-    status: "completed" as StatusType,
-    workspace: "Oncology Research Workspace",
-    team: "Quinfosys Research Division",
-    lastUpdated: "4 hours ago",
-    objective: "Fragment-based lead discovery targeting PARP1 for synthetic lethality in BRCA-mutant oncology models.",
-    collaborators: ["DK", "ER"],
-  }
-};
-
-const TOP_CANDIDATES = [
-  { id: "QDF-EGFR-001", target: "EGFR (L858R/T790M)", dockingScore: -12.4, admetRisk: "Low" as any, quantumRank: 1, noveltyScore: 0.92, status: "running" as StatusType },
-  { id: "QDF-EGFR-014", target: "EGFR (L858R/T790M)", dockingScore: -11.8, admetRisk: "Low" as any, quantumRank: 2, noveltyScore: 0.85, status: "completed" as StatusType },
-  { id: "QDF-EGFR-027", target: "EGFR (L858R/T790M)", dockingScore: -11.2, admetRisk: "Medium" as any, quantumRank: 3, noveltyScore: 0.78, status: "completed" as StatusType },
-];
-
-const RECENT_ACTIVITY = [
-  { text: "AlphaFold structure attached to EGFR target", time: "2h ago" },
-  { text: "15,000 molecules generated via Transformer engine", time: "4h ago" },
-  { text: "1,500 candidates passed ADMET filtering", time: "6h ago" },
-  { text: "GNINA rescoring completed for top 500 candidates", time: "1d ago" },
-  { text: "Quantum reranking queued for Rigetti Aspen-M-3", time: "1d ago" },
-];
+const PROJECTS_DB: Record<string, any> = {};
 
 export interface ProjectOverviewViewProps { projectId: string; }
 export default function ProjectOverviewView({ projectId }: ProjectOverviewViewProps) {
@@ -245,43 +204,7 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
   }, [projectId, project]);
 
 
-  const handleLoadDemo = async () => {
-    try {
-      setIsLoading(true);
-      await new Promise(r => setTimeout(r, 600));
-      setInputs({
-        protein_fasta_file_id: "demo_fasta_123",
-        protein_structure_file_id: "demo_pdb_123",
-        reference_ligand_file_id: "demo_ligand_123",
-        assay_data_file_id: "demo_assay_123",
-        binding_site: {
-          mode: "grid_box",
-          box: { center_x: 10, center_y: 10, center_z: 10, size_x: 20, size_y: 20, size_z: 20 }
-        }
-      });
-      setProject((prev: any) => ({
-        ...prev,
-        disease: "Non-Small Cell Lung Cancer",
-        target: "EGFR (L858R / T790M)",
-      }));
-      setIsValidated(true);
-      if (typeof window !== "undefined") {
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get("loadDemo") === "true") {
-        setActiveTab("Input Data");
-        handleLoadDemo();
-      }
-    }
-  }, []);
 
   // Read auth token from localStorage (client-side only)
   useEffect(() => {
@@ -819,11 +742,26 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
                 title="Lead Candidate Snapshot" 
                 description="Top confidence scoring leads prioritized for experimental validation."
               />
-              <div className="grid gap-4 md:grid-cols-3">
-                {TOP_CANDIDATES.map((candidate) => (
-                  <CandidateCard key={candidate.id} {...candidate} />
-                ))}
-              </div>
+              {molecules && molecules.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  {molecules.slice(0, 3).map((mol, idx) => (
+                    <CandidateCard 
+                      key={mol.id || mol.molecule_id} 
+                      id={mol.molecule_id || mol.id || `MOL-${idx + 1}`} 
+                      target={project.target || "Unknown Target"}
+                      dockingScore={mol.docking_score ?? null}
+                      admetRisk={mol.admet_risk || mol.properties?.toxicity || null}
+                      quantumRank={mol.quantum_rank || (idx + 1)}
+                      noveltyScore={mol.novelty_score ?? mol.properties?.qed ?? null}
+                      status="completed"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="ui-card-surface p-8 text-center text-xs font-bold text-muted-text/50 border border-dashed border-border/40">
+                  No lead candidates available yet. Run the pipeline stages to prioritize compounds.
+                </div>
+              )}
             </section>
           </div>
 
@@ -836,14 +774,24 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
               <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-text/60">Recent activity</h4>
               <div className="ui-card-surface p-0 overflow-hidden">
                 <div className="divide-y divide-border/40">
-                  {RECENT_ACTIVITY.map((activity, i) => (
-                    <div key={i} className="p-4 hover:bg-surface-subtle/20 transition-colors">
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="text-[11px] font-medium text-text/80 leading-snug">{activity.text}</p>
-                        <span className="text-[8px] font-black text-muted-text/40 uppercase whitespace-nowrap">{activity.time}</span>
+                  {getStageExperiments().length > 0 ? (
+                    getStageExperiments().map((exp, i) => (
+                      <div key={i} className="p-4 hover:bg-surface-subtle/20 transition-colors">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-[11px] font-medium text-text/80 leading-snug">
+                            Stage <span className="text-accent uppercase font-bold">{exp.stage.replace("_", " ")}</span> completed for experiment {exp.experiment_id}
+                          </p>
+                          <span className="text-[8px] font-black text-muted-text/40 uppercase whitespace-nowrap">
+                            {exp.completed_at ? new Date(exp.completed_at).toLocaleTimeString() : "Just now"}
+                          </span>
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-[10px] text-muted-text/50 font-bold">
+                      No activity recorded yet. Upload input files and run pipeline tasks to begin.
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </section>
@@ -953,11 +901,7 @@ export default function ProjectOverviewView({ projectId }: ProjectOverviewViewPr
                 </div>
 
                 <div className="space-y-2 pt-6">
-                  {!isValidated && (
-                    <button onClick={handleLoadDemo} className="w-full py-2.5 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/50 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/30 transition-all shadow-lg shadow-indigo-500/10 mb-2">
-                      Load Demo Dataset
-                    </button>
-                  )}
+
                   <button onClick={() => setIsValidated(true)} className={`w-full py-2.5 rounded-lg text-bg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${isValidated ? 'bg-success shadow-success/20' : 'bg-accent shadow-accent/20 hover:bg-accent/90'}`}>
                     {isValidated ? "Data Validated" : "Validate Data"}
                   </button>

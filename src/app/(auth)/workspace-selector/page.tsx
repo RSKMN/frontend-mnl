@@ -42,15 +42,6 @@ const STATIC_WORKSPACES: Workspace[] = [
     lastActive: "4h ago",
     status: "Active",
   },
-  {
-    id: "demo",
-    name: "Demo Workspace",
-    organization: "QuDrugForge Demo",
-    projects: 3,
-    members: 1,
-    lastActive: "2d ago",
-    status: "Sandbox",
-  },
 ];
 
 const RECENT_PROJECTS: RecentProject[] = [];
@@ -87,7 +78,7 @@ export default function WorkspaceSelectorPage() {
         setWorkspaces(STATIC_WORKSPACES);
       }
     } catch (err) {
-      console.error("Failed to fetch workspaces, falling back to demo:", err);
+      console.error("Failed to fetch workspaces, falling back to static workspaces:", err);
       setWorkspaces(STATIC_WORKSPACES);
     } finally {
       setIsLoading(false);

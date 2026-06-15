@@ -194,34 +194,6 @@ export default function WorkspacePage() {
     }
   };
 
-  const handleLoadDemoDataset = async () => {
-    const wsId = localStorage.getItem("active_workspace_id");
-    if (!wsId) {
-      alert("No active workspace selected.");
-      return;
-    }
-    try {
-      setIsLoading(true);
-      const res = await apiClient.post<any>("/projects", {
-        body: {
-          workspace_id: wsId,
-          name: "EGFR Demo Program",
-          description: "One-click preloaded demo for EGFR L858R.",
-          disease_type: "Non-Small Cell Lung Cancer",
-          cancer_type: "EGFR (L858R / T790M)"
-        }
-      });
-      if (res.success && res.data) {
-        router.push(`/research-projects/${res.data.id || res.data.project_id}`);
-      } else {
-        alert("Failed to create demo project.");
-      }
-    } catch (err) {
-      alert("Error creating demo project: " + String(err));
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const diseases = Array.from(new Set(projects.map(p => p.disease)));
   const statuses = ["all", "active", "running", "completed", "warning", "draft", "archived"];
@@ -242,14 +214,7 @@ export default function WorkspacePage() {
         description="Manage target discovery, molecule generation, docking, quantum reranking, and validation workflows across oncology research programs."
         actions={
           <ActionButtonGroup>
-            <ActionButton 
-              label="Load Demo Dataset" 
-              onClick={handleLoadDemoDataset} 
-              disabled={isLoading} 
-              variant="outline"
-              className="border-indigo-500/50 text-indigo-400 hover:bg-indigo-500/10"
-              icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} 
-            />
+
             <ActionButton label="Import Dataset" icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>} />
             <ActionButton label="New Project" variant="primary" onClick={handleCreateProject} disabled={isLoading} icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>} />
           </ActionButtonGroup>

@@ -81,25 +81,7 @@ export default function ActivityPanel({ recentRuns, loading, error }: ActivityPa
     { event: "OpenMM simulation running", time: "8m ago", color: "text-accent" },
   ]);
 
-  useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("demo_mode") === "true") {
-      const interval = setInterval(() => {
-        const events = [
-          "GNINA docking completed", "Quantum reranking initialized", "ADMET filtering complete",
-          "OpenMM simulation running", "Lead candidate identified", "Toxicity screening finished",
-          "H-bond map generated", "Solubility predicted"
-        ];
-        const colors = ["text-success", "text-primary", "text-accent", "text-warning"];
-        const newLog = {
-          event: events[Math.floor(Math.random() * events.length)],
-          time: "Just now",
-          color: colors[Math.floor(Math.random() * colors.length)]
-        };
-        setLogs(prev => [newLog, ...prev.slice(0, 3)]);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, []);
+
 
   return (
     <aside className="ui-card-surface flex flex-col p-8 shadow-premium transition-all duration-300 hover:shadow-2xl">
