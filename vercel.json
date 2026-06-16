@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "https://decide-lafayette-quoted-advocate.trycloudflare.com/api/v1/:path*"
+      "destination": "https://vitamin-licensed-reach-about.trycloudflare.com/api/v1/:path*"
     },
     {
       "source": "/health",
-      "destination": "https://decide-lafayette-quoted-advocate.trycloudflare.com/health"
+      "destination": "https://vitamin-licensed-reach-about.trycloudflare.com/health"
     }
   ],
   "headers": [

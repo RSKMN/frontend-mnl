@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const BACKEND_URL = "https://decide-lafayette-quoted-advocate.trycloudflare.com";
+const BACKEND_URL = "https://vitamin-licensed-reach-about.trycloudflare.com";
 
 const nextConfig = {
 	reactStrictMode: true,
