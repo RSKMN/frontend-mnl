@@ -39,7 +39,7 @@ function ValidationPageContent({ projectId }: { projectId: string }) {
     try {
       if (!projectId) return null;
       const [admetRes, summaryRes] = await Promise.all([
-        apiClient.get<any>(`/projects/${projectId}/admet/results?limit=100`),
+        apiClient.get<any>(`/projects/${projectId}/admet/results`, { params: { limit: 100 } }),
         apiClient.get<any>(`/projects/${projectId}/pipeline/summary`)
       ]);
       if (admetRes.success && admetRes.data?.items) {

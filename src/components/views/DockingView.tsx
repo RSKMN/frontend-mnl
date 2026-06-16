@@ -265,7 +265,7 @@ function DockingWorkspaceContent({ projectId }: DockingViewProps) {
                     >
                       <td className="px-4 py-4 font-mono text-xs font-bold text-text">{res.compound_id || res.id}</td>
                       <td className="px-4 py-4 text-center font-mono text-xs font-black text-accent">
-                        {isGnina ? (res.cnn_affinity ?? "-") : (res.binding_energy ?? "-")}
+                        {isGnina ? (res.cnn_affinity ?? "-") : (res.binding_affinity_kcal_mol ?? res.score ?? res.binding_energy ?? "-")}
                       </td>
                       <td className="px-4 py-4 text-center font-mono text-xs text-text">
                         {isGnina ? (res.cnn_pose_score ?? "-") : (res.metadata?.rmsd ?? "-")}

@@ -44,7 +44,7 @@ export default function QMView({ projectId }: QMViewProps) {
       if (!activeProjectId) return null;
       
       const [qmRes, summaryRes] = await Promise.all([
-        apiClient.get<any>(`/projects/${activeProjectId}/quantum/descriptors?limit=100`),
+        apiClient.get<any>(`/projects/${activeProjectId}/quantum/descriptors`, { params: { limit: 100 } }),
         apiClient.get<any>(`/projects/${activeProjectId}/pipeline/summary`)
       ]);
 
@@ -151,7 +151,9 @@ export default function QMView({ projectId }: QMViewProps) {
       : (r.qml_score !== null && r.qml_score !== undefined ? r.qml_score : "-"),
     homo: r.qm_descriptors?.homo_ev !== undefined ? r.qm_descriptors.homo_ev : "-",
     lumo: r.qm_descriptors?.lumo_ev !== undefined ? r.qm_descriptors.lumo_ev : "-",
-    gap: r.qm_descriptors?.homo_lumo_gap_ev !== undefined ? r.qm_descriptors.homo_lumo_gap_ev : "-",
+    gap: r.qm_descriptors?.homo_lumo_gap_ev !== undefined && r.qm_descriptors?.homo_lumo_gap_ev !== null
+      ? r.qm_descriptors.homo_lumo_gap_ev
+      : (r.qm_descriptors?.gap_ev !== undefined && r.qm_descriptors?.gap_ev !== null ? r.qm_descriptors.gap_ev : "-"),
     dipole: r.qm_descriptors?.dipole_debye !== undefined ? r.qm_descriptors.dipole_debye : "-",
     energy: r.qm_descriptors?.xtb_total_energy_eh !== undefined ? r.qm_descriptors.xtb_total_energy_eh : "-",
     qmMode: r.qm_descriptors?.qm_mode || "-",

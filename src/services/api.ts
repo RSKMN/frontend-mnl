@@ -88,7 +88,7 @@ export function isDemoMode(): boolean {
 const API_TIMEOUT_MS =
   (typeof process !== "undefined" &&
     Number(process.env?.NEXT_PUBLIC_API_TIMEOUT_MS || process.env?.NEXT_PUBLIC_API_TIMEOUT)) ||
-  10000;
+  30000;
 
 const EMPTY_DISTRIBUTION: Distribution = {
   bins: [],

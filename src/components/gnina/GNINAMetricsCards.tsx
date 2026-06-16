@@ -13,8 +13,9 @@ export function GNINAMetricsCards({ items }: GNINAMetricsCardsProps) {
     ? (items.reduce((sum, i) => sum + i.cnn_score, 0) / totalPoses).toFixed(3)
     : "0.000";
     
-  const bestAffinity = totalPoses > 0
-    ? Math.min(...items.map(i => i.cnn_affinity)).toFixed(1)
+  const validAffinities = items.map(i => i.cnn_affinity).filter(val => val > 0);
+  const bestAffinity = validAffinities.length > 0
+    ? Math.max(...validAffinities).toFixed(1)
     : "0.0";
 
   return (

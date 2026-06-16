@@ -36,10 +36,10 @@ export default function GNINAPage({ params }: GNINAPageProps) {
       if (gninaRes.success && gninaRes.data?.items) {
         const normalized = (gninaRes.data.items as any[]).map((item, index) => {
           return {
-            molecule_id: String(item.molecule_id ?? item.id ?? item.candidate_id ?? `gnina-${index + 1}`),
-            cnn_score: Number(item.cnn_score ?? item.score ?? 0),
-            cnn_affinity: Number(item.cnn_affinity ?? item.affinity ?? 0),
-            vina_score: Number(item.vina_score ?? item.vina ?? item.binding_energy ?? 0),
+            molecule_id: String(item.compound_id ?? item.molecule_id ?? item.candidate_id ?? item.id ?? `gnina-${index + 1}`),
+            cnn_score: Number(item.cnn_pose_score ?? item.cnn_score ?? item.score ?? item.raw?.gnina_cnn_pose_score ?? 0),
+            cnn_affinity: Number(item.cnn_affinity ?? item.affinity ?? item.raw?.gnina_cnn_affinity ?? 0),
+            vina_score: Number(item.vina_score ?? item.vina ?? item.binding_energy ?? item.raw?.gnina_affinity_kcal_mol ?? 0),
             pose_evidence: String(item.pose_evidence ?? item.evidence ?? item.pose_download_url ?? item.pose_file_id ?? "Pose verified"),
           } as GninaResult;
         });
